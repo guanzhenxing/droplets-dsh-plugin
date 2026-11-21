@@ -1,0 +1,26 @@
+name: ci
+
+on:
+  push:
+    paths: ['droplets-dsh/**']
+  pull_request:
+    paths: ['droplets-dsh/**']
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: droplets-dsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: droplets-dsh/package-lock.json
+      - run: npm install --no-audit --no-fund
+      - run: npm run build
+      - run: npm test
+      # Committed artifacts must match a fresh build (build -> test -> git diff --exit-code).
+      - run: git diff --exit-code -- index.js client.js
