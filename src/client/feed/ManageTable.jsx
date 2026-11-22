@@ -315,16 +315,30 @@ function EditDialog({ api, feed, availableGroups, onClose, onChanged }) {
   const [name, setName] = useState(feed?.title ?? '');
   const [group, setGroup] = useState(feed?.groupName ?? '');
   const [groupMenuOpen, setGroupMenuOpen] = useState(false);
+  // Enabled is an immediate-effect control in droplets (toggle.mutate on
+  // change, never part of the save payload); keep a local mirror for render.
   const [enabled, setEnabled] = useState(feed?.enabled ?? true);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
+  async function toggleEnabled() {
+    const next = !enabled;
+    setEnabled(next);
+    try {
+      await api.setFeed({ id: feed.id, patch: { enabled: next } });
+      await onChanged();
+    } catch (cause) {
+      setEnabled(!next);
+      setError(String(cause?.message ?? cause));
+    }
+  }
+
   async function save() {
     setBusy(true);
     setError('');
     try {
-      await api.setFeed({ id: feed.id, patch: { name: name.trim(), group: group.trim(), enabled } });
+      await api.setFeed({ id: feed.id, patch: { name: name.trim(), group: group.trim() } });
       await onChanged();
       onClose();
     } catch (cause) { setError(String(cause?.message ?? cause)); }
@@ -380,8 +394,8 @@ function EditDialog({ api, feed, availableGroups, onClose, onChanged }) {
           </div>
           <div className="dpl-dialog-row">
             <span className="dpl-dialog-label">启用</span>
-            <input type="checkbox" className="dpl-switch" checked={enabled} title={enabled ? '停用' : '启用'} onChange={(e) => setEnabled(e.target.checked)} />
-            <span className="dpl-dialog-switch-hint">{enabled ? '参与自动刷新与全部源聚合' : '已停用（不刷新、不进聚合）'}</span>
+            <input type="checkbox" className="dpl-switch" checked={enabled} title={enabled ? '停用' : '启用'} onChange={() => void toggleEnabled()} />
+            <span className="dpl-dialog-switch-hint">{enabled ? '参与自动刷新与全部源聚合（即时生效）' : '已停用（不刷新、不进聚合）'}</span>
           </div>
         </div>
         {error ? <div className="dpl-dialog-error dpl-dialog-pad">{error}</div> : null}

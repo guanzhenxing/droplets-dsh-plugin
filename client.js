@@ -3918,11 +3918,22 @@ function EditDialog({ api, feed, availableGroups, onClose, onChanged }) {
   const [confirmDelete, setConfirmDelete] = (0, import_react7.useState)(false);
   const [error, setError] = (0, import_react7.useState)("");
   const [busy, setBusy] = (0, import_react7.useState)(false);
+  async function toggleEnabled() {
+    const next = !enabled;
+    setEnabled(next);
+    try {
+      await api.setFeed({ id: feed.id, patch: { enabled: next } });
+      await onChanged();
+    } catch (cause) {
+      setEnabled(!next);
+      setError(String(cause?.message ?? cause));
+    }
+  }
   async function save() {
     setBusy(true);
     setError("");
     try {
-      await api.setFeed({ id: feed.id, patch: { name: name.trim(), group: group.trim(), enabled } });
+      await api.setFeed({ id: feed.id, patch: { name: name.trim(), group: group.trim() } });
       await onChanged();
       onClose();
     } catch (cause) {
@@ -3992,8 +4003,8 @@ function EditDialog({ api, feed, availableGroups, onClose, onChanged }) {
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "dpl-dialog-row", children: [
         /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "dpl-dialog-label", children: "\u542F\u7528" }),
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("input", { type: "checkbox", className: "dpl-switch", checked: enabled, title: enabled ? "\u505C\u7528" : "\u542F\u7528", onChange: (e) => setEnabled(e.target.checked) }),
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "dpl-dialog-switch-hint", children: enabled ? "\u53C2\u4E0E\u81EA\u52A8\u5237\u65B0\u4E0E\u5168\u90E8\u6E90\u805A\u5408" : "\u5DF2\u505C\u7528\uFF08\u4E0D\u5237\u65B0\u3001\u4E0D\u8FDB\u805A\u5408\uFF09" })
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("input", { type: "checkbox", className: "dpl-switch", checked: enabled, title: enabled ? "\u505C\u7528" : "\u542F\u7528", onChange: () => void toggleEnabled() }),
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "dpl-dialog-switch-hint", children: enabled ? "\u53C2\u4E0E\u81EA\u52A8\u5237\u65B0\u4E0E\u5168\u90E8\u6E90\u805A\u5408\uFF08\u5373\u65F6\u751F\u6548\uFF09" : "\u5DF2\u505C\u7528\uFF08\u4E0D\u5237\u65B0\u3001\u4E0D\u8FDB\u805A\u5408\uFF09" })
       ] })
     ] }),
     error ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "dpl-dialog-error dpl-dialog-pad", children: error }) : null,
