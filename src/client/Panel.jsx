@@ -34,6 +34,53 @@ export function DropletsPanel({ api, SessionProvider, renderSlot }) {
     setCompanionOpen(true);
   }, []);
 
+  // Global tooltip layer (droplets TooltipLayer parity): one fixed div at the
+  // body level, fed by delegated pointerover/out on [data-tip]. Solves two
+  // things the pure-CSS ::after cannot: tooltips inside scroll containers
+  // were clipped, and their invisible text polluted scrollWidth metrics.
+  useEffect(() => {
+    const tip = document.createElement('div');
+    tip.className = 'dpl-gtip';
+    tip.setAttribute('role', 'tooltip');
+    document.body.appendChild(tip);
+    let current = null;
+    const place = (target) => {
+      const rect = target.getBoundingClientRect();
+      tip.style.top = (rect.bottom + 6) + 'px';
+      const left = rect.left + rect.width / 2;
+      const half = Math.min(tip.offsetWidth / 2, 160);
+      tip.style.left = Math.max(8 + half, Math.min(window.innerWidth - 8 - half, left)) + 'px';
+      tip.style.transform = 'translateX(-50%)';
+    };
+    const onOver = (event) => {
+      const target = event.target?.closest?.('[data-tip]');
+      if (!target || target === current) return;
+      current = target;
+      const text = target.getAttribute('data-tip');
+      if (!text) { tip.style.opacity = '0'; return; }
+      tip.textContent = text;
+      place(target);
+      tip.style.opacity = '1';
+    };
+    const onOut = (event) => {
+      const target = event.target?.closest?.('[data-tip]');
+      if (!target || target !== current) return;
+      current = null;
+      tip.style.opacity = '0';
+    };
+    const onKey = () => { current = null; tip.style.opacity = '0'; };
+    const root = document.body;
+    root.addEventListener('pointerover', onOver);
+    root.addEventListener('pointerout', onOut);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      root.removeEventListener('pointerover', onOver);
+      root.removeEventListener('pointerout', onOut);
+      window.removeEventListener('keydown', onKey);
+      tip.remove();
+    };
+  }, []);
+
   return (
     <div className="dpl-root">
       <header className="dpl-header">

@@ -12,7 +12,10 @@ import { formatWhen, formatWhenFull } from './feed/format.js';
 import { SafeHtml } from './components.jsx';
 import { t } from './i18n.js';
 
-const HOVER_OPEN_DELAY_MS = 500;
+// droplets D09: open-on-hover is an opt-in setting; the default is click.
+// Opening marks unseen → seen, so hover-opening by default would let a
+// careless sweep of the list silently mutate read state (not undoable).
+const OPEN_ON_HOVER = false;
 const STATE_LABEL = { unseen: '未读', seen: '已读', skipped: '略过' };
 
 /**
@@ -96,6 +99,7 @@ export function FeedView({ api, onMaterial, onJumpSpace }) {
             api={api} feeds={feeds} sourceId={sourceId} selectedGroup={selectedGroup}
             selected={selected} onSelect={setSelected} onMaterial={onMaterial}
             spinning={spinning} onRefresh={() => void refresh()} onFeedsChanged={loadFeeds}
+            onManage={() => setManaging(true)}
             collapsed={collapsed} onExpand={expand} onCollapse={collapse}
           />
         ) },
@@ -109,7 +113,7 @@ export function FeedView({ api, onMaterial, onJumpSpace }) {
 
 /** Items pane: title + pill + refresh + three-state filter + mark-all + «. */
 function ItemList(props) {
-  const { api, feeds, sourceId, selectedGroup, selected, onSelect, onMaterial, spinning, onRefresh, onFeedsChanged, collapsed, onExpand, onCollapse } = props;
+  const { api, feeds, sourceId, selectedGroup, selected, onSelect, onMaterial, spinning, onRefresh, onFeedsChanged, onManage, collapsed, onExpand, onCollapse } = props;
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewFilter, setViewFilter] = useState('all');
@@ -244,7 +248,12 @@ function ItemList(props) {
       <div className="dpl-entry-scroll" ref={listScroll}>
         {loading ? <div className="dpl-list-loading"><Loader2 size={17} className="dpl-spin" /></div> : null}
         {!loading && partitioned.length === 0 ? (
-          <div className="dpl-list-empty">暂无条目。添加源并刷新后在此阅读。</div>
+          <div className="dpl-list-empty">
+            <p>{feeds.length === 0 ? '还没有订阅源。' : '暂无条目。'}</p>
+            <button type="button" className="dpl-btn dpl-sm dpl-primary-solid" onClick={onManage}>
+              {feeds.length === 0 ? '去添加源' : '管理订阅源'}
+            </button>
+          </div>
         ) : null}
         {partitioned.map((item) => {
           const feed = feedsById.get(item.sourceId);
@@ -253,14 +262,25 @@ function ItemList(props) {
               key={item.sourceId + ':' + item.key}
               className={'dpl-entry-row' + (selected?.key === item.key && selected?.sourceId === item.sourceId ? ' is-active' : '')}
               onMouseEnter={() => {
+                if (!OPEN_ON_HOVER) return;
                 clearHoverTimer();
                 hoverTimer.current = setTimeout(() => {
                   hoverTimer.current = null;
                   const current = visibleItems.current.find((entry) => entry.sourceId === item.sourceId && entry.key === item.key);
                   if (current) openItem(current);
-                }, HOVER_OPEN_DELAY_MS);
+                }, 500);
               }}
               onMouseLeave={clearHoverTimer}
+              tabIndex={0}
+              role="button"
+              aria-current={selected?.key === item.key && selected?.sourceId === item.sourceId ? 'true' : undefined}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  clearHoverTimer();
+                  openItem(item);
+                }
+              }}
               onClick={() => { clearHoverTimer(); openItem(item); }}
             >
               <div className="dpl-entry-src">

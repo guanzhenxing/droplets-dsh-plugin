@@ -366,6 +366,13 @@ function EditDialog({ api, feed, availableGroups, onClose, onChanged }) {
           </div>
           <button type="button" className="dpl-icon-btn dpl-round" onClick={onClose} aria-label="关闭"><X size={15} /></button>
         </div>
+        {feed.lastError ? (
+          <div className="dpl-dialog-error dpl-dialog-errorpanel">
+            <div className="dpl-dialog-errortitle">最近一次抓取失败</div>
+            <div className="dpl-dialog-errortext">{feed.lastError}</div>
+            <div className="dpl-dialog-errormeta">最近尝试 {feed.lastFetchAt ? formatWhenFull(feed.lastFetchAt) : '从未'}；可在源管理中重试</div>
+          </div>
+        ) : null}
         <div className="dpl-dialog-rows">
           <div className="dpl-dialog-row">
             <span className="dpl-dialog-label">名称</span>

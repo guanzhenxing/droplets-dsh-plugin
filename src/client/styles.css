@@ -1067,14 +1067,10 @@
 .dpl-aux-ask:hover { opacity: 0.88; background: var(--dpl-accent-solid); }
 .dpl-aux-ask svg { width: 12px; height: 12px; }
 
-/* ---- instant CSS tooltips (droplets TooltipLayer parity) ---- */
-.dpl-root [data-tip], .dpl-companion [data-tip] { position: relative; }
-.dpl-root [data-tip]::after, .dpl-companion [data-tip]::after {
-  content: attr(data-tip);
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
+/* ---- global tooltip layer (body-level, JS-positioned) ---- */
+.dpl-gtip {
+  position: fixed;
+  z-index: 300;
   background: var(--dsw-alias-label-primary, #0f1115);
   color: var(--dsw-alias-bg-base, #fff);
   font-size: 12px;
@@ -1082,56 +1078,48 @@
   padding: 5px 8px;
   border-radius: 6px;
   white-space: nowrap;
-  z-index: 120;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.12s ease 0.3s;
+  transition: opacity 0.12s ease 0.25s;
   box-shadow: 0 4px 14px rgba(15, 23, 42, 0.24);
 }
-.dpl-root [data-tip]:hover::after, .dpl-companion [data-tip]:hover::after { opacity: 1; }
-.dpl-root [data-tip]:disabled::after { opacity: 0; }
+.dpl-gtip[data-empty] { display: none; }
 
-/* ---- feed dialogs (droplets FeedAddDialog / FeedEditDialog shapes) ---- */
-.dpl-dialog-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 50;
-  display: grid;
-  place-items: center;
-  background: rgba(0, 0, 0, 0.3);
-  padding: 24px;
+/* Narrow container: a docked companion would overflow the three-pane minimum
+   (205+240+420+360). Switch it to the floating-window form instead — the
+   panels keep their min widths and nothing scrolls sideways. */
+@container (max-width: 1240px) {
+  .dpl-companion.is-docked {
+    position: fixed;
+    z-index: 40;
+    top: 3.5rem;
+    right: 1rem;
+    bottom: auto;
+    width: min(480px, calc(100vw - 2rem));
+    height: min(70vh, 640px);
+    border: 1px solid var(--dpl-border);
+    border-radius: 14px;
+    box-shadow: 0 18px 48px rgba(15, 23, 42, 0.3);
+  }
 }
-.dpl-dialog {
-  display: flex;
-  flex-direction: column;
-  max-width: 100%;
-  border-radius: 14px;
-  background: var(--dpl-bg);
-  box-shadow: 0 16px 48px rgba(15, 23, 42, 0.24);
-  border: 1px solid var(--dpl-border);
-}
-.dpl-add-dialog { width: 440px; }
-.dpl-edit-dialog { width: 520px; }
-.dpl-dialog-headline { display: flex; align-items: center; gap: 10px; padding: 16px 20px 10px; }
-.dpl-dialog-title { font-size: 13.5px; font-weight: 600; }
-.dpl-icon-btn.dpl-round { width: 28px; height: 28px; border-radius: 50%; }
-.dpl-dialog-badge { display: inline-flex; transform: scale(1.3); transform-origin: left center; }
-.dpl-dialog-name { font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dpl-dialog-sub { font-size: 12px; color: var(--dpl-faint); margin-top: 1px; }
-.dpl-dialog-body { display: flex; flex-direction: column; gap: 10px; padding: 4px 20px 12px; font-size: 12px; }
-.dpl-dialog-field { display: flex; flex-direction: column; gap: 5px; color: var(--dpl-muted); }
-.dpl-dialog-field input { width: 100%; }
-.dpl-dialog-hint { font-size: 12px; color: var(--dpl-faint); }
-.dpl-dialog-error { border-radius: 8px; background: color-mix(in srgb, var(--dpl-danger) 10%, transparent); color: var(--dpl-danger); padding: 6px 8px; font-size: 12px; word-break: break-all; }
-.dpl-dialog-warn { border-radius: 8px; background: rgba(230, 167, 0, 0.12); color: #8a6d1a; padding: 6px 8px; font-size: 12px; }
-.dpl-dialog-rows { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--dpl-border); padding: 12px 20px; font-size: 12px; }
-.dpl-dialog-row { display: flex; align-items: center; gap: 8px; }
-.dpl-dialog-label { width: 64px; flex: none; color: var(--dpl-faint); }
-.dpl-dialog-row input { min-width: 0; }
-.dpl-row-flex { display: flex; align-items: center; gap: 4px; }
-.dpl-group-menu { top: calc(100% + 4px); left: 64px; min-width: 180px; max-height: 176px; overflow: auto; }
-.dpl-dialog-url { flex: 1; min-width: 0; color: var(--dpl-muted); word-break: break-all; font-size: 12px; }
-.dpl-dialog-switch-hint { color: var(--dpl-muted); font-size: 12px; }
-.dpl-dialog-pad { margin: 0 20px 8px; }
-.dpl-dialog-footer { display: flex; align-items: center; gap: 8px; border-top: 1px solid var(--dpl-border); padding: 12px 20px; }
-.chevron-flip, .dpl-icon-btn .is-flipped { transform: rotate(180deg); }
+
+/* Edit-dialog error panel (droplets feed-edit-error shape) */
+.dpl-dialog-errorpanel { margin: 0 20px 10px; display: flex; flex-direction: column; gap: 3px; }
+.dpl-dialog-errortitle { font-weight: 600; }
+.dpl-dialog-errortext { word-break: break-all; }
+.dpl-dialog-errormeta { color: var(--dpl-faint); }
+.dpl-list-empty p { margin: 0 0 10px; }
+.dpl-entry-row:focus-visible { outline: 2px solid var(--dpl-accent); outline-offset: -2px; }
+
+/* Wide article content (tables, long URLs) must scroll inside the reader,
+   never push the panel layout sideways (flex children default to
+   min-width:auto — the classic blowout). */
+.dpl-preview { min-width: 0; }
+.dpl-article-body-wrap { min-width: 0; }
+.dpl-article-body { min-width: 0; overflow-x: auto; }
+.dpl-article-body table { display: block; max-width: 100%; overflow-x: auto; }
+.dpl-article-body pre { max-width: 100%; }
+.dpl-note-body { min-width: 0; overflow-x: auto; }
