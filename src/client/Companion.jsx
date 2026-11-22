@@ -16,12 +16,11 @@ import { t } from './i18n.js';
  * @param {{api:object, material:object, onClose:function, SessionProvider?:Function,
  *          renderSlot?:Function, storagePrefix?:string}} props
  */
-export function Companion({ api, material, onClose, SessionProvider, renderSlot, storagePrefix = 'droplets' }) {
+export function Companion({ api, material, form = 'docked', onFormChange, onClose, SessionProvider, renderSlot, storagePrefix = 'droplets' }) {
   const [workspaceId, setWorkspaceId] = useState(() => api.defaultChatWorkspace?.());
-  // Floating / docked form (droplets decision 2.26/2.29): floating by default
-  // — a fixed, draggable, viewport-clamped window; docked pins to the right
-  // edge of the panel body. Position and form persist in localStorage.
-  const [form, setForm] = useState(() => localStorage.getItem(storagePrefix + '.ai.form') ?? 'floating');
+  // The Panel owns the form (it decides where this component mounts):
+  // docked = flex pane squeezing the spaces (never covers the article);
+  // floating = fixed, draggable, viewport-clamped window. Pos persists.
   const [pos, setPos] = useState(() => {
     try { return JSON.parse(localStorage.getItem(storagePrefix + '.ai.pos') ?? 'null'); } catch { return null; }
   });
@@ -34,9 +33,7 @@ export function Companion({ api, material, onClose, SessionProvider, renderSlot,
     };
   }, []);
   const toggleForm = () => {
-    const next = form === 'docked' ? 'floating' : 'docked';
-    setForm(next);
-    try { localStorage.setItem(storagePrefix + '.ai.form', next); } catch { /* ignore */ }
+    onFormChange?.(form === 'docked' ? 'floating' : 'docked');
   };
   const onHeaderPointerDown = (event) => {
     if (form !== 'floating') return;
@@ -169,7 +166,7 @@ export function Companion({ api, material, onClose, SessionProvider, renderSlot,
         <Sparkles size={13} className="dpl-companion-spark" />
         <strong className="dpl-truncate">{material.space === 'vault-search' ? t('companion.askVaultTitle') : t('companion.title')}</strong>
         <button className="dpl-icon-btn" title={t('companion.newChat')} aria-label={t('companion.newChat')} onClick={() => void start(true)} disabled={busy || !workspaceId}>＋</button>
-        <button className="dpl-icon-btn" title={form === 'docked' ? '切换为悬浮窗' : '停靠靠右'} aria-label={form === 'docked' ? '切换为悬浮窗' : '停靠靠右'} onClick={toggleForm}>
+        <button className="dpl-icon-btn" data-tip={form === 'docked' ? '切换为悬浮窗' : '停靠靠右'} aria-label={form === 'docked' ? '切换为悬浮窗' : '停靠靠右'} onClick={toggleForm}>
           {form === 'docked' ? <PinOff size={13} /> : <Pin size={13} />}
         </button>
         <button className="dpl-icon-btn" title={t('companion.close')} aria-label={t('companion.close')} onClick={onClose}><X size={13} /></button>

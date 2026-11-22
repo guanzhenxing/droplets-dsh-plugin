@@ -20,6 +20,14 @@ const SPACES = [
 export function DropletsPanel({ api, SessionProvider, renderSlot }) {
   const [space, setSpace] = useState('feed');
   const [companionOpen, setCompanionOpen] = useState(false);
+  // Docked = a real flex pane that squeezes the spaces (never covers the
+  // article); floating = the draggable fixed window. Panel owns the form so
+  // it can place the component in the right DOM position for each shape.
+  const [companionForm, setCompanionForm] = useState(() => localStorage.getItem('droplets.ai.form') ?? 'docked');
+  const changeCompanionForm = useCallback((next) => {
+    setCompanionForm(next);
+    try { localStorage.setItem('droplets.ai.form', next); } catch { /* ignore */ }
+  }, []);
   const [material, setMaterial] = useState({ space: 'feed', title: '' });
 
   // Window focus triggers a light vault rescan (index staleness guard).
@@ -104,18 +112,31 @@ export function DropletsPanel({ api, SessionProvider, renderSlot }) {
         </div>
       </header>
 
-      <div className="dpl-body">
+      <div className={'dpl-body' + (companionOpen && companionForm === 'docked' ? ' has-docked' : '')}>
         <div className="dpl-space">
           {space === 'feed' && <FeedView api={api} onMaterial={onMaterial} onJumpSpace={setSpace} />}
           {space === 'inbox' && <InboxView api={api} onMaterial={onMaterial} />}
           {space === 'vault' && <VaultView api={api} onMaterial={onMaterial} />}
         </div>
+        {companionOpen && companionForm === 'docked' && (
+          <Companion
+            api={api}
+            material={material}
+            form="docked"
+            onFormChange={setCompanionForm}
+            onClose={() => setCompanionOpen(false)}
+            SessionProvider={SessionProvider}
+            renderSlot={renderSlot}
+          />
+        )}
       </div>
 
-      {companionOpen && (
+      {companionOpen && companionForm === 'floating' && (
         <Companion
           api={api}
           material={material}
+          form="floating"
+          onFormChange={setCompanionForm}
           onClose={() => setCompanionOpen(false)}
           SessionProvider={SessionProvider}
           renderSlot={renderSlot}
