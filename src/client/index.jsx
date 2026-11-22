@@ -10,7 +10,7 @@ import { nativeChatBridge } from './native-chat.js';
 import { DropletIcon } from './components.jsx';
 import zh from '../../locale/zh.json';
 import en from '../../locale/en.json';
-import './styles.css';
+import PANEL_CSS from './styles.css';
 
 const PLUGIN_ID = 'droplets-dsh';
 export const PANEL_ID = 'droplets';
@@ -55,6 +55,16 @@ const TYPERT_REMOTE = {
 export const inject = ['slots', 'layout', 'remote'];
 
 export async function apply(ctx) {
+  // Panel styles as one managed <style> node (text loader; bare css imports
+  // are silently dropped when bundling to CJS, which once shipped an
+  // unstyled panel — the artifact test freezes this contract).
+  ctx.effect(() => {
+    const style = document.createElement('style');
+    style.textContent = PANEL_CSS;
+    document.head.appendChild(style);
+    return () => style.remove();
+  }, 'droplets: panel styles');
+
   try {
     await ctx.remote.$mount(TYPERT_REMOTE);
   } catch (error) {

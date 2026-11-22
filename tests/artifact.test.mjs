@@ -46,6 +46,13 @@ test('host bundle preserves request parameter names (typert introspection)', () 
   }
 });
 
+test('client bundle carries the panel stylesheet (no silent unstyled ship)', () => {
+  const source = readFileSync(new URL('../client.js', import.meta.url), 'utf8');
+  assert.ok(/\.dpl-root\s*\{/.test(source), 'panel css rules present in bundle');
+  assert.ok(/createElement\(['"]style['"]\)/.test(source), 'style node injection present');
+  assert.ok(!source.includes("import './styles.css'"), 'no bare css import left behind');
+});
+
 test('client bundle is a ModuleLoader wrapper with matching id', () => {
   const clientPath = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', 'client.js');
   assert.ok(existsSync(clientPath), 'client.js committed');

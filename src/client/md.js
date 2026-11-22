@@ -42,7 +42,11 @@ function inline(text) {
 
 /** Render a Markdown document to HTML (pre-sanitization). */
 export function markdownToHtml(markdown) {
-  const lines = String(markdown ?? '').replace(/\r\n/g, '\n').split('\n');
+  let text = String(markdown ?? '').replace(/\r\n/g, '\n');
+  // Strip a leading YAML frontmatter block: it is metadata, not content.
+  const frontmatter = /^---\n([\s\S]*?)\n---(?:\n|$)/.exec(text);
+  if (frontmatter) text = text.slice(frontmatter[0].length);
+  const lines = text.split('\n');
   const out = [];
   let paragraph = [];
   let listType;
