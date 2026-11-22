@@ -79,21 +79,22 @@ export function AuxRail({ headings, containerRef, onAskAi }) {
           key={index}
           type="button"
           className={'dpl-aux-tick' + (index === activeIdx ? ' is-active' : '')}
-          style={{ width: TICK_LEVEL[Math.min(Math.max(heading.level - 2, 0), 4)] * 4 }}
-          title={heading.text}
           aria-label={'跳转到 ' + heading.text}
+          aria-current={index === activeIdx ? 'true' : 'false'}
           onMouseEnter={() => setHoverIdx(index)}
           onClick={() => scrollToHeading(index)}
-        />
+        >
+          <span className="dpl-aux-bar" style={{ width: TICK_LEVEL[Math.min(Math.max(heading.level - 2, 0), 4)] * 4 }} />
+        </button>
       ))}
       {headings.length > 0 ? (
-        <button type="button" className="dpl-aux-tick is-action" onClick={scrollTop} data-tip="回到顶部" aria-label="回到顶部">
-          <ArrowUp size={11} />
+        <button type="button" className="dpl-aux-round" onClick={scrollTop} data-tip="回到顶部" aria-label="回到顶部">
+          <ArrowUp size={14} />
         </button>
       ) : null}
       {onAskAi ? (
         <button type="button" className="dpl-aux-ask" onClick={onAskAi} data-tip="问 AI" aria-label="问 AI">
-          <Sparkles size={13} />
+          <Sparkles size={14} />
         </button>
       ) : null}
     </div>
