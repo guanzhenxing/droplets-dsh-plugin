@@ -37,6 +37,7 @@
   },
   "feed": {
     "all": "All subscriptions",
+    "sources": "Sources",
     "groups": "Groups",
     "ungrouped": "Ungrouped",
     "addSubscription": "Add subscription",

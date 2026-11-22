@@ -37,6 +37,7 @@
   },
   "feed": {
     "all": "全部订阅",
+    "sources": "订阅源",
     "groups": "分组",
     "ungrouped": "未分组",
     "addSubscription": "添加订阅",

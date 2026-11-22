@@ -90,10 +90,12 @@ export function FeedView({ api, frozen, onMaterial }) {
     onMaterial({ space: 'feed', key: selected.key, title: selected.title, url: selected.url, selection, content: '' });
   }
 
+  // Aggregate rows ('all' and 'group:*') are rendered by the dedicated
+  // "all" row above and the group headings below — never list them twice.
   const groupsList = useMemo(() => {
     const groups = new Map();
     for (const item of channels) {
-      if (item.kind === 'aggregate' && item.key !== 'all') continue;
+      if (item.kind !== 'feed') continue;
       const key = item.group ?? '';
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(item);
@@ -103,9 +105,9 @@ export function FeedView({ api, frozen, onMaterial }) {
 
   return (
     <div className="dpl-feed">
-      <aside className="dpl-col dpl-sources" aria-label={t('feed.all')}>
+      <aside className="dpl-col dpl-sources" aria-label={t('feed.sources')}>
         <div className="dpl-col-head">
-          <span className="dpl-pane-title">{t('feed.all')}</span>
+          <span className="dpl-pane-title">{t('feed.sources')}</span>
           <button type="button" className="dpl-icon-btn" title={t('feed.addSubscription')} aria-label={t('feed.addSubscription')} onClick={() => setManaging(true)}>＋</button>
           <button type="button" className="dpl-icon-btn" title={t('feed.manage')} aria-label={t('feed.manage')} onClick={() => setManaging(true)}>☰</button>
           <button type="button" className="dpl-icon-btn" title={t('feed.exportOpml')} aria-label={t('feed.exportOpml')} onClick={async () => {

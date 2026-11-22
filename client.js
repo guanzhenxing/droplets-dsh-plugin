@@ -75,6 +75,7 @@ var zh_default = {
   },
   feed: {
     all: "\u5168\u90E8\u8BA2\u9605",
+    sources: "\u8BA2\u9605\u6E90",
     groups: "\u5206\u7EC4",
     ungrouped: "\u672A\u5206\u7EC4",
     addSubscription: "\u6DFB\u52A0\u8BA2\u9605",
@@ -226,6 +227,7 @@ var en_default = {
   },
   feed: {
     all: "All subscriptions",
+    sources: "Sources",
     groups: "Groups",
     ungrouped: "Ungrouped",
     addSubscription: "Add subscription",
@@ -2693,7 +2695,7 @@ function FeedView({ api, frozen, onMaterial }) {
   const groupsList = (0, import_react2.useMemo)(() => {
     const groups = /* @__PURE__ */ new Map();
     for (const item of channels) {
-      if (item.kind === "aggregate" && item.key !== "all") continue;
+      if (item.kind !== "feed") continue;
       const key = item.group ?? "";
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(item);
@@ -2701,9 +2703,9 @@ function FeedView({ api, frozen, onMaterial }) {
     return [...groups.entries()];
   }, [channels]);
   return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "dpl-feed", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("aside", { className: "dpl-col dpl-sources", "aria-label": t("feed.all"), children: [
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("aside", { className: "dpl-col dpl-sources", "aria-label": t("feed.sources"), children: [
       /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "dpl-col-head", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "dpl-pane-title", children: t("feed.all") }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "dpl-pane-title", children: t("feed.sources") }),
         /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", className: "dpl-icon-btn", title: t("feed.addSubscription"), "aria-label": t("feed.addSubscription"), onClick: () => setManaging(true), children: "\uFF0B" }),
         /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", className: "dpl-icon-btn", title: t("feed.manage"), "aria-label": t("feed.manage"), onClick: () => setManaging(true), children: "\u2630" }),
         /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", className: "dpl-icon-btn", title: t("feed.exportOpml"), "aria-label": t("feed.exportOpml"), onClick: async () => {
