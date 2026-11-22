@@ -29,6 +29,7 @@ function defaults() {
     },
     subscriptions: [],
     read: {},
+    states: {},
     favorites: {},
     inbox: [],
     // { path, builtAt, files: { [relPath]: { mtimeMs, size, title, tags, links } } }
@@ -61,7 +62,13 @@ export class DropletsStore {
       if (!Array.isArray(this.data.subscriptions)) this.data.subscriptions = [];
       if (!Array.isArray(this.data.inbox)) this.data.inbox = [];
       if (!this.data.read || typeof this.data.read !== 'object') this.data.read = {};
+      if (!this.data.states || typeof this.data.states !== 'object') this.data.states = {};
       if (!this.data.favorites || typeof this.data.favorites !== 'object') this.data.favorites = {};
+      // migration: legacy read map -> 'seen' states (droplets three-state model)
+      for (const [key, value] of Object.entries(this.data.read)) {
+        if (this.data.states[key] === undefined) this.data.states[key] = 'seen';
+        delete this.data.read[key];
+      }
       if (!this.data.companionContexts || typeof this.data.companionContexts !== 'object') this.data.companionContexts = {};
     } catch (error) {
       if (error?.code !== 'ENOENT') {

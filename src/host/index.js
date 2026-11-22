@@ -183,7 +183,7 @@ export class DropletsService extends TypertRemoteService {
   async listChannels() {
     await this.ready;
     const data = this.store.data;
-    const countUnread = (entries) => entries.reduce((sum, entry) => (data.read[entry.key] ? sum : sum + 1), 0);
+    const countUnread = (entries) => entries.reduce((sum, entry) => (data.states[entry.key] ? sum : sum + 1), 0);
     const channels = [{
       key: 'all',
       kind: 'aggregate',
@@ -248,10 +248,129 @@ export class DropletsService extends TypertRemoteService {
       publishedAt: entry.publishedAt,
       url: entry.url,
       image: data.settings.showImages === false ? undefined : entry.image,
-      read: data.read[entry.key] !== undefined,
+      read: data.states[entry.key] !== undefined,
+      state: data.states[entry.key] ?? 'unseen',
       favorite: data.favorites[entry.key] !== undefined,
       hasBody: typeof entry.html === 'string' && entry.html !== '',
     };
+  }
+
+  // ------------------------------------------------------------------
+  // droplets-shaped feed API (RssFeed / RssItemView semantics)
+  // ------------------------------------------------------------------
+
+  /** Feeds in the droplets RssFeed shape (groupName, enabled, counts). */
+  async listFeeds() {
+    await this.ready;
+    const data = this.store.data;
+    return {
+      feeds: data.subscriptions.map((sub) => ({
+        id: sub.id,
+        title: sub.name,
+        url: sub.url,
+        groupName: sub.group ?? '',
+        enabled: sub.enabled !== false,
+        lastFetchAt: sub.lastFetchedAt ?? null,
+        lastError: sub.lastError ?? null,
+        unreadCount: (sub.entries ?? []).filter((entry) => data.states[entry.key] === undefined).length,
+        itemCount: (sub.entries ?? []).length,
+      })),
+    };
+  }
+
+  /**
+   * Items in the droplets RssItemView shape. sourceId undefined = all feeds
+   * (aggregated view); groupName filters to one group (mutually exclusive
+   * with sourceId, exactly like droplets).
+   */
+  async listItems(request) {
+    const { sourceId, groupName, limit } = request ?? {};
+    await this.ready;
+    const data = this.store.data;
+    const size = Math.min(Math.max(limit ?? 120, 1), 500);
+    let pool = [];
+    if (typeof sourceId === 'string' && sourceId) {
+      const sub = data.subscriptions.find((candidate) => candidate.id === sourceId);
+      pool = sub ? this.entriesOfFeed(sub) : [];
+    } else if (typeof groupName === 'string') {
+      pool = data.subscriptions
+        .filter((sub) => (sub.group ?? '') === groupName)
+        .flatMap((sub) => this.entriesOfFeed(sub));
+    } else {
+      pool = data.subscriptions.flatMap((sub) => this.entriesOfFeed(sub));
+    }
+    pool.sort(sortByDate);
+    return {
+      items: pool.slice(0, size).map((entry) => ({
+        sourceId: entry.channelKey,
+        key: entry.key,
+        title: entry.title,
+        link: entry.url ?? '',
+        summary: entry.summary ?? '',
+        content: '',
+        contentHtml: entry.html ?? '',
+        publishedAt: entry.publishedAt ?? null,
+        state: data.states[entry.key] ?? 'unseen',
+      })),
+    };
+  }
+
+  /** Three-state item marking: 'seen' | 'skipped' | 'unseen' (clears). */
+  async setItemState(request) {
+    const { keys, state } = request ?? {};
+    await this.ready;
+    const list = Array.isArray(keys) ? keys : [keys];
+    for (const key of list) {
+      if (typeof key !== 'string') continue;
+      if (state === 'unseen') delete this.store.data.states[key];
+      else if (state === 'seen' || state === 'skipped') this.store.data.states[key] = state;
+    }
+    this.pruneStateIds();
+    this.store.touch();
+    return { ok: true };
+  }
+
+  /** Keep the states map bounded like the legacy read map. */
+  pruneStateIds() {
+    const states = this.store.data.states;
+    const keys = Object.keys(states);
+    if (keys.length <= 10000) return;
+    // No timestamps on states; keep insertion order and hard-cap the map.
+    const ranked = keys;
+    for (const key of ranked.slice(10000)) delete states[key];
+  }
+
+  /** Mark everything in a scope as seen (sourceId / groupName / all). */
+  async markAllRead(request) {
+    const { sourceId, groupName } = request ?? {};
+    await this.ready;
+    const states = this.store.data.states;
+    let channel = 'all';
+    if (typeof sourceId === 'string' && sourceId) channel = sourceId;
+    else if (typeof groupName === 'string') channel = 'group:' + groupName;
+    let count = 0;
+    for (const entry of this.entriesOf(channel)) {
+      if (states[entry.key] === undefined) {
+        states[entry.key] = 'seen';
+        count += 1;
+      }
+    }
+    this.store.touch();
+    return { marked: count };
+  }
+
+  /** Feed management patch: rename / regroup / enable-disable. */
+  async setFeed(request) {
+    const { id, patch } = request ?? {};
+    await this.ready;
+    const sub = this.store.data.subscriptions.find((candidate) => candidate.id === id);
+    if (!sub) throw new Error(`no subscription ${id}`);
+    if (typeof patch?.name === 'string' && patch.name.trim() !== '') sub.name = patch.name.trim();
+    if (typeof patch?.group === 'string') sub.group = patch.group.trim() || undefined;
+    if (typeof patch?.enabled === 'boolean') sub.enabled = patch.enabled;
+    this.store.touch();
+    await this.store.flush();
+    return { ok: true };
   }
 
   async listEntries(request) {
@@ -264,7 +383,7 @@ export class DropletsService extends TypertRemoteService {
       const needle = search.trim().toLowerCase();
       entries = entries.filter((entry) => entry.title.toLowerCase().includes(needle) || entry.summary?.toLowerCase().includes(needle));
     }
-    if (filter === 'unread') entries = entries.filter((entry) => this.store.data.read[entry.key] === undefined);
+    if (filter === 'unread') entries = entries.filter((entry) => this.store.data.states[entry.key] === undefined);
     if (filter === 'favorite' || filter === 'favorites') entries = entries.filter((entry) => this.store.data.favorites[entry.key] !== undefined);
     const offset = typeof cursor === 'string' && cursor.startsWith('off:') ? Number(cursor.slice(4)) || 0 : 0;
     const page = entries.slice(offset, offset + size);
@@ -311,29 +430,18 @@ export class DropletsService extends TypertRemoteService {
     return out;
   }
 
+  /** Legacy two-state marking kept for the agent tools; writes the states map. */
   async setRead(request) {
     const { keys, read } = request ?? {};
     await this.ready;
     const list = Array.isArray(keys) ? keys : [keys];
     for (const key of list) {
       if (typeof key !== 'string') continue;
-      if (read === false) delete this.store.data.read[key];
-      else this.store.data.read[key] = Date.now();
+      if (read === false) delete this.store.data.states[key];
+      else this.store.data.states[key] = 'seen';
     }
-    this.pruneReadIds();
     this.store.touch();
     return { ok: true };
-  }
-
-  /** Keep the read map bounded: favorites and the newest N survive. */
-  pruneReadIds() {
-    const data = this.store.data;
-    const keys = Object.keys(data.read);
-    if (keys.length <= 5000) return;
-    const ranked = keys.sort((a, b) => data.read[b] - data.read[a]);
-    for (const key of ranked.slice(5000)) {
-      if (!data.favorites[key]) delete data.read[key];
-    }
   }
 
   async setFavorite(request) {
@@ -513,7 +621,8 @@ export class DropletsService extends TypertRemoteService {
   }
 
   selectSubscriptions(channel) {
-    const subs = this.store.data.subscriptions;
+    // Disabled feeds never auto-refresh (droplets refresh strategy minimum).
+    const subs = this.store.data.subscriptions.filter((sub) => sub.enabled !== false);
     if (typeof channel === 'string' && channel !== 'all' && !channel.startsWith('group:')) {
       const sub = subs.find((candidate) => candidate.id === channel);
       return sub ? [sub] : [];
@@ -766,6 +875,7 @@ export class DropletsService extends TypertRemoteService {
   const names = [
     // feed
     'listChannels', 'listEntries', 'getEntry', 'searchEntries', 'setRead', 'setFavorite',
+    'listFeeds', 'listItems', 'setItemState', 'markAllRead', 'setFeed',
     'listSubscriptions', 'addSubscription', 'removeSubscription', 'updateSubscription',
     'opmlPreview', 'opmlImport', 'opmlExport', 'refresh',
     // inbox

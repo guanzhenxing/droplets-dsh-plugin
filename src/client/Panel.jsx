@@ -5,7 +5,6 @@ import { FeedView } from './FeedView.jsx';
 import { InboxView } from './InboxView.jsx';
 import { VaultView } from './VaultView.jsx';
 import { Companion } from './Companion.jsx';
-import { FrozenOrder } from './frozen-sort.js';
 
 const SPACES = [
   { id: 'feed', label: () => t('spaces.feed') },
@@ -24,7 +23,6 @@ export function DropletsPanel({ api, SessionProvider, renderSlot }) {
   const [material, setMaterial] = useState({ space: 'feed', title: '' });
   const [settings, setSettings] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
-  const frozen = useMemo(() => new FrozenOrder(), []);
 
   // Window focus triggers a light vault rescan (index staleness guard).
   const onFocus = useCallback(() => { void api.vaultReindex?.().catch(() => {}); }, [api]);
@@ -73,7 +71,7 @@ export function DropletsPanel({ api, SessionProvider, renderSlot }) {
 
       <div className={'dpl-body' + (companionOpen ? ' has-companion' : '')}>
         <div className="dpl-space">
-          {space === 'feed' && <FeedView api={api} frozen={frozen} onMaterial={onMaterial} onJumpSpace={setSpace} />}
+          {space === 'feed' && <FeedView api={api} onMaterial={onMaterial} onJumpSpace={setSpace} />}
           {space === 'inbox' && <InboxView api={api} onMaterial={onMaterial} />}
           {space === 'vault' && <VaultView api={api} onMaterial={onMaterial} />}
         </div>
