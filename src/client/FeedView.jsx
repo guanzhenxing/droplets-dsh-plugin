@@ -105,54 +105,67 @@ export function FeedView({ api, frozen, onMaterial }) {
     <div className="dpl-feed">
       <aside className="dpl-col dpl-sources" aria-label={t('feed.all')}>
         <div className="dpl-col-head">
-          <button type="button" className="dpl-btn" onClick={() => setManaging(true)}>{t('feed.manage')}</button>
-          <button type="button" className="dpl-icon-btn" title={t('feed.importOpml')} onClick={() => setOpml(true)}>⇥</button>
-          <button type="button" className="dpl-icon-btn" title={t('feed.exportOpml')} onClick={async () => {
+          <span className="dpl-pane-title">{t('feed.all')}</span>
+          <button type="button" className="dpl-icon-btn" title={t('feed.addSubscription')} aria-label={t('feed.addSubscription')} onClick={() => setManaging(true)}>＋</button>
+          <button type="button" className="dpl-icon-btn" title={t('feed.manage')} aria-label={t('feed.manage')} onClick={() => setManaging(true)}>☰</button>
+          <button type="button" className="dpl-icon-btn" title={t('feed.exportOpml')} aria-label={t('feed.exportOpml')} onClick={async () => {
             const { xml } = await api.opmlExport().catch(() => ({ xml: '' }));
             if (xml) download('droplets-subscriptions.opml', xml, 'text/xml');
-          }}>⇤</button>
+          }}>⇩</button>
         </div>
-        <button
-          type="button"
-          className={'dpl-source' + (channel === 'all' ? ' is-active' : '')}
-          onClick={() => setChannel('all')}
-        >
-          <span>{t('feed.all')}</span>
-          <em>{channels.find((item) => item.key === 'all')?.unread ?? 0}</em>
-        </button>
-        {groupsList.map(([group, items]) => (
-          <div className="dpl-source-group" key={group || '__none__'}>
-            {group !== '' && <div className="dpl-source-group-name">{group}</div>}
-            {items.map((item) => (
-              <button
-                type="button"
-                key={item.key}
-                className={'dpl-source' + (channel === item.key ? ' is-active' : '') + (item.lastError ? ' has-error' : '')}
-                title={item.lastError ? t('feed.lastError') + ': ' + item.lastError : item.name}
-                onClick={() => setChannel(item.key)}
-              >
-                <span>{item.name}</span>
-                <em>{item.unread > 0 ? item.unread : ''}</em>
-              </button>
-            ))}
+        <div className="dpl-source-tools">
+          <div className="dpl-search">
+            <input
+              type="search"
+              placeholder={t('common.searchPlaceholder')}
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
           </div>
-        ))}
+          <button
+            type="button"
+            className="dpl-icon-btn"
+            title={t('common.refresh')}
+            aria-label={t('common.refresh')}
+            disabled={busy}
+            onClick={() => void refresh()}
+          >{busy ? '⋯' : '⟳'}</button>
+        </div>
+        <div className="dpl-sources-list">
+          <button
+            type="button"
+            className={'dpl-source' + (channel === 'all' ? ' is-active' : '')}
+            onClick={() => setChannel('all')}
+          >
+            <span>{t('feed.all')}</span>
+            <em>{channels.find((item) => item.key === 'all')?.unread ?? 0}</em>
+          </button>
+          {groupsList.map(([group, items]) => (
+            <div className="dpl-source-group" key={group || '__none__'}>
+              {group !== '' && <div className="dpl-source-group-name">{group}</div>}
+              {items.map((item) => (
+                <button
+                  type="button"
+                  key={item.key}
+                  className={'dpl-source' + (channel === item.key ? ' is-active' : '') + (item.lastError ? ' has-error' : '')}
+                  title={item.lastError ? t('feed.lastError') + ': ' + item.lastError : item.name}
+                  onClick={() => setChannel(item.key)}
+                >
+                  <span>{item.name}</span>
+                  <em>{item.unread > 0 ? item.unread : ''}</em>
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
       </aside>
 
       <section className="dpl-col dpl-entries" aria-label={t('spaces.feed')}>
         <div className="dpl-col-head">
           <button type="button" className={'dpl-chip' + (filter === 'all' ? ' is-active' : '')} onClick={() => setFilter('all')}>{t('feed.allEntries')}</button>
-          <button type="button" className={'dpl-chip' + (filter === 'unread' ? ' is-active' : '')} onClick={() => setFilter('unread')}>{t('feed.unreadOnly')} {unreadCount > 0 ? unreadCount : ''}</button>
+          <button type="button" className={'dpl-chip' + (filter === 'unread' ? ' is-active' : '')} onClick={() => setFilter('unread')}>{t('feed.unreadOnly')}{unreadCount > 0 ? ' ' + unreadCount : ''}</button>
           <button type="button" className={'dpl-chip' + (filter === 'favorite' ? ' is-active' : '')} onClick={() => setFilter('favorite')}>{t('feed.favorites')}</button>
-          <button type="button" className="dpl-icon-btn" title={t('common.refresh')} disabled={busy} onClick={() => void refresh()}>{busy ? '⋯' : '⟳'}</button>
-        </div>
-        <div className="dpl-search">
-          <input
-            type="search"
-            placeholder={t('common.searchPlaceholder')}
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
+          <button type="button" className="dpl-icon-btn" title={t('feed.importOpml')} aria-label={t('feed.importOpml')} onClick={() => setOpml(true)}>⇧</button>
         </div>
         {error && <div className="dpl-error" role="alert">{error}</div>}
         {entries.length === 0 && !busy && <div className="dpl-empty">{t('feed.noEntries')}</div>}
