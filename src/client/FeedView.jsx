@@ -243,6 +243,7 @@ function ItemList(props) {
         <button type="button" className="dpl-icon-btn" data-tip="标记全部为已读" aria-label="标记全部为已读" disabled={unseenCount === 0} onClick={() => setConfirmMarkAllRead(true)}>
           <CheckCheck size={15} />
         </button>
+        <span className="dpl-flex-fill" />
         <PanelCollapseButton onClick={onCollapse} />
       </div>
       <div className="dpl-entry-scroll" ref={listScroll}>

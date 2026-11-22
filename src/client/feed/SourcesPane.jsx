@@ -69,6 +69,7 @@ export function SourcesPane({
     <aside className="dpl-pane dpl-sources" aria-label="订阅源">
       <div className="dpl-pane-head">
         <span className="dpl-pane-title">订阅源</span>
+        <span className="dpl-flex-fill" />
         <PanelCollapseButton onClick={onCollapse} />
       </div>
       <div className="dpl-sources-actions">

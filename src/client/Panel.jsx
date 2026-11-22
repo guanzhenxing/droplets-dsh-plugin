@@ -142,9 +142,6 @@ export function DropletsPanel({ api, SessionProvider, renderSlot }) {
           renderSlot={renderSlot}
         />
       )}
-
-        />
-      )}
     </div>
   );
 }

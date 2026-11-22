@@ -3441,6 +3441,7 @@ function SourcesPane({
   return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("aside", { className: "dpl-pane dpl-sources", "aria-label": "\u8BA2\u9605\u6E90", children: [
     /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "dpl-pane-head", children: [
       /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: "dpl-pane-title", children: "\u8BA2\u9605\u6E90" }),
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: "dpl-flex-fill" }),
       /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(PanelCollapseButton, { onClick: onCollapse })
     ] }),
     /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "dpl-sources-actions", children: [
@@ -4359,6 +4360,7 @@ function ItemList(props) {
       /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("button", { type: "button", className: "dpl-icon-btn" + (viewFilter === "seen" ? " is-toggled" : ""), "data-tip": "\u53EA\u663E\u793A\u5DF2\u8BFB", "aria-label": "\u53EA\u663E\u793A\u5DF2\u8BFB", "aria-pressed": viewFilter === "seen", onClick: () => setViewFilter(viewFilter === "seen" ? "all" : "seen"), children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(CircleCheck, { size: 15 }) }),
       /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("button", { type: "button", className: "dpl-icon-btn" + (viewFilter === "skipped" ? " is-toggled" : ""), "data-tip": "\u53EA\u663E\u793A\u7565\u8FC7", "aria-label": "\u53EA\u663E\u793A\u7565\u8FC7", "aria-pressed": viewFilter === "skipped", onClick: () => setViewFilter(viewFilter === "skipped" ? "all" : "skipped"), children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Archive, { size: 15 }) }),
       /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("button", { type: "button", className: "dpl-icon-btn", "data-tip": "\u6807\u8BB0\u5168\u90E8\u4E3A\u5DF2\u8BFB", "aria-label": "\u6807\u8BB0\u5168\u90E8\u4E3A\u5DF2\u8BFB", disabled: unseenCount === 0, onClick: () => setConfirmMarkAllRead(true), children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(CheckCheck, { size: 15 }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: "dpl-flex-fill" }),
       /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(PanelCollapseButton, { onClick: onCollapse })
     ] }),
     /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "dpl-entry-scroll", ref: listScroll, children: [
@@ -107763,8 +107765,7 @@ function DropletsPanel({ api, SessionProvider, renderSlot }) {
         SessionProvider,
         renderSlot
       }
-    ),
-    "/> )}"
+    )
   ] });
 }
 
