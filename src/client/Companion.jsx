@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Pin, PinOff, Sparkles, X } from 'lucide-react';
 import { t } from './i18n.js';
 
 /**
@@ -17,6 +18,40 @@ import { t } from './i18n.js';
  */
 export function Companion({ api, material, onClose, SessionProvider, renderSlot, storagePrefix = 'droplets' }) {
   const [workspaceId, setWorkspaceId] = useState(() => api.defaultChatWorkspace?.());
+  // Floating / docked form (droplets decision 2.26/2.29): floating by default
+  // — a fixed, draggable, viewport-clamped window; docked pins to the right
+  // edge of the panel body. Position and form persist in localStorage.
+  const [form, setForm] = useState(() => localStorage.getItem(storagePrefix + '.ai.form') ?? 'floating');
+  const [pos, setPos] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(storagePrefix + '.ai.pos') ?? 'null'); } catch { return null; }
+  });
+  const dragRef = useRef(null);
+  const clampPos = useCallback((p) => {
+    const width = Math.min(480, window.innerWidth - 32);
+    return {
+      x: Math.min(0, Math.max(-Math.max(0, window.innerWidth - width - 32), p?.x ?? 0)),
+      y: Math.max(0, Math.min(Math.max(0, window.innerHeight - 56 - 220), p?.y ?? 0)),
+    };
+  }, []);
+  const toggleForm = () => {
+    const next = form === 'docked' ? 'floating' : 'docked';
+    setForm(next);
+    try { localStorage.setItem(storagePrefix + '.ai.form', next); } catch { /* ignore */ }
+  };
+  const onHeaderPointerDown = (event) => {
+    if (form !== 'floating') return;
+    const base = clampPos(pos ?? { x: 0, y: 0 });
+    dragRef.current = { startX: event.clientX, startY: event.clientY, baseX: base.x, baseY: base.y };
+    event.target.setPointerCapture?.(event.pointerId);
+  };
+  const onHeaderPointerMove = (event) => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    const next = clampPos({ x: drag.baseX + (event.clientX - drag.startX), y: drag.baseY + (event.clientY - drag.startY) });
+    setPos(next);
+    try { localStorage.setItem(storagePrefix + '.ai.pos', JSON.stringify(next)); } catch { /* ignore */ }
+  };
+  const onHeaderPointerUp = () => { dragRef.current = null; };
   const [chat, setChat] = useState(null);
   const [error, setError] = useState('');
   const [actionError, setActionError] = useState('');
@@ -135,12 +170,30 @@ export function Companion({ api, material, onClose, SessionProvider, renderSlot,
     }
   }
 
+  const clamped = clampPos(pos ?? { x: 0, y: 0 });
+  const shellClass = 'dpl-companion' + (form === 'floating' ? ' is-floating' : ' is-docked');
+
   return (
-    <aside className="dpl-companion" aria-label={t('companion.title')}>
-      <header className="dpl-companion-header">
-        <strong>{material.space === 'vault-search' ? t('companion.askVaultTitle') : t('companion.title')}</strong>
+    <aside
+      className={shellClass}
+      aria-label={t('companion.title')}
+      {...(form === 'floating' ? {
+        style: { top: 'calc(3.5rem + ' + clamped.y + 'px)', right: 'calc(1rem - ' + clamped.x + 'px)' },
+      } : {})}
+    >
+      <header
+        className={'dpl-companion-header' + (form === 'floating' ? ' is-draggable' : '')}
+        onPointerDown={onHeaderPointerDown}
+        onPointerMove={onHeaderPointerMove}
+        onPointerUp={onHeaderPointerUp}
+      >
+        <Sparkles size={13} className="dpl-companion-spark" />
+        <strong className="dpl-truncate">{material.space === 'vault-search' ? t('companion.askVaultTitle') : t('companion.title')}</strong>
         <button className="dpl-icon-btn" title={t('companion.newChat')} aria-label={t('companion.newChat')} onClick={() => void start(true)} disabled={busy || !workspaceId}>＋</button>
-        <button className="dpl-icon-btn" title={t('companion.close')} aria-label={t('companion.close')} onClick={onClose}>✕</button>
+        <button className="dpl-icon-btn" title={form === 'docked' ? '切换为悬浮窗' : '停靠靠右'} aria-label={form === 'docked' ? '切换为悬浮窗' : '停靠靠右'} onClick={toggleForm}>
+          {form === 'docked' ? <PinOff size={13} /> : <Pin size={13} />}
+        </button>
+        <button className="dpl-icon-btn" title={t('companion.close')} aria-label={t('companion.close')} onClick={onClose}><X size={13} /></button>
       </header>
       <div className="dpl-companion-context">
         <strong>{material.title}</strong>
