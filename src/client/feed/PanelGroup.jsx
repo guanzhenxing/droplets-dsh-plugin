@@ -135,7 +135,7 @@ export function PanelGroup({ page = 'feed', panels }) {
 /** Uniform panel-head collapse button («). */
 export function PanelCollapseButton({ onClick, label }) {
   return (
-    <button type="button" className="dpl-icon-btn dpl-panel-collapse" onClick={onClick} title="收起面板" aria-label={label ?? '收起面板'}>
+    <button type="button" className="dpl-icon-btn dpl-panel-collapse" onClick={onClick} data-tip="收起面板" aria-label={label ?? '收起面板'}>
       <ChevronLeft size={15} />
     </button>
   );

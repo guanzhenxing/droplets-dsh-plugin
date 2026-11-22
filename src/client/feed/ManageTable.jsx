@@ -207,7 +207,7 @@ export function ManageTable({ api, feeds, onBack, onChanged }) {
             <span className="dpl-right dpl-manage-count">{feed.unreadCount > 0 ? feed.unreadCount : '—'}/{feed.itemCount}</span>
             <span className="dpl-right dpl-manage-time">{feed.lastFetchAt ? formatWhenFull(feed.lastFetchAt) : '从未'}</span>
             <span className={'dpl-health' + (feed.lastError ? ' is-error' : feed.enabled ? ' is-ok' : ' is-off')} title={feed.lastError ?? (feed.enabled ? '正常' : '已停用')} />
-            <button type="button" className="dpl-icon-btn" title="编辑" aria-label="编辑" onClick={(e) => { e.stopPropagation(); setEditingId(feed.id); }}>
+            <button type="button" className="dpl-icon-btn" data-tip="编辑" aria-label="编辑" onClick={(e) => { e.stopPropagation(); setEditingId(feed.id); }}>
               <Pencil size={13} />
             </button>
           </div>

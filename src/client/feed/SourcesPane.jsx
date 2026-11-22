@@ -85,7 +85,7 @@ export function SourcesPane({
         </div>
         <div className="dpl-toolbar-actions">
           <div className="dpl-relative">
-            <button type="button" className="dpl-icon-btn dpl-tb" title="排序（会话内；「未分组」恒排最后）" onClick={() => setSortMenuOpen((v) => !v)}>
+            <button type="button" className="dpl-icon-btn dpl-tb" data-tip="排序（会话内；「未分组」恒排最后）" onClick={() => setSortMenuOpen((v) => !v)}>
               <ArrowUpNarrowWide size={14} />
             </button>
             {sortMenuOpen ? (
@@ -103,7 +103,7 @@ export function SourcesPane({
               </div>
             ) : null}
           </div>
-          <button type="button" className={'dpl-icon-btn dpl-tb' + (autoReveal ? ' is-toggled' : '')} title="自动定位（选中源变化时展开其所在组并滚动到该源）" onClick={() => setAutoReveal(!autoReveal)}>
+          <button type="button" className={'dpl-icon-btn dpl-tb' + (autoReveal ? ' is-toggled' : '')} data-tip="自动定位（选中源变化时展开其所在组并滚动到该源）" onClick={() => setAutoReveal(!autoReveal)}>
             <ScanSearch size={14} />
           </button>
           <button type="button" className="dpl-icon-btn dpl-tb" title={anyGroupExpanded ? '全部折叠' : '全部展开'} onClick={() => setCollapsedGroups(anyGroupExpanded ? new Set(groupNames) : new Set())}>

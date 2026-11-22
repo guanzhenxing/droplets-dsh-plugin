@@ -224,19 +224,19 @@ function ItemList(props) {
             setPill((value) => value + 1);
           }}>新增 {newCount} 条</button>
         ) : null}
-        <button type="button" className="dpl-icon-btn" title="刷新全部" aria-label="刷新全部" disabled={spinning} onClick={onRefresh}>
+        <button type="button" className="dpl-icon-btn" data-tip="刷新全部" aria-label="刷新全部" disabled={spinning} onClick={onRefresh}>
           {spinning ? <Loader2 size={15} className="dpl-spin" /> : <RefreshCw size={15} />}
         </button>
-        <button type="button" className={'dpl-icon-btn' + (viewFilter === 'unseen' ? ' is-toggled' : '')} title="只显示未读" aria-label="只显示未读" aria-pressed={viewFilter === 'unseen'} onClick={() => setViewFilter(viewFilter === 'unseen' ? 'all' : 'unseen')}>
+        <button type="button" className={'dpl-icon-btn' + (viewFilter === 'unseen' ? ' is-toggled' : '')} data-tip="只显示未读" aria-label="只显示未读" aria-pressed={viewFilter === 'unseen'} onClick={() => setViewFilter(viewFilter === 'unseen' ? 'all' : 'unseen')}>
           <Circle size={14} className={viewFilter === 'unseen' ? 'dpl-fill' : undefined} />
         </button>
-        <button type="button" className={'dpl-icon-btn' + (viewFilter === 'seen' ? ' is-toggled' : '')} title="只显示已读" aria-label="只显示已读" aria-pressed={viewFilter === 'seen'} onClick={() => setViewFilter(viewFilter === 'seen' ? 'all' : 'seen')}>
+        <button type="button" className={'dpl-icon-btn' + (viewFilter === 'seen' ? ' is-toggled' : '')} data-tip="只显示已读" aria-label="只显示已读" aria-pressed={viewFilter === 'seen'} onClick={() => setViewFilter(viewFilter === 'seen' ? 'all' : 'seen')}>
           <CircleCheck size={15} />
         </button>
-        <button type="button" className={'dpl-icon-btn' + (viewFilter === 'skipped' ? ' is-toggled' : '')} title="只显示略过" aria-label="只显示略过" aria-pressed={viewFilter === 'skipped'} onClick={() => setViewFilter(viewFilter === 'skipped' ? 'all' : 'skipped')}>
+        <button type="button" className={'dpl-icon-btn' + (viewFilter === 'skipped' ? ' is-toggled' : '')} data-tip="只显示略过" aria-label="只显示略过" aria-pressed={viewFilter === 'skipped'} onClick={() => setViewFilter(viewFilter === 'skipped' ? 'all' : 'skipped')}>
           <Archive size={15} />
         </button>
-        <button type="button" className="dpl-icon-btn" title="标记全部为已读" aria-label="标记全部为已读" disabled={unseenCount === 0} onClick={() => setConfirmMarkAllRead(true)}>
+        <button type="button" className="dpl-icon-btn" data-tip="标记全部为已读" aria-label="标记全部为已读" disabled={unseenCount === 0} onClick={() => setConfirmMarkAllRead(true)}>
           <CheckCheck size={15} />
         </button>
         <PanelCollapseButton onClick={onCollapse} />
@@ -362,10 +362,10 @@ function Preview({ api, feeds, item, onMaterial, onJumpSpace, onMarked }) {
               <ExternalLink size={15} />
             </a>
           ) : null}
-          <button type="button" className="dpl-round-btn" title="加入精读" aria-label="加入精读" disabled={busyAction === 'inbox'} onClick={() => void addToInbox()}>
+          <button type="button" className="dpl-round-btn" data-tip="加入精读" aria-label="加入精读" disabled={busyAction === 'inbox'} onClick={() => void addToInbox()}>
             {busyAction === 'inbox' ? <Loader2 size={15} className="dpl-spin" /> : <Inbox size={15} />}
           </button>
-          <button type="button" className="dpl-round-btn" title="略过" aria-label="略过" disabled={busyAction === 'skip'} onClick={() => void skip()}>
+          <button type="button" className="dpl-round-btn" data-tip="略过" aria-label="略过" disabled={busyAction === 'skip'} onClick={() => void skip()}>
             {busyAction === 'skip' ? <Loader2 size={15} className="dpl-spin" /> : <Archive size={15} />}
           </button>
         </div>

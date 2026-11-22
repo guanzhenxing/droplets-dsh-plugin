@@ -36,7 +36,7 @@ function method(name, params = true) {
 }
 
 const NO_PARAM_METHODS = new Set([
-  'listChannels', 'listSubscriptions', 'opmlExport', 'vaultStatus', 'vaultReindex',
+  'listChannels', 'listFeeds', 'listSubscriptions', 'opmlExport', 'vaultStatus', 'vaultReindex',
   'vaultTree', 'vaultGraph', 'getSettings', 'getStorageInfo', 'clearData',
 ]);
 

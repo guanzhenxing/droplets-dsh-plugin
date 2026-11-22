@@ -58,7 +58,6 @@ export function Companion({ api, material, onClose, SessionProvider, renderSlot,
   const [busy, setBusy] = useState(true);
   const [attached, setAttached] = useState('');
   const [notice, setNotice] = useState('');
-  const [sendingPrompt, setSendingPrompt] = useState(false);
   const sending = useRef(false);
   const owned = useRef(null);
   const generation = useRef(0);
@@ -149,26 +148,6 @@ export function Companion({ api, material, onClose, SessionProvider, renderSlot,
     return () => { stale = true; };
   }, [chat, materialKey]);
 
-  async function sendPrompt() {
-    if (sending.current || !chat || attached !== materialKey) return;
-    sending.current = true;
-    setSendingPrompt(true);
-    setActionError('');
-    try {
-      const prompt = material.selection
-        ? `请解释选中段落的含义与上下文：\n${material.selection.slice(0, 2000)}`
-        : '请总结这篇材料的主要观点、论据与值得追问的问题。';
-      await chat.submitPrompt(prompt);
-    } catch (cause) {
-      const message = cause?.message ?? String(cause);
-      if (message.includes('手动发送')) setNotice(message);
-      else if (message.includes('已有草稿')) setActionError(t('companion.draftPending'));
-      else setActionError(`${t('companion.sendFailed')}：${message}`);
-    } finally {
-      setSendingPrompt(false);
-      sending.current = false;
-    }
-  }
 
   const clamped = clampPos(pos ?? { x: 0, y: 0 });
   const shellClass = 'dpl-companion' + (form === 'floating' ? ' is-floating' : ' is-docked');
@@ -234,16 +213,6 @@ export function Companion({ api, material, onClose, SessionProvider, renderSlot,
           <blockquote>{material.selection}</blockquote>
         </section>
       )}
-      <div className="dpl-companion-prompt-strip" role="group" aria-label={t('companion.title')}>
-        <button
-          type="button"
-          className="dpl-prompt-ghost"
-          disabled={sendingPrompt || attached !== materialKey}
-          onClick={() => void sendPrompt()}
-        >
-          {material.selection ? t('companion.askSelection') : t('companion.askArticle')}
-        </button>
-      </div>
     </aside>
   );
 }

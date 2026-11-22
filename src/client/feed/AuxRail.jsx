@@ -87,12 +87,12 @@ export function AuxRail({ headings, containerRef, onAskAi }) {
         />
       ))}
       {headings.length > 0 ? (
-        <button type="button" className="dpl-aux-tick is-action" onClick={scrollTop} title="回到顶部" aria-label="回到顶部">
+        <button type="button" className="dpl-aux-tick is-action" onClick={scrollTop} data-tip="回到顶部" aria-label="回到顶部">
           <ArrowUp size={11} />
         </button>
       ) : null}
       {onAskAi ? (
-        <button type="button" className="dpl-aux-ask" onClick={onAskAi} title="问 AI" aria-label="问 AI">
+        <button type="button" className="dpl-aux-ask" onClick={onAskAi} data-tip="问 AI" aria-label="问 AI">
           <Sparkles size={13} />
         </button>
       ) : null}
