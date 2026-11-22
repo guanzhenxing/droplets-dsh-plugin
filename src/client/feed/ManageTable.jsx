@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Loader2, Pencil, Plus, X } from 'lucide-react';
+import { ChevronDown, Loader2, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { sortManageFeeds } from './feed-sorting.js';
 import { FeedBadge } from './SourcesPane.jsx';
 import { formatWhenFull } from './format.js';
@@ -252,6 +252,7 @@ function AddDialog({ api, onClose, onChanged }) {
   const [url, setUrl] = useState('');
   const [name, setName] = useState('');
   const [group, setGroup] = useState('');
+  const [lanWarning, setLanWarning] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -261,38 +262,49 @@ function AddDialog({ api, onClose, onChanged }) {
     try {
       await api.addSubscription({ url: url.trim(), name: name.trim() || undefined, group: group.trim() || undefined });
       await onChanged();
+      if (isLanUrl(url.trim())) {
+        setLanWarning('该源允许访问内网/回环地址，请确认来源可信。');
+        return;
+      }
       onClose();
     } catch (cause) { setError(String(cause?.message ?? cause)); }
     finally { setBusy(false); }
   }
 
-  const lan = /^https?:\/\/(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|\[::1\]|localhost)/i.test(url.trim());
-
   return (
-    <div className="dpl-modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="dpl-modal">
-        <div className="dpl-modal-title">添加订阅源 <button type="button" className="dpl-icon-btn" onClick={onClose}><X size={14} /></button></div>
-        <div className="dpl-form-col">
-          <label className="dpl-field">
-            <span>订阅地址</span>
-            <input autoFocus placeholder="https://example.com/feed.xml" value={url} onChange={(e) => setUrl(e.target.value)} />
-          </label>
-          <label className="dpl-field">
-            <span>名称（可选）</span>
-            <input placeholder="默认取 feed 标题" value={name} onChange={(e) => setName(e.target.value)} />
-          </label>
-          <label className="dpl-field">
-            <span>分组（可选）</span>
-            <input placeholder="如 Tech" value={group} onChange={(e) => setGroup(e.target.value)} />
-          </label>
-          {lan ? <p className="dpl-warn-text">该地址位于内网/回环段：允许添加，但请确认其可信。</p> : null}
-          {error ? <p className="dpl-warn-text">{error}</p> : null}
+    <div className="dpl-dialog-backdrop" onClick={onClose}>
+      <div className="dpl-dialog dpl-add-dialog" onClick={(e) => e.stopPropagation()}>
+        <div className="dpl-dialog-headline">
+          <span className="dpl-dialog-title">添加订阅源</span>
+          <span className="dpl-grow" />
+          <button type="button" className="dpl-icon-btn dpl-round" onClick={onClose} aria-label="关闭"><X size={15} /></button>
         </div>
-        <div className="dpl-form-row dpl-end">
-          <button type="button" className="dpl-btn" onClick={onClose}>取消</button>
-          <button type="button" className="dpl-btn dpl-primary-solid" disabled={busy || url.trim() === ''} onClick={() => void submit()}>
-            {busy ? <Loader2 size={14} className="dpl-spin" /> : null} 添加
-          </button>
+        <div className="dpl-dialog-body">
+          <label className="dpl-dialog-field">
+            <span>Feed 地址</span>
+            <input autoFocus placeholder="https://…（支持 RSS / Atom / JSON Feed）" value={url} onChange={(e) => setUrl(e.target.value)} />
+          </label>
+          <label className="dpl-dialog-field">
+            <span>名称（可选）</span>
+            <input placeholder="留空自动使用源标题" value={name} onChange={(e) => setName(e.target.value)} />
+          </label>
+          <label className="dpl-dialog-field">
+            <span>分组（可选）</span>
+            <input placeholder="如：Tech" value={group} onChange={(e) => setGroup(e.target.value)} />
+          </label>
+          <div className="dpl-dialog-hint">添加时验证源并自动抓取标题与首批条目。</div>
+          {error ? <div className="dpl-dialog-error">{error}</div> : null}
+          {lanWarning ? <div className="dpl-dialog-warn">{lanWarning}</div> : null}
+        </div>
+        <div className="dpl-dialog-footer">
+          <span className="dpl-grow" />
+          {lanWarning ? (
+            <button type="button" className="dpl-btn dpl-sm" onClick={onClose}>我知道了，关闭</button>
+          ) : (
+            <button type="button" className="dpl-btn dpl-sm dpl-primary-solid" disabled={busy || url.trim().length === 0} onClick={() => void submit()}>
+              {busy ? <Loader2 size={13} className="dpl-spin" /> : null} 订阅
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -302,7 +314,9 @@ function AddDialog({ api, onClose, onChanged }) {
 function EditDialog({ api, feed, availableGroups, onClose, onChanged }) {
   const [name, setName] = useState(feed?.title ?? '');
   const [group, setGroup] = useState(feed?.groupName ?? '');
+  const [groupMenuOpen, setGroupMenuOpen] = useState(false);
   const [enabled, setEnabled] = useState(feed?.enabled ?? true);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -310,7 +324,7 @@ function EditDialog({ api, feed, availableGroups, onClose, onChanged }) {
     setBusy(true);
     setError('');
     try {
-      await api.setFeed({ id: feed.id, patch: { name, group, enabled } });
+      await api.setFeed({ id: feed.id, patch: { name: name.trim(), group: group.trim(), enabled } });
       await onChanged();
       onClose();
     } catch (cause) { setError(String(cause?.message ?? cause)); }
@@ -318,7 +332,6 @@ function EditDialog({ api, feed, availableGroups, onClose, onChanged }) {
   }
 
   async function remove() {
-    if (!window.confirm('退订「' + feed.title + '」？本地缓存条目将一并删除，此操作不可撤销。')) return;
     setBusy(true);
     try {
       await api.removeSubscription(feed.id);
@@ -329,29 +342,63 @@ function EditDialog({ api, feed, availableGroups, onClose, onChanged }) {
   }
 
   return (
-    <div className="dpl-modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="dpl-modal">
-        <div className="dpl-modal-title">编辑订阅源 <button type="button" className="dpl-icon-btn" onClick={onClose}><X size={14} /></button></div>
-        <div className="dpl-form-col">
-          <label className="dpl-field"><span>名称</span><input value={name} onChange={(e) => setName(e.target.value)} /></label>
-          <label className="dpl-field">
-            <span>分组{availableGroups.length > 0 ? '（可选，已有：' + availableGroups.join('、' ) + '）' : '（可选）'}</span>
-            <input value={group} onChange={(e) => setGroup(e.target.value)} />
-          </label>
-          <label className="dpl-field dpl-row">
-            <input type="checkbox" className="dpl-switch" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
-            <span>{enabled ? '启用（参与自动刷新与全部源聚合）' : '已停用（不刷新、不进聚合）'}</span>
-          </label>
-          <p className="dpl-dim-text">{feed.url}</p>
-          {error ? <p className="dpl-warn-text">{error}</p> : null}
+    <div className="dpl-dialog-backdrop" onClick={onClose}>
+      <div className="dpl-dialog dpl-edit-dialog" onClick={(e) => e.stopPropagation()}>
+        <div className="dpl-dialog-headline">
+          <span className="dpl-dialog-badge"><FeedBadge feed={feed} /></span>
+          <div className="dpl-min0 dpl-grow">
+            <div className="dpl-dialog-name">{feed.title}</div>
+            <div className="dpl-dialog-sub">{feed.groupName || '未分组'}，共 {feed.itemCount} 条，未读 {feed.unreadCount}</div>
+          </div>
+          <button type="button" className="dpl-icon-btn dpl-round" onClick={onClose} aria-label="关闭"><X size={15} /></button>
         </div>
-        <div className="dpl-form-row dpl-between">
-          <button type="button" className="dpl-btn dpl-danger" onClick={() => void remove()}>删除源…</button>
+        <div className="dpl-dialog-rows">
+          <div className="dpl-dialog-row">
+            <span className="dpl-dialog-label">名称</span>
+            <input className="dpl-grow" value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div className="dpl-dialog-row">
+            <span className="dpl-dialog-label">分组</span>
+            <div className="dpl-relative dpl-grow dpl-row-flex">
+              <input className="dpl-grow" placeholder="选择或输入分组（空 = 未分组）" value={group} onChange={(e) => setGroup(e.target.value)} />
+              <button type="button" className="dpl-icon-btn" data-tip="选择已有分组" aria-label="选择已有分组" aria-expanded={groupMenuOpen} onClick={() => setGroupMenuOpen((v) => !v)}>
+                <ChevronDown size={14} className={groupMenuOpen ? 'is-flipped' : undefined} />
+              </button>
+              {groupMenuOpen ? (
+                <div className="dpl-menu dpl-group-menu">
+                  <button type="button" className="dpl-menu-item" onClick={() => { setGroup(''); setGroupMenuOpen(false); }}>{group === '' ? '✓ ' : ''}未分组</button>
+                  {availableGroups.map((g) => (
+                    <button key={g} type="button" className="dpl-menu-item" onClick={() => { setGroup(g); setGroupMenuOpen(false); }}>{group === g ? '✓ ' : ''}{g}</button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          </div>
+          <div className="dpl-dialog-row">
+            <span className="dpl-dialog-label">Feed 地址</span>
+            <span className="dpl-dialog-url">{feed.url}</span>
+          </div>
+          <div className="dpl-dialog-row">
+            <span className="dpl-dialog-label">启用</span>
+            <input type="checkbox" className="dpl-switch" checked={enabled} title={enabled ? '停用' : '启用'} onChange={(e) => setEnabled(e.target.checked)} />
+            <span className="dpl-dialog-switch-hint">{enabled ? '参与自动刷新与全部源聚合' : '已停用（不刷新、不进聚合）'}</span>
+          </div>
+        </div>
+        {error ? <div className="dpl-dialog-error dpl-dialog-pad">{error}</div> : null}
+        <div className="dpl-dialog-footer">
+          <button type="button" className={'dpl-btn dpl-sm' + (confirmDelete ? ' dpl-danger' : '')} disabled={busy} onClick={() => (confirmDelete ? void remove() : setConfirmDelete(true))}>
+            <Trash2 size={13} /> {confirmDelete ? '确认删除' : '删除源'}
+          </button>
           <span className="dpl-grow" />
-          <button type="button" className="dpl-btn" onClick={onClose}>取消</button>
-          <button type="button" className="dpl-btn dpl-primary-solid" disabled={busy} onClick={() => void save()}>保存</button>
+          <button type="button" className="dpl-btn dpl-sm dpl-primary-solid" disabled={busy} onClick={() => void save()}>
+            {busy ? <Loader2 size={13} className="dpl-spin" /> : null} 保存
+          </button>
         </div>
       </div>
     </div>
   );
+}
+
+function isLanUrl(u) {
+  return /^https?:\/\/(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|\[::1\]|localhost)/i.test(String(u ?? ''));
 }
