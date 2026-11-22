@@ -73,7 +73,7 @@ export function DropletsPanel({ api, SessionProvider, renderSlot }) {
 
       <div className={'dpl-body' + (companionOpen ? ' has-companion' : '')}>
         <div className="dpl-space">
-          {space === 'feed' && <FeedView api={api} frozen={frozen} onMaterial={onMaterial} />}
+          {space === 'feed' && <FeedView api={api} frozen={frozen} onMaterial={onMaterial} onJumpSpace={setSpace} />}
           {space === 'inbox' && <InboxView api={api} onMaterial={onMaterial} />}
           {space === 'vault' && <VaultView api={api} onMaterial={onMaterial} />}
         </div>

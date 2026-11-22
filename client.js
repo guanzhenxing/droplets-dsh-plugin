@@ -33,7 +33,7 @@ __export(index_exports, {
 module.exports = __toCommonJS(index_exports);
 
 // src/client/Panel.jsx
-var import_react6 = require("react");
+var import_react9 = require("react");
 
 // locale/zh.json
 var zh_default = {
@@ -76,6 +76,17 @@ var zh_default = {
   feed: {
     all: "\u5168\u90E8\u8BA2\u9605",
     sources: "\u8BA2\u9605\u6E90",
+    articles: "\u6587\u7AE0",
+    readOnly: "\u5168\u90E8",
+    markAllRead: "\u6807\u8BB0\u5168\u90E8\u4E3A\u5DF2\u8BFB",
+    markAllReadConfirm: "\u5C06\u5F53\u524D\u8303\u56F4\u7684 {count} \u6761\u672A\u8BFB\u5168\u90E8\u6807\u8BB0\u4E3A\u5DF2\u8BFB,\u6B64\u64CD\u4F5C\u65E0\u6CD5\u64A4\u9500\u3002",
+    newItems: "\u65B0\u589E {count} \u6761",
+    sentToInbox: "\u5DF2\u52A0\u5165\u7CBE\u8BFB,\u6B63\u5728\u8DF3\u8F6C\u6536\u4EF6\u7BB1\u2026",
+    addToInbox: "\u52A0\u5165\u7CBE\u8BFB",
+    skip: "\u7565\u8FC7",
+    pickToPreview: "\u5728\u4E2D\u95F4\u5217\u8868\u9009\u62E9\u4E00\u6761\u5185\u5BB9\u9884\u89C8",
+    stateRead: "\u5DF2\u8BFB",
+    stateUnread: "\u672A\u8BFB",
     groups: "\u5206\u7EC4",
     ungrouped: "\u672A\u5206\u7EC4",
     addSubscription: "\u6DFB\u52A0\u8BA2\u9605",
@@ -228,6 +239,17 @@ var en_default = {
   feed: {
     all: "All subscriptions",
     sources: "Sources",
+    articles: "Articles",
+    readOnly: "All",
+    markAllRead: "Mark all as read",
+    markAllReadConfirm: "Mark {count} unread entries in the current scope as read. This cannot be undone.",
+    newItems: "{count} new",
+    sentToInbox: "Saved for reading \u2014 jumping to the inbox\u2026",
+    addToInbox: "Save to inbox",
+    skip: "Skip",
+    pickToPreview: "Pick an entry in the list to preview",
+    stateRead: "Read",
+    stateUnread: "Unread",
     groups: "Groups",
     ungrouped: "Ungrouped",
     addSubscription: "Add subscription",
@@ -2610,22 +2632,433 @@ function formatBytes(bytes) {
 }
 
 // src/client/FeedView.jsx
+var import_react5 = require("react");
+
+// node_modules/lucide-react/dist/esm/createLucideIcon.mjs
+var import_react4 = require("react");
+
+// node_modules/lucide-react/dist/esm/shared/src/utils/toKebabCase.mjs
+var toKebabCase = (value) => (value.match(/\d+[xX]\d+|[A-Z]?[a-z]+|[A-Z]|\d+/g) ?? []).join("-").toLowerCase();
+
+// node_modules/lucide-react/dist/esm/shared/src/utils/toLucideIconData.mjs
+function toLucideIconData(iconName, iconNode, aliases = []) {
+  if (iconNode == null) {
+    throw new Error("[lucide]: iconNode is required when icon name is used");
+  }
+  return {
+    name: toKebabCase(iconName),
+    size: 24,
+    node: iconNode,
+    ...aliases.length > 0 ? { aliases } : {}
+  };
+}
+
+// node_modules/lucide-react/dist/esm/shared/src/utils/toCamelCase.mjs
+var toCamelCase = (string) => {
+  let out = "";
+  let upperNext = false;
+  for (const ch2 of string) {
+    if (ch2 === "-" || ch2 === "_" || ch2 <= " ") {
+      upperNext = out.length > 0;
+      continue;
+    }
+    if (out.length === 0) {
+      out += ch2.toLowerCase();
+    } else {
+      out += upperNext ? ch2.toUpperCase() : ch2;
+    }
+    upperNext = false;
+  }
+  return out;
+};
+
+// node_modules/lucide-react/dist/esm/shared/src/utils/toPascalCase.mjs
+var toPascalCase = (string) => {
+  const camelCase = toCamelCase(string);
+  return camelCase.charAt(0).toUpperCase() + camelCase.slice(1);
+};
+
+// node_modules/lucide-react/dist/esm/Icon.mjs
+var import_react3 = require("react");
+
+// node_modules/lucide-react/dist/esm/shared/src/utils/mergeClasses.mjs
+var mergeClasses = (...classes) => {
+  const tokens = /* @__PURE__ */ new Set();
+  for (const cls of classes) {
+    if (typeof cls !== "string") continue;
+    for (const token of cls.split(/\s+/)) {
+      if (token) tokens.add(token);
+    }
+  }
+  return [...tokens].join(" ");
+};
+
+// node_modules/lucide-react/dist/esm/shared/src/build/defaultAttributes.mjs
+var defaultAttributes = {
+  xmlns: "http://www.w3.org/2000/svg",
+  width: 24,
+  height: 24,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  "stroke-width": 2,
+  "stroke-linecap": "round",
+  "stroke-linejoin": "round"
+};
+
+// node_modules/lucide-react/dist/esm/shared/src/build/buildLucideIconNode.mjs
+function isDefined(value) {
+  return value !== null && value !== void 0;
+}
+function buildLucideIconNode(icon, params = {}) {
+  const attributeNames = params.attributeNames ?? {};
+  const getAttributeName = (attributeName) => attributeNames[attributeName] ?? attributeName;
+  const viewBoxWidth = icon.size ?? icon.width ?? defaultAttributes["width"];
+  const viewBoxHeight = icon.size ?? icon.height ?? defaultAttributes["height"];
+  const aliasClassNames = icon.aliases?.filter((alias) => typeof alias === "string" && alias.trim() !== "").map((alias) => `lucide-${alias}`) ?? [];
+  const iconClassNames = [...icon.name ? [`lucide-${icon.name}`] : [], ...aliasClassNames];
+  const classNamesFromClassName = params.className?.split(" ").filter(Boolean) ?? [];
+  const className = params.includeDefaultClasses === false ? mergeClasses(...classNamesFromClassName) : mergeClasses("lucide", ...iconClassNames, ...classNamesFromClassName);
+  const calculatedStrokeWidth = params.absoluteStrokeWidth ? Number(params.strokeWidth ?? defaultAttributes["stroke-width"]) * Number(icon.size ?? icon.width ?? defaultAttributes["width"]) / Number(params.size ?? params.width ?? defaultAttributes["width"]) : params.strokeWidth ?? defaultAttributes["stroke-width"];
+  const attributes = {
+    ...Object.entries(defaultAttributes).reduce((attrs, [attrName, value]) => {
+      attrs[getAttributeName(attrName)] = value;
+      return attrs;
+    }, {}),
+    ..."color" in params && params.color && {
+      [getAttributeName("stroke")]: params.color
+    },
+    ..."size" in params && isDefined(params.size) && {
+      [getAttributeName("width")]: params.size,
+      [getAttributeName("height")]: params.size
+    },
+    ..."width" in params && isDefined(params.width) && {
+      [getAttributeName("width")]: params.width
+    },
+    ..."height" in params && isDefined(params.height) && {
+      [getAttributeName("height")]: params.height
+    },
+    [getAttributeName("stroke-width")]: calculatedStrokeWidth,
+    ...className && {
+      [getAttributeName("class")]: className
+    },
+    [getAttributeName("viewBox")]: `0 0 ${viewBoxWidth} ${viewBoxHeight}`,
+    ...params.hasA11yProp === false ? {
+      [getAttributeName("aria-hidden")]: "true"
+    } : {},
+    ..."attributes" in params && params.attributes
+  };
+  return [
+    "svg",
+    attributes,
+    icon.node.map((child) => {
+      const [name, attrs, children] = child;
+      const nextAttrs = params.nonScalingStroke ? { [getAttributeName("vector-effect")]: "non-scaling-stroke", ...attrs } : attrs;
+      return children ? [name, nextAttrs, children] : [name, nextAttrs];
+    })
+  ];
+}
+
+// node_modules/lucide-react/dist/esm/shared/src/build/buildLucideIconForReact.mjs
+function buildLucideIconForReact(icon, params = {}) {
+  return buildLucideIconNode(icon, {
+    ...params,
+    attributeNames: {
+      ...params.attributeNames,
+      class: "className",
+      "stroke-width": "strokeWidth",
+      "stroke-linecap": "strokeLinecap",
+      "stroke-linejoin": "strokeLinejoin",
+      "vector-effect": "vectorEffect"
+    }
+  });
+}
+
+// node_modules/lucide-react/dist/esm/shared/src/utils/hasA11yProp.mjs
+var hasA11yProp = (props) => {
+  if (props == null || typeof props !== "object") {
+    return false;
+  }
+  for (const prop in props) {
+    if (Object.prototype.hasOwnProperty.call(props, prop) && (prop.startsWith("aria-") || prop === "role" || prop === "title") && props[prop] != null) {
+      return true;
+    }
+  }
+  return false;
+};
+
+// node_modules/lucide-react/dist/esm/context.mjs
 var import_react2 = require("react");
+var LucideContext = (0, import_react2.createContext)({});
+var useLucideContext = () => (0, import_react2.useContext)(LucideContext);
+
+// node_modules/lucide-react/dist/esm/Icon.mjs
+var Icon = (0, import_react3.forwardRef)(
+  ({
+    color,
+    size,
+    width,
+    height,
+    strokeWidth,
+    absoluteStrokeWidth,
+    nonScalingStroke,
+    className = "",
+    children,
+    iconNode = [],
+    icon = {
+      node: iconNode,
+      aliases: [],
+      size: 24
+    },
+    ...rest
+  }, ref) => {
+    const {
+      size: contextSize = 24,
+      strokeWidth: contextStrokeWidth = 2,
+      absoluteStrokeWidth: contextAbsoluteStrokeWidth = false,
+      nonScalingStroke: contextNonScalingStroke = false,
+      color: contextColor = "currentColor",
+      className: contextClass = ""
+    } = useLucideContext() ?? {};
+    const hasAccessibleProp = Boolean(children) || hasA11yProp(rest);
+    const [name, svgAttributes, builtIconNode = []] = buildLucideIconForReact(icon, {
+      color: color ?? contextColor,
+      width: width ?? size ?? contextSize,
+      height: height ?? size ?? contextSize,
+      strokeWidth: strokeWidth ?? contextStrokeWidth,
+      absoluteStrokeWidth: absoluteStrokeWidth ?? contextAbsoluteStrokeWidth,
+      nonScalingStroke: nonScalingStroke ?? contextNonScalingStroke,
+      className: mergeClasses(contextClass, className),
+      hasA11yProp: hasAccessibleProp,
+      attributes: rest
+    });
+    return (0, import_react3.createElement)(
+      name,
+      {
+        ref,
+        ...svgAttributes
+      },
+      [
+        ...builtIconNode.map(([tag, attrs]) => (0, import_react3.createElement)(tag, attrs)),
+        ...Array.isArray(children) ? children : [children]
+      ]
+    );
+  }
+);
+
+// node_modules/lucide-react/dist/esm/createLucideIcon.mjs
+function createLucideIcon(iconDataOrName, iconNode = [], aliases = []) {
+  const iconData = typeof iconDataOrName === "string" ? toLucideIconData(iconDataOrName, iconNode, aliases) : iconDataOrName;
+  const Component = (0, import_react4.forwardRef)(
+    ({ className, ...props }, ref) => (0, import_react4.createElement)(Icon, {
+      ref,
+      icon: iconData,
+      className,
+      ...props
+    })
+  );
+  if (iconData.name) {
+    Component.displayName = toPascalCase(iconData.name);
+  }
+  return Component;
+}
+
+// node_modules/lucide-react/dist/esm/icons/archive.mjs
+var __iconData = {
+  name: "archive",
+  size: 24,
+  node: [
+    ["rect", { width: "20", height: "5", x: "2", y: "3", rx: "1", key: "1wp1u1" }],
+    ["path", { d: "M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8", key: "1s80jp" }],
+    ["path", { d: "M10 12h4", key: "a56b0p" }]
+  ]
+};
+__iconData.node;
+var Archive = createLucideIcon(__iconData);
+
+// node_modules/lucide-react/dist/esm/icons/check-check.mjs
+var __iconData2 = {
+  name: "check-check",
+  size: 24,
+  node: [
+    ["path", { d: "M18 6 7 17l-5-5", key: "116fxf" }],
+    ["path", { d: "m22 10-7.5 7.5L13 16", key: "ke71qq" }]
+  ]
+};
+__iconData2.node;
+var CheckCheck = createLucideIcon(__iconData2);
+
+// node_modules/lucide-react/dist/esm/icons/circle-check.mjs
+var __iconData3 = {
+  name: "circle-check",
+  size: 24,
+  node: [
+    ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
+    ["path", { d: "m16 9-5.5 5.5L8 12", key: "xofnsj" }]
+  ],
+  aliases: ["check-circle-2"]
+};
+__iconData3.node;
+var CircleCheck = createLucideIcon(__iconData3);
+
+// node_modules/lucide-react/dist/esm/icons/circle.mjs
+var __iconData4 = {
+  name: "circle",
+  size: 24,
+  node: [["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }]]
+};
+__iconData4.node;
+var Circle = createLucideIcon(__iconData4);
+
+// node_modules/lucide-react/dist/esm/icons/download.mjs
+var __iconData5 = {
+  name: "download",
+  size: 24,
+  node: [
+    ["path", { d: "M12 15V3", key: "m9g1x1" }],
+    ["path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4", key: "ih7n3h" }],
+    ["path", { d: "m7 10 5 5 5-5", key: "brsn70" }]
+  ]
+};
+__iconData5.node;
+var Download = createLucideIcon(__iconData5);
+
+// node_modules/lucide-react/dist/esm/icons/external-link.mjs
+var __iconData6 = {
+  name: "external-link",
+  size: 24,
+  node: [
+    ["path", { d: "M15 3h6v6", key: "1q9fwt" }],
+    ["path", { d: "M10 14 21 3", key: "gplh6r" }],
+    ["path", { d: "M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6", key: "a6xqqp" }]
+  ]
+};
+__iconData6.node;
+var ExternalLink = createLucideIcon(__iconData6);
+
+// node_modules/lucide-react/dist/esm/icons/inbox.mjs
+var __iconData7 = {
+  name: "inbox",
+  size: 24,
+  node: [
+    ["polyline", { points: "22 12 16 12 14 15 10 15 8 12 2 12", key: "o97t9d" }],
+    [
+      "path",
+      {
+        d: "M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z",
+        key: "oot6mr"
+      }
+    ]
+  ]
+};
+__iconData7.node;
+var Inbox = createLucideIcon(__iconData7);
+
+// node_modules/lucide-react/dist/esm/icons/list-plus.mjs
+var __iconData8 = {
+  name: "list-plus",
+  size: 24,
+  node: [
+    ["path", { d: "M16 5H3", key: "m91uny" }],
+    ["path", { d: "M11 12H3", key: "51ecnj" }],
+    ["path", { d: "M16 19H3", key: "zzsher" }],
+    ["path", { d: "M18 9v6", key: "1twb98" }],
+    ["path", { d: "M21 12h-6", key: "bt1uis" }]
+  ]
+};
+__iconData8.node;
+var ListPlus = createLucideIcon(__iconData8);
+
+// node_modules/lucide-react/dist/esm/icons/loader-circle.mjs
+var __iconData9 = {
+  name: "loader-circle",
+  size: 24,
+  node: [["path", { d: "M21 12a9 9 0 1 1-6.219-8.56", key: "13zald" }]],
+  aliases: ["loader-2"]
+};
+__iconData9.node;
+var LoaderCircle = createLucideIcon(__iconData9);
+
+// node_modules/lucide-react/dist/esm/icons/plus.mjs
+var __iconData10 = {
+  name: "plus",
+  size: 24,
+  node: [
+    ["path", { d: "M5 12h14", key: "1ays0h" }],
+    ["path", { d: "M12 5v14", key: "s699le" }]
+  ]
+};
+__iconData10.node;
+var Plus = createLucideIcon(__iconData10);
+
+// node_modules/lucide-react/dist/esm/icons/refresh-cw.mjs
+var __iconData11 = {
+  name: "refresh-cw",
+  size: 24,
+  node: [
+    ["path", { d: "M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8", key: "v9h5vc" }],
+    ["path", { d: "M21 3v5h-5", key: "1q7to0" }],
+    ["path", { d: "M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16", key: "3uifl3" }],
+    ["path", { d: "M8 16H3v5", key: "1cv678" }]
+  ]
+};
+__iconData11.node;
+var RefreshCw = createLucideIcon(__iconData11);
+
+// node_modules/lucide-react/dist/esm/icons/triangle-exclamation-point.mjs
+var __iconData12 = {
+  name: "triangle-exclamation-point",
+  size: 24,
+  node: [
+    [
+      "path",
+      {
+        d: "m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3",
+        key: "wmoenq"
+      }
+    ],
+    ["path", { d: "M12 9v4", key: "juzpu7" }],
+    ["path", { d: "M12 17h.01", key: "p32p05" }]
+  ],
+  aliases: ["alert-triangle", "triangle-alert"]
+};
+__iconData12.node;
+var TriangleExclamationPoint = createLucideIcon(__iconData12);
+
+// node_modules/lucide-react/dist/esm/icons/upload.mjs
+var __iconData13 = {
+  name: "upload",
+  size: 24,
+  node: [
+    ["path", { d: "M12 3v12", key: "1x0j5s" }],
+    ["path", { d: "m17 8-5-5-5 5", key: "7q97r8" }],
+    ["path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4", key: "ih7n3h" }]
+  ]
+};
+__iconData13.node;
+var Upload = createLucideIcon(__iconData13);
+
+// src/client/FeedView.jsx
 var import_jsx_runtime2 = require("react/jsx-runtime");
-function FeedView({ api, frozen, onMaterial }) {
-  const [channels, setChannels] = (0, import_react2.useState)([]);
-  const [channel, setChannel] = (0, import_react2.useState)("all");
-  const [entries2, setEntries] = (0, import_react2.useState)([]);
-  const [selected, setSelected] = (0, import_react2.useState)(null);
-  const [html2, setHtml] = (0, import_react2.useState)("");
-  const [filter, setFilter] = (0, import_react2.useState)("all");
-  const [search, setSearch] = (0, import_react2.useState)("");
-  const [busy, setBusy] = (0, import_react2.useState)(false);
-  const [error, setError] = (0, import_react2.useState)("");
-  const [managing, setManaging] = (0, import_react2.useState)(false);
-  const [opml, setOpml] = (0, import_react2.useState)(false);
-  const loadSeq = (0, import_react2.useRef)(0);
-  const loadChannels = (0, import_react2.useCallback)(async () => {
+function FeedView({ api, frozen, onMaterial, onJumpSpace }) {
+  const [channels, setChannels] = (0, import_react5.useState)([]);
+  const [channel, setChannel] = (0, import_react5.useState)("all");
+  const [entries2, setEntries] = (0, import_react5.useState)([]);
+  const [selected, setSelected] = (0, import_react5.useState)(null);
+  const [html2, setHtml] = (0, import_react5.useState)("");
+  const [unreadOnly, setUnreadOnly] = (0, import_react5.useState)(false);
+  const [search, setSearch] = (0, import_react5.useState)("");
+  const [busy, setBusy] = (0, import_react5.useState)(false);
+  const [error, setError] = (0, import_react5.useState)("");
+  const [notice, setNotice] = (0, import_react5.useState)("");
+  const [managing, setManaging] = (0, import_react5.useState)(false);
+  const [opml, setOpml] = (0, import_react5.useState)(false);
+  const [confirmReadAll, setConfirmReadAll] = (0, import_react5.useState)(false);
+  const [favBusy, setFavBusy] = (0, import_react5.useState)("");
+  const loadSeq = (0, import_react5.useRef)(0);
+  const listScroll = (0, import_react5.useRef)(null);
+  const autoSelected = (0, import_react5.useRef)(false);
+  const loadChannels = (0, import_react5.useCallback)(async () => {
     try {
       const { channels: next } = await api.listChannels();
       setChannels(next);
@@ -2633,11 +3066,11 @@ function FeedView({ api, frozen, onMaterial }) {
       setError(String(cause?.message ?? cause));
     }
   }, [api]);
-  const loadEntries = (0, import_react2.useCallback)(async (silent = false) => {
+  const loadEntries = (0, import_react5.useCallback)(async (silent = false) => {
     const seq = ++loadSeq.current;
     if (!silent) setBusy(true);
     try {
-      const page = await api.listEntries({ channel, filter: filter === "all" ? void 0 : filter, search: search || void 0, limit: 100 });
+      const page = await api.listEntries({ channel, filter: unreadOnly ? "unread" : void 0, search: search || void 0, limit: 100 });
       if (seq !== loadSeq.current) return;
       setEntries(frozen.order(channel, page.entries));
     } catch (cause) {
@@ -2645,15 +3078,38 @@ function FeedView({ api, frozen, onMaterial }) {
     } finally {
       if (seq === loadSeq.current) setBusy(false);
     }
-  }, [api, channel, filter, search, frozen]);
-  (0, import_react2.useEffect)(() => {
+  }, [api, channel, unreadOnly, search, frozen]);
+  (0, import_react5.useEffect)(() => {
     void loadChannels();
   }, [loadChannels]);
-  (0, import_react2.useEffect)(() => {
+  (0, import_react5.useEffect)(() => {
+    autoSelected.current = false;
     void loadEntries();
   }, [loadEntries]);
-  const unreadCount = (0, import_react2.useMemo)(() => channels.find((item) => item.key === channel)?.unread ?? 0, [channels, channel]);
-  async function openEntry(entry) {
+  const sessionKey = channel + "|" + (unreadOnly ? "u" : "a") + "|" + search;
+  const baseline = (0, import_react5.useRef)({ session: "", keys: /* @__PURE__ */ new Set() });
+  const [pillEpoch, setPillEpoch] = (0, import_react5.useState)(0);
+  const newCount = (0, import_react5.useMemo)(() => {
+    if (busy) return 0;
+    if (baseline.current.session !== sessionKey) {
+      if (entries2.length === 0) return 0;
+      baseline.current = { session: sessionKey, keys: new Set(entries2.map((entry) => entry.key)) };
+      return 0;
+    }
+    let count = 0;
+    for (const entry of entries2) if (!baseline.current.keys.has(entry.key)) count += 1;
+    return count;
+  }, [entries2, sessionKey, busy, pillEpoch]);
+  const unreadCount = (0, import_react5.useMemo)(() => channels.find((item) => item.key === channel)?.unread ?? 0, [channels, channel]);
+  const listTitle = (0, import_react5.useMemo)(() => {
+    if (channel === "all") return t("feed.articles");
+    return channels.find((item) => item.key === channel)?.name ?? t("feed.articles");
+  }, [channel, channels]);
+  const channelNameOf = (0, import_react5.useCallback)((key) => {
+    const found = channels.find((item) => item.key === key);
+    return found?.name ?? "";
+  }, [channels]);
+  const openEntry = (0, import_react5.useCallback)(async (entry, { markRead = true } = {}) => {
     setSelected(entry);
     setHtml("");
     setError("");
@@ -2661,20 +3117,28 @@ function FeedView({ api, frozen, onMaterial }) {
       const result = await api.getEntry(entry.key);
       setHtml(result.html ?? "");
       onMaterial({ space: "feed", key: entry.key, title: entry.title, url: entry.url, content: plainOf(result.html ?? "") });
-      if (!entry.read) {
+      if (markRead && !entry.read) {
         setEntries((current) => current.map((item) => item.key === entry.key ? { ...item, read: true } : item));
         void api.setRead([entry.key], true).then(() => void loadChannels());
+        setSelected({ ...entry, read: true });
       }
     } catch (cause) {
       setError(String(cause?.message ?? cause));
     }
-  }
+  }, [api, onMaterial, loadChannels]);
+  (0, import_react5.useEffect)(() => {
+    if (autoSelected.current || selected !== null || entries2.length === 0) return;
+    autoSelected.current = true;
+    void openEntry(entries2[0], { markRead: false });
+  }, [entries2]);
   async function toggleFavorite(entry) {
     const favorite = !entry.favorite;
+    setFavBusy(entry.key);
     setEntries((current) => current.map((item) => item.key === entry.key ? { ...item, favorite } : item));
     if (selected?.key === entry.key) setSelected({ ...selected, favorite });
     await api.setFavorite(entry.key, favorite).catch(() => {
     });
+    setFavBusy("");
   }
   async function refresh() {
     setBusy(true);
@@ -2687,12 +3151,44 @@ function FeedView({ api, frozen, onMaterial }) {
       setBusy(false);
     }
   }
+  async function markAllRead() {
+    const keys = entries2.filter((entry) => !entry.read).map((entry) => entry.key);
+    if (keys.length === 0) return;
+    setConfirmReadAll(false);
+    setEntries((current) => current.map((entry) => entry.read ? entry : { ...entry, read: true }));
+    await api.setRead(keys, true).catch(() => {
+    });
+    await loadChannels().catch(() => {
+    });
+  }
+  async function addToInbox(entry) {
+    if (!entry.url) return;
+    setNotice("");
+    try {
+      await api.inboxAddUrl({ url: entry.url });
+      setNotice(t("feed.sentToInbox"));
+      onJumpSpace?.("inbox");
+    } catch (cause) {
+      setNotice(String(cause?.message ?? cause));
+    }
+  }
+  async function skipEntry(entry) {
+    if (!entry.read) {
+      setEntries((current) => current.map((item) => item.key === entry.key ? { ...item, read: true } : item));
+      await api.setRead([entry.key], true).catch(() => {
+      });
+      void loadChannels();
+    }
+    const index2 = entries2.findIndex((item) => item.key === entry.key);
+    const next = entries2.slice(index2 + 1).find((item) => !item.read) ?? entries2[index2 + 1];
+    if (next) void openEntry(next);
+  }
   function captureSelection() {
     const selection = String(window.getSelection?.() ?? "").trim();
     if (!selected || selection === "") return;
     onMaterial({ space: "feed", key: selected.key, title: selected.title, url: selected.url, selection, content: "" });
   }
-  const groupsList = (0, import_react2.useMemo)(() => {
+  const groupsList = (0, import_react5.useMemo)(() => {
     const groups = /* @__PURE__ */ new Map();
     for (const item of channels) {
       if (item.kind !== "feed") continue;
@@ -2706,60 +3202,36 @@ function FeedView({ api, frozen, onMaterial }) {
     /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("aside", { className: "dpl-col dpl-sources", "aria-label": t("feed.sources"), children: [
       /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "dpl-col-head", children: [
         /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "dpl-pane-title", children: t("feed.sources") }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", className: "dpl-icon-btn", title: t("feed.addSubscription"), "aria-label": t("feed.addSubscription"), onClick: () => setManaging(true), children: "\uFF0B" }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", className: "dpl-icon-btn", title: t("feed.manage"), "aria-label": t("feed.manage"), onClick: () => setManaging(true), children: "\u2630" }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "dpl-flex-fill" }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", className: "dpl-icon-btn", title: t("feed.addSubscription"), "aria-label": t("feed.addSubscription"), onClick: () => setManaging(true), children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(Plus, { size: 16 }) }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", className: "dpl-icon-btn", title: t("feed.manage"), "aria-label": t("feed.manage"), onClick: () => setManaging(true), children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(ListPlus, { size: 16 }) }),
         /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", className: "dpl-icon-btn", title: t("feed.exportOpml"), "aria-label": t("feed.exportOpml"), onClick: async () => {
           const { xml: xml2 } = await api.opmlExport().catch(() => ({ xml: "" }));
           if (xml2) download("droplets-subscriptions.opml", xml2, "text/xml");
-        }, children: "\u21E9" })
+        }, children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(Download, { size: 16 }) })
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "dpl-source-tools", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "dpl-search", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-          "input",
-          {
-            type: "search",
-            placeholder: t("common.searchPlaceholder"),
-            value: search,
-            onChange: (event) => setSearch(event.target.value)
-          }
-        ) }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-          "button",
-          {
-            type: "button",
-            className: "dpl-icon-btn",
-            title: t("common.refresh"),
-            "aria-label": t("common.refresh"),
-            disabled: busy,
-            onClick: () => void refresh(),
-            children: busy ? "\u22EF" : "\u27F3"
-          }
-        )
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "dpl-search", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("input", { type: "search", placeholder: t("common.searchPlaceholder"), value: search, onChange: (event) => setSearch(event.target.value) }) }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", className: "dpl-icon-btn", title: t("common.refresh"), "aria-label": t("common.refresh"), disabled: busy, onClick: () => void refresh(), children: busy ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(LoaderCircle, { size: 16, className: "dpl-spin" }) : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(RefreshCw, { size: 16 }) })
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "dpl-sources-list", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
-          "button",
-          {
-            type: "button",
-            className: "dpl-source" + (channel === "all" ? " is-active" : ""),
-            onClick: () => setChannel("all"),
-            children: [
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: t("feed.all") }),
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("em", { children: channels.find((item) => item.key === "all")?.unread ?? 0 })
-            ]
-          }
-        ),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("button", { type: "button", className: "dpl-source" + (channel === "all" ? " is-active" : ""), onClick: () => setChannel("all"), children: [
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: t("feed.all") }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("em", { children: channels.find((item) => item.key === "all")?.unread ?? 0 })
+        ] }),
         groupsList.map(([group, items]) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "dpl-source-group", children: [
           group !== "" && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "dpl-source-group-name", children: group }),
           items.map((item) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
             "button",
             {
               type: "button",
-              className: "dpl-source" + (channel === item.key ? " is-active" : "") + (item.lastError ? " has-error" : ""),
+              className: "dpl-source" + (channel === item.key ? " is-active" : ""),
               title: item.lastError ? t("feed.lastError") + ": " + item.lastError : item.name,
               onClick: () => setChannel(item.key),
               children: [
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(SourceBadge, { name: item.name }),
                 /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: item.name }),
+                item.lastError ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(TriangleExclamationPoint, { size: 13, className: "dpl-source-error" }) : null,
                 /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("em", { children: item.unread > 0 ? item.unread : "" })
               ]
             },
@@ -2770,94 +3242,127 @@ function FeedView({ api, frozen, onMaterial }) {
     ] }),
     /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { className: "dpl-col dpl-entries", "aria-label": t("spaces.feed"), children: [
       /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "dpl-col-head", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", className: "dpl-chip" + (filter === "all" ? " is-active" : ""), onClick: () => setFilter("all"), children: t("feed.allEntries") }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("button", { type: "button", className: "dpl-chip" + (filter === "unread" ? " is-active" : ""), onClick: () => setFilter("unread"), children: [
-          t("feed.unreadOnly"),
-          unreadCount > 0 ? " " + unreadCount : ""
-        ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", className: "dpl-chip" + (filter === "favorite" ? " is-active" : ""), onClick: () => setFilter("favorite"), children: t("feed.favorites") }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", className: "dpl-icon-btn", title: t("feed.importOpml"), "aria-label": t("feed.importOpml"), onClick: () => setOpml(true), children: "\u21E7" })
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "dpl-pane-title dpl-truncate", children: listTitle }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "dpl-flex-fill" }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", className: "dpl-icon-btn" + (unreadOnly ? " is-on" : ""), title: t("feed.unreadOnly"), "aria-label": t("feed.unreadOnly"), "aria-pressed": unreadOnly, onClick: () => setUnreadOnly((value) => !value), children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(Circle, { size: 15, className: unreadOnly ? "dpl-fill" : void 0 }) }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", className: "dpl-icon-btn" + (!unreadOnly ? " is-on" : ""), title: t("feed.readOnly"), "aria-label": t("feed.readOnly"), "aria-pressed": !unreadOnly, onClick: () => setUnreadOnly(false), children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(CircleCheck, { size: 16 }) }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", className: "dpl-icon-btn", title: t("feed.markAllRead"), "aria-label": t("feed.markAllRead"), disabled: unreadCount === 0, onClick: () => setConfirmReadAll(true), children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(CheckCheck, { size: 16 }) }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", className: "dpl-icon-btn", title: t("feed.importOpml"), "aria-label": t("feed.importOpml"), onClick: () => setOpml(true), children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(Upload, { size: 16 }) })
       ] }),
+      newCount > 0 && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", className: "dpl-new-pill", onClick: () => {
+        listScroll.current?.scrollTo({ top: 0 });
+        baseline.current = { session: sessionKey, keys: new Set(entries2.map((entry) => entry.key)) };
+        setPillEpoch((epoch) => epoch + 1);
+      }, children: t("feed.newItems", { count: newCount }) }),
       error && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "dpl-error", role: "alert", children: error }),
-      entries2.length === 0 && !busy && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "dpl-empty", children: t("feed.noEntries") }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("ul", { className: "dpl-entry-list", children: entries2.map((entry) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("li", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
-          "button",
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "dpl-entry-scroll", ref: listScroll, children: [
+        entries2.length === 0 && !busy && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "dpl-empty", children: t("feed.noEntries") }),
+        entries2.map((entry) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+          "div",
           {
-            type: "button",
-            className: "dpl-entry" + (selected?.key === entry.key ? " is-active" : "") + (entry.read ? "" : " is-unread"),
+            className: "dpl-entry-row" + (selected?.key === entry.key ? " is-active" : ""),
             onClick: () => void openEntry(entry),
             children: [
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "dpl-entry-title", children: entry.title }),
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("span", { className: "dpl-entry-meta", children: [
-                entry.channelName,
-                " \xB7 ",
-                formatDate(entry.publishedAt)
-              ] })
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "dpl-entry-src", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(SourceBadge, { name: entry.channelName ?? channelNameOf(entry.channelKey) }),
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "dpl-truncate", children: entry.channelName ?? channelNameOf(entry.channelKey) }),
+                entry.publishedAt ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(import_jsx_runtime2.Fragment, { children: [
+                  ", ",
+                  /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: formatDate(entry.publishedAt) })
+                ] }) : null,
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "dpl-flex-fill" }),
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+                  "button",
+                  {
+                    type: "button",
+                    className: "dpl-star" + (entry.favorite ? " is-on" : ""),
+                    "aria-label": entry.favorite ? t("common.unfavorite") : t("common.favorite"),
+                    disabled: favBusy === entry.key,
+                    onClick: (event) => {
+                      event.stopPropagation();
+                      void toggleFavorite(entry);
+                    },
+                    children: entry.favorite ? "\u2605" : "\u2606"
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "dpl-entry-main", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "dpl-dot" + (entry.read ? " is-read" : ""), "data-state": entry.read ? "seen" : "unseen" }),
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "dpl-truncate " + (entry.read ? "" : "is-unread"), children: entry.title })
+              ] }),
+              entry.summary ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { className: "dpl-entry-sum", children: entry.summary }) : null
             ]
-          }
-        ),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-          "button",
-          {
-            type: "button",
-            className: "dpl-star" + (entry.favorite ? " is-on" : ""),
-            "aria-label": entry.favorite ? t("common.unfavorite") : t("common.favorite"),
-            onClick: () => void toggleFavorite(entry),
-            children: entry.favorite ? "\u2605" : "\u2606"
-          }
-        )
-      ] }, entry.key)) })
-    ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { className: "dpl-reader", onMouseUp: captureSelection, children: [
-      !selected && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "dpl-empty dpl-reader-empty", children: t("feed.noFeedSelected") }),
-      selected && /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("article", { className: "dpl-article", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("header", { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h1", { children: selected.title }),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "dpl-article-meta", children: [
-            selected.author ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: selected.author }) : null,
-            selected.publishedAt ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("time", { children: formatDate(selected.publishedAt) }) : null,
-            selected.url ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("a", { href: selected.url, target: "_blank", rel: "noreferrer", children: [
-              t("common.openSource"),
-              " \u2197"
-            ] }) : null
-          ] })
-        ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(SafeHtml, { className: "dpl-article-body", html: html2 })
+          },
+          entry.key
+        ))
       ] })
     ] }),
-    managing && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-      SubscriptionManager,
-      {
-        api,
-        onClose: () => setManaging(false),
-        onChanged: async () => {
-          await loadChannels();
-          await loadEntries(true);
-        }
-      }
-    ),
-    opml && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-      OpmlDialog,
-      {
-        api,
-        onClose: () => setOpml(false),
-        onImported: async () => {
-          await loadChannels();
-          await refresh();
-        }
-      }
-    )
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { className: "dpl-reader", onMouseUp: captureSelection, children: [
+      !selected && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "dpl-empty dpl-reader-empty", children: t("feed.pickToPreview") }),
+      selected && /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(import_jsx_runtime2.Fragment, { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "dpl-reader-actions-float", children: [
+          selected.url ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("a", { className: "dpl-round-btn", href: selected.url, target: "_blank", rel: "noreferrer", title: t("common.openSource"), "aria-label": t("common.openSource"), children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(ExternalLink, { size: 15 }) }) : null,
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", className: "dpl-round-btn", title: t("feed.addToInbox"), "aria-label": t("feed.addToInbox"), onClick: () => void addToInbox(selected), children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(Inbox, { size: 15 }) }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", className: "dpl-round-btn", title: t("feed.skip"), "aria-label": t("feed.skip"), onClick: () => void skipEntry(selected), children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(Archive, { size: 15 }) })
+        ] }),
+        notice && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "dpl-notice", role: "status", children: notice }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("article", { className: "dpl-article", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("header", { children: [
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h1", { children: selected.title }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "dpl-article-meta", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(SourceBadge, { name: selected.channelName ?? "" }),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: selected.channelName }),
+              selected.author ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: selected.author }) : null,
+              selected.publishedAt ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("time", { children: formatDate(selected.publishedAt) }) : null,
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: selected.read ? t("feed.stateRead") : t("feed.stateUnread") })
+            ] })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(SafeHtml, { className: "dpl-article-body", html: html2 })
+        ] })
+      ] })
+    ] }),
+    confirmReadAll && /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(Modal, { title: t("feed.markAllRead"), onClose: () => setConfirmReadAll(false), children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { children: t("feed.markAllReadConfirm", { count: unreadCount }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "dpl-form-row", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", className: "dpl-btn", onClick: () => setConfirmReadAll(false), children: t("common.cancel") }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", className: "dpl-btn is-primary", onClick: () => void markAllRead(), children: t("common.done") })
+      ] })
+    ] }),
+    managing && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(SubscriptionManager, { api, onClose: () => setManaging(false), onChanged: async () => {
+      await loadChannels();
+      await loadEntries(true);
+    } }),
+    opml && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(OpmlDialog, { api, onClose: () => setOpml(false), onImported: async () => {
+      await loadChannels();
+      await refresh();
+    } })
   ] });
 }
+var BADGE_HUES = [212, 262, 292, 322, 352, 22, 52, 142, 172];
+function SourceBadge({ name }) {
+  const label = String(name ?? "").trim();
+  const letter = (label[0] ?? "?").toUpperCase();
+  let seed = 0;
+  for (const ch2 of label) seed = seed * 31 + ch2.codePointAt(0) >>> 0;
+  const hue = BADGE_HUES[seed % BADGE_HUES.length];
+  return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+    "span",
+    {
+      className: "dpl-badge",
+      "aria-hidden": "true",
+      style: { background: "oklch(0.9 0.05 " + hue + ")", color: "oklch(0.45 0.11 " + hue + ")" },
+      children: letter
+    }
+  );
+}
 function SubscriptionManager({ api, onClose, onChanged }) {
-  const [subscriptions, setSubscriptions] = (0, import_react2.useState)([]);
-  const [url, setUrl] = (0, import_react2.useState)("");
-  const [name, setName] = (0, import_react2.useState)("");
-  const [group, setGroup] = (0, import_react2.useState)("");
-  const [error, setError] = (0, import_react2.useState)("");
-  const [busy, setBusy] = (0, import_react2.useState)(false);
-  (0, import_react2.useEffect)(() => {
+  const [subscriptions, setSubscriptions] = (0, import_react5.useState)([]);
+  const [url, setUrl] = (0, import_react5.useState)("");
+  const [name, setName] = (0, import_react5.useState)("");
+  const [group, setGroup] = (0, import_react5.useState)("");
+  const [error, setError] = (0, import_react5.useState)("");
+  const [busy, setBusy] = (0, import_react5.useState)(false);
+  (0, import_react5.useEffect)(() => {
     void api.listSubscriptions().then(({ subscriptions: items }) => setSubscriptions(items)).catch((cause) => setError(String(cause?.message ?? cause)));
   }, [api]);
   async function add2() {
@@ -2889,10 +3394,11 @@ function SubscriptionManager({ api, onClose, onChanged }) {
       /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("input", { placeholder: t("feed.feedUrl"), value: url, onChange: (event) => setUrl(event.target.value) }),
       /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("input", { placeholder: t("feed.feedName"), value: name, onChange: (event) => setName(event.target.value) }),
       /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("input", { placeholder: t("feed.feedGroup"), value: group, onChange: (event) => setGroup(event.target.value) }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", className: "dpl-btn", disabled: busy || url.trim() === "", onClick: () => void add2(), children: t("feed.add") })
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", className: "dpl-btn is-primary", disabled: busy || url.trim() === "", onClick: () => void add2(), children: busy ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(LoaderCircle, { size: 14, className: "dpl-spin" }) : t("feed.add") })
     ] }),
     error && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "dpl-error", role: "alert", children: error }),
     /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("ul", { className: "dpl-sub-list", children: subscriptions.map((sub) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("li", { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(SourceBadge, { name: sub.name }),
       /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("span", { className: "dpl-sub-name", children: [
         sub.name,
         sub.group ? " \xB7 " + sub.group : ""
@@ -2901,16 +3407,16 @@ function SubscriptionManager({ api, onClose, onChanged }) {
         sub.entryCount,
         sub.lastError ? " \xB7 " + t("feed.lastError") : ""
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", className: "dpl-btn is-danger", onClick: () => void remove(sub), children: t("feed.remove") })
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", className: "dpl-icon-btn", title: t("feed.remove"), "aria-label": t("feed.remove"), onClick: () => void remove(sub), children: "\u2715" })
     ] }, sub.id)) })
   ] });
 }
 function OpmlDialog({ api, onClose, onImported }) {
-  const [text2, setText] = (0, import_react2.useState)("");
-  const [entries2, setEntries] = (0, import_react2.useState)(null);
-  const [picked, setPicked] = (0, import_react2.useState)(/* @__PURE__ */ new Set());
-  const [error, setError] = (0, import_react2.useState)("");
-  const [busy, setBusy] = (0, import_react2.useState)(false);
+  const [text2, setText] = (0, import_react5.useState)("");
+  const [entries2, setEntries] = (0, import_react5.useState)(null);
+  const [picked, setPicked] = (0, import_react5.useState)(/* @__PURE__ */ new Set());
+  const [error, setError] = (0, import_react5.useState)("");
+  const [busy, setBusy] = (0, import_react5.useState)(false);
   async function preview() {
     setBusy(true);
     setError("");
@@ -2938,34 +3444,18 @@ function OpmlDialog({ api, onClose, onImported }) {
     }
   }
   return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(Modal, { title: t("feed.importOpml"), onClose, wide: true, children: [
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-      "textarea",
-      {
-        className: "dpl-opml-input",
-        placeholder: t("feed.opmlFile") + " / " + t("feed.opmlUrl"),
-        value: text2,
-        onChange: (event) => setText(event.target.value),
-        rows: 4
-      }
-    ),
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "dpl-form-row", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", className: "dpl-btn", disabled: busy || text2.trim() === "", onClick: () => void preview(), children: t("feed.importOpml") }) }),
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("textarea", { className: "dpl-opml-input", placeholder: t("feed.opmlFile") + " / " + t("feed.opmlUrl"), value: text2, onChange: (event) => setText(event.target.value), rows: 4 }),
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "dpl-form-row", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", className: "dpl-btn is-primary", disabled: busy || text2.trim() === "", onClick: () => void preview(), children: busy ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(LoaderCircle, { size: 14, className: "dpl-spin" }) : t("feed.importOpml") }) }),
     error && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "dpl-error", role: "alert", children: error }),
     entries2 && /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(import_jsx_runtime2.Fragment, { children: [
       /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("ul", { className: "dpl-sub-list", children: entries2.map((entry) => /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("li", { children: /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { className: entry.duplicate ? "is-dim" : "", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-          "input",
-          {
-            type: "checkbox",
-            checked: picked.has(entry.url),
-            disabled: entry.duplicate,
-            onChange: (event) => {
-              const next = new Set(picked);
-              if (event.target.checked) next.add(entry.url);
-              else next.delete(entry.url);
-              setPicked(next);
-            }
-          }
-        ),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("input", { type: "checkbox", checked: picked.has(entry.url), disabled: entry.duplicate, onChange: (event) => {
+          const next = new Set(picked);
+          if (event.target.checked) next.add(entry.url);
+          else next.delete(entry.url);
+          setPicked(next);
+        } }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(SourceBadge, { name: entry.name ?? entry.url }),
         /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "dpl-sub-name", children: entry.name ?? entry.url }),
         entry.group ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("span", { className: "dpl-sub-meta", children: [
           " \xB7 ",
@@ -2976,7 +3466,7 @@ function OpmlDialog({ api, onClose, onImported }) {
           t("feed.duplicate")
         ] }) : null
       ] }) }, entry.url)) }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "dpl-form-row", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("button", { type: "button", className: "dpl-btn", disabled: busy || picked.size === 0, onClick: () => void importSelected(), children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "dpl-form-row", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("button", { type: "button", className: "dpl-btn is-primary", disabled: busy || picked.size === 0, onClick: () => void importSelected(), children: [
         t("feed.importSelected"),
         " (",
         picked.size,
@@ -3004,7 +3494,7 @@ function download(filename, content, type) {
 }
 
 // src/client/InboxView.jsx
-var import_react3 = require("react");
+var import_react6 = require("react");
 
 // node_modules/pdfjs-dist/legacy/build/pdf.mjs
 var import_meta = {};
@@ -4132,9 +4622,9 @@ var html_namespaceFn = /* @__PURE__ */ __webpack_require__.cw((module2) => {
 var ie8_dom_define_namespaceFn = /* @__PURE__ */ __webpack_require__.cw((module2) => {
   var DESCRIPTORS = descriptors_namespaceFn();
   var fails = fails_namespaceFn();
-  var createElement = document_create_element_namespaceFn();
+  var createElement4 = document_create_element_namespaceFn();
   module2.exports = !DESCRIPTORS && !fails(function() {
-    return Object.defineProperty(createElement("div"), "a", {
+    return Object.defineProperty(createElement4("div"), "a", {
       get: function() {
         return 7;
       }
@@ -37066,9 +37556,9 @@ var html_namespaceFn2 = /* @__PURE__ */ __webpack_require__2.cw((module2) => {
 var ie8_dom_define_namespaceFn2 = /* @__PURE__ */ __webpack_require__2.cw((module2) => {
   var DESCRIPTORS = descriptors_namespaceFn2();
   var fails = fails_namespaceFn2();
-  var createElement = document_create_element_namespaceFn2();
+  var createElement4 = document_create_element_namespaceFn2();
   module2.exports = !DESCRIPTORS && !fails(function() {
-    return Object.defineProperty(createElement("div"), "a", {
+    return Object.defineProperty(createElement4("div"), "a", {
       get: function() {
         return 7;
       }
@@ -104401,14 +104891,14 @@ function stripToBody(xhtml) {
 // src/client/InboxView.jsx
 var import_jsx_runtime3 = require("react/jsx-runtime");
 function InboxView({ api, onMaterial }) {
-  const [items, setItems] = (0, import_react3.useState)([]);
-  const [url, setUrl] = (0, import_react3.useState)("");
-  const [selected, setSelected] = (0, import_react3.useState)(null);
-  const [doc, setDoc] = (0, import_react3.useState)(null);
-  const [busy, setBusy] = (0, import_react3.useState)(false);
-  const [error, setError] = (0, import_react3.useState)("");
-  const docRef = (0, import_react3.useRef)(null);
-  const load = (0, import_react3.useCallback)(async () => {
+  const [items, setItems] = (0, import_react6.useState)([]);
+  const [url, setUrl] = (0, import_react6.useState)("");
+  const [selected, setSelected] = (0, import_react6.useState)(null);
+  const [doc, setDoc] = (0, import_react6.useState)(null);
+  const [busy, setBusy] = (0, import_react6.useState)(false);
+  const [error, setError] = (0, import_react6.useState)("");
+  const docRef = (0, import_react6.useRef)(null);
+  const load = (0, import_react6.useCallback)(async () => {
     try {
       const { items: next } = await api.inboxList({});
       setItems(next);
@@ -104416,10 +104906,10 @@ function InboxView({ api, onMaterial }) {
       setError(String(cause?.message ?? cause));
     }
   }, [api]);
-  (0, import_react3.useEffect)(() => {
+  (0, import_react6.useEffect)(() => {
     void load();
   }, [load]);
-  (0, import_react3.useEffect)(() => () => {
+  (0, import_react6.useEffect)(() => () => {
     docRef.current?.destroy?.();
   }, []);
   async function addUrl() {
@@ -104566,8 +105056,8 @@ function kindLabel(kind) {
   return t("inbox.webpage");
 }
 function PdfReader({ doc, setDoc }) {
-  const canvasRef = (0, import_react3.useRef)(null);
-  (0, import_react3.useEffect)(() => {
+  const canvasRef = (0, import_react6.useRef)(null);
+  (0, import_react6.useEffect)(() => {
     let cancelled = false;
     void (async () => {
       const canvas = canvasRef.current;
@@ -104621,7 +105111,7 @@ function plainOf2(html2) {
 }
 
 // src/client/VaultView.jsx
-var import_react4 = require("react");
+var import_react7 = require("react");
 
 // node_modules/d3-quadtree/dist/d3-quadtree.mjs
 function tree_add(d) {
@@ -105539,21 +106029,21 @@ function computeLayout(graph, width = 1e3, height = 700) {
 // src/client/VaultView.jsx
 var import_jsx_runtime4 = require("react/jsx-runtime");
 function VaultView({ api, onMaterial }) {
-  const [tree, setTree] = (0, import_react4.useState)(null);
-  const [stats, setStats] = (0, import_react4.useState)({ files: 0, builtAt: 0, root: "" });
-  const [note, setNote] = (0, import_react4.useState)(null);
-  const [mode, setMode] = (0, import_react4.useState)("read");
-  const [draft, setDraft] = (0, import_react4.useState)("");
-  const [search, setSearch] = (0, import_react4.useState)("");
-  const [results, setResults] = (0, import_react4.useState)(null);
-  const [backlinks, setBacklinks] = (0, import_react4.useState)([]);
-  const [graph, setGraph] = (0, import_react4.useState)(null);
-  const [conflict, setConflict] = (0, import_react4.useState)(null);
-  const [creating, setCreating] = (0, import_react4.useState)(null);
-  const [error, setError] = (0, import_react4.useState)("");
-  const [busy, setBusy] = (0, import_react4.useState)(false);
-  const readerRef = (0, import_react4.useRef)(null);
-  const loadTree = (0, import_react4.useCallback)(async () => {
+  const [tree, setTree] = (0, import_react7.useState)(null);
+  const [stats, setStats] = (0, import_react7.useState)({ files: 0, builtAt: 0, root: "" });
+  const [note, setNote] = (0, import_react7.useState)(null);
+  const [mode, setMode] = (0, import_react7.useState)("read");
+  const [draft, setDraft] = (0, import_react7.useState)("");
+  const [search, setSearch] = (0, import_react7.useState)("");
+  const [results, setResults] = (0, import_react7.useState)(null);
+  const [backlinks, setBacklinks] = (0, import_react7.useState)([]);
+  const [graph, setGraph] = (0, import_react7.useState)(null);
+  const [conflict, setConflict] = (0, import_react7.useState)(null);
+  const [creating, setCreating] = (0, import_react7.useState)(null);
+  const [error, setError] = (0, import_react7.useState)("");
+  const [busy, setBusy] = (0, import_react7.useState)(false);
+  const readerRef = (0, import_react7.useRef)(null);
+  const loadTree = (0, import_react7.useCallback)(async () => {
     try {
       const outcome = await api.vaultTree();
       setTree(outcome.tree);
@@ -105562,10 +106052,10 @@ function VaultView({ api, onMaterial }) {
       setError(String(cause?.message ?? cause));
     }
   }, [api]);
-  (0, import_react4.useEffect)(() => {
+  (0, import_react7.useEffect)(() => {
     void loadTree();
   }, [loadTree]);
-  const flatFiles = (0, import_react4.useMemo)(() => {
+  const flatFiles = (0, import_react7.useMemo)(() => {
     const files = [];
     const walk = (node) => {
       for (const file of node.files) files.push(file);
@@ -105854,8 +106344,8 @@ function Tree({ node, activePath, onOpen, depth = 0 }) {
 function GraphView({ graph, onOpen }) {
   const width = 900;
   const height = 620;
-  const positions = (0, import_react4.useMemo)(() => computeLayout(graph, width, height), [graph]);
-  const [hover, setHover] = (0, import_react4.useState)(null);
+  const positions = (0, import_react7.useMemo)(() => computeLayout(graph, width, height), [graph]);
+  const [hover, setHover] = (0, import_react7.useState)(null);
   return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "dpl-graph", "aria-label": t("vault.graph"), children: [
     /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("svg", { viewBox: "0 0 " + width + " " + height, role: "img", children: [
       graph.edges.map((edge, index2) => {
@@ -105892,22 +106382,22 @@ function GraphView({ graph, onOpen }) {
 }
 
 // src/client/Companion.jsx
-var import_react5 = require("react");
+var import_react8 = require("react");
 var import_jsx_runtime5 = require("react/jsx-runtime");
 function Companion({ api, material, onClose, SessionProvider, renderSlot, storagePrefix = "droplets" }) {
-  const [workspaceId, setWorkspaceId] = (0, import_react5.useState)(() => api.defaultChatWorkspace?.());
-  const [chat, setChat] = (0, import_react5.useState)(null);
-  const [error, setError] = (0, import_react5.useState)("");
-  const [actionError, setActionError] = (0, import_react5.useState)("");
-  const [busy, setBusy] = (0, import_react5.useState)(true);
-  const [attached, setAttached] = (0, import_react5.useState)("");
-  const [notice, setNotice] = (0, import_react5.useState)("");
-  const [sendingPrompt, setSendingPrompt] = (0, import_react5.useState)(false);
-  const sending = (0, import_react5.useRef)(false);
-  const owned = (0, import_react5.useRef)(null);
-  const generation = (0, import_react5.useRef)(0);
-  const started = (0, import_react5.useRef)(false);
-  const bindingQueue = (0, import_react5.useRef)(Promise.resolve());
+  const [workspaceId, setWorkspaceId] = (0, import_react8.useState)(() => api.defaultChatWorkspace?.());
+  const [chat, setChat] = (0, import_react8.useState)(null);
+  const [error, setError] = (0, import_react8.useState)("");
+  const [actionError, setActionError] = (0, import_react8.useState)("");
+  const [busy, setBusy] = (0, import_react8.useState)(true);
+  const [attached, setAttached] = (0, import_react8.useState)("");
+  const [notice, setNotice] = (0, import_react8.useState)("");
+  const [sendingPrompt, setSendingPrompt] = (0, import_react8.useState)(false);
+  const sending = (0, import_react8.useRef)(false);
+  const owned = (0, import_react8.useRef)(null);
+  const generation = (0, import_react8.useRef)(0);
+  const started = (0, import_react8.useRef)(false);
+  const bindingQueue = (0, import_react8.useRef)(Promise.resolve());
   const materialKey = [material.space, material.key ?? material.path ?? "", material.selection || ""].join("|");
   const bindContext = (request) => {
     const pending = bindingQueue.current.catch(() => {
@@ -105915,15 +106405,15 @@ function Companion({ api, material, onClose, SessionProvider, renderSlot, storag
     bindingQueue.current = pending;
     return pending;
   };
-  (0, import_react5.useEffect)(() => {
+  (0, import_react8.useEffect)(() => {
     if (workspaceId) return;
     return api.watchChatWorkspaces?.(() => setWorkspaceId(api.defaultChatWorkspace?.()));
   }, [api, workspaceId]);
-  (0, import_react5.useEffect)(() => () => {
+  (0, import_react8.useEffect)(() => () => {
     generation.current += 1;
     owned.current?.release();
   }, []);
-  (0, import_react5.useEffect)(() => {
+  (0, import_react8.useEffect)(() => {
     setActionError("");
     setNotice("");
   }, [materialKey]);
@@ -105966,14 +106456,14 @@ function Companion({ api, material, onClose, SessionProvider, renderSlot, storag
       if (current === generation.current) setBusy(false);
     }
   }
-  (0, import_react5.useEffect)(() => {
+  (0, import_react8.useEffect)(() => {
     if (!workspaceId || started.current) return;
     started.current = true;
     void start();
   }, [workspaceId]);
   const autoPrompt = material.action === "organize" && typeof material.prompt === "string" ? material.prompt : "";
-  const autoSentFor = (0, import_react5.useRef)("");
-  (0, import_react5.useEffect)(() => {
+  const autoSentFor = (0, import_react8.useRef)("");
+  (0, import_react8.useEffect)(() => {
     if (!chat || attached !== materialKey || autoPrompt === "" || autoSentFor.current === materialKey) return;
     autoSentFor.current = materialKey;
     void chat.submitPrompt(autoPrompt).catch((cause) => {
@@ -105983,7 +106473,7 @@ function Companion({ api, material, onClose, SessionProvider, renderSlot, storag
       else setActionError(t("companion.sendFailed") + "\uFF1A" + message);
     });
   }, [chat, attached, materialKey, autoPrompt]);
-  (0, import_react5.useEffect)(() => {
+  (0, import_react8.useEffect)(() => {
     if (!chat || attached === materialKey) return;
     let stale = false;
     setError("");
@@ -106116,21 +106606,21 @@ var SPACES = [
   { id: "vault", label: () => t("spaces.vault") }
 ];
 function DropletsPanel({ api, SessionProvider, renderSlot }) {
-  const [space, setSpace] = (0, import_react6.useState)("feed");
-  const [companionOpen, setCompanionOpen] = (0, import_react6.useState)(false);
-  const [material, setMaterial] = (0, import_react6.useState)({ space: "feed", title: "" });
-  const [settings, setSettings2] = (0, import_react6.useState)(null);
-  const [showSettings, setShowSettings] = (0, import_react6.useState)(false);
-  const frozen = (0, import_react6.useMemo)(() => new FrozenOrder(), []);
-  const onFocus = (0, import_react6.useCallback)(() => {
+  const [space, setSpace] = (0, import_react9.useState)("feed");
+  const [companionOpen, setCompanionOpen] = (0, import_react9.useState)(false);
+  const [material, setMaterial] = (0, import_react9.useState)({ space: "feed", title: "" });
+  const [settings, setSettings2] = (0, import_react9.useState)(null);
+  const [showSettings, setShowSettings] = (0, import_react9.useState)(false);
+  const frozen = (0, import_react9.useMemo)(() => new FrozenOrder(), []);
+  const onFocus = (0, import_react9.useCallback)(() => {
     void api.vaultReindex?.().catch(() => {
     });
   }, [api]);
-  (0, import_react6.useEffect)(() => {
+  (0, import_react9.useEffect)(() => {
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, [onFocus]);
-  const onMaterial = (0, import_react6.useCallback)((next) => {
+  const onMaterial = (0, import_react9.useCallback)((next) => {
     setMaterial(next);
     setCompanionOpen(true);
   }, []);
@@ -106171,7 +106661,7 @@ function DropletsPanel({ api, SessionProvider, renderSlot }) {
     ] }),
     /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "dpl-body" + (companionOpen ? " has-companion" : ""), children: [
       /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "dpl-space", children: [
-        space === "feed" && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(FeedView, { api, frozen, onMaterial }),
+        space === "feed" && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(FeedView, { api, frozen, onMaterial, onJumpSpace: setSpace }),
         space === "inbox" && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(InboxView, { api, onMaterial }),
         space === "vault" && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(VaultView, { api, onMaterial })
       ] }),
@@ -106197,9 +106687,9 @@ function DropletsPanel({ api, SessionProvider, renderSlot }) {
   ] });
 }
 function SettingsDialog({ api, settings, onClose }) {
-  const [info3, setInfo] = (0, import_react6.useState)(null);
-  const [savedAt, setSavedAt] = (0, import_react6.useState)(0);
-  (0, import_react6.useEffect)(() => {
+  const [info3, setInfo] = (0, import_react9.useState)(null);
+  const [savedAt, setSavedAt] = (0, import_react9.useState)(0);
+  (0, import_react9.useEffect)(() => {
     void api.getStorageInfo?.().then(setInfo).catch(() => {
     });
   }, [api, savedAt]);
@@ -106376,7 +106866,7 @@ function nativeChatBridge(ctx) {
 }
 
 // src/client/styles.css
-var styles_default = "/* droplets \xB7 panel styles.\n * Skin: DSH design tokens (--dsw-alias-*) so the panel follows the host\n * theme (light/dark) automatically. Layout & interaction: droplets'\n * three-pane shapes (sources 240 / entries 320 / reader, docked companion).\n * Details (measure, ghost buttons, list rhythm): qiaomu-rss refinements. */\n.dpl-root {\n  --dpl-bg: var(--dsw-alias-bg-base, #fff);\n  --dpl-bg-2: var(--dsw-alias-bg-layer-1, rgba(15, 23, 42, 0.03));\n  --dpl-bg-active: var(--dsw-alias-interactive-bg-active, rgba(15, 23, 42, 0.08));\n  --dpl-bg-hover: var(--dsw-alias-interactive-bg-hover, rgba(15, 23, 42, 0.05));\n  --dpl-border: var(--dsw-alias-border-l1, rgba(15, 23, 42, 0.08));\n  --dpl-fg: var(--dsw-alias-label-primary, #0f1115);\n  --dpl-muted: var(--dsw-alias-label-secondary, rgba(15, 23, 42, 0.6));\n  --dpl-faint: var(--dsw-alias-label-tertiary, rgba(15, 23, 42, 0.4));\n  --dpl-accent: var(--dsw-alias-brand-primary, #4f46e5);\n  --dpl-link: var(--dsw-alias-link, #3567d6);\n  --dpl-danger: var(--dsw-alias-state-error-primary, #d5484f);\n  --dpl-radius: 10px;\n  --dpl-radius-sm: 8px;\n  --dpl-sources-width: 240px;\n  --dpl-list-width: 320px;\n  --dpl-measure: 720px;\n  display: flex;\n  flex-direction: column;\n  height: 100%;\n  min-height: 0;\n  background: var(--dpl-bg);\n  color: var(--dpl-fg);\n  font-size: 14px;\n  container-type: inline-size;\n}\n.dpl-root *, .dpl-root *::before, .dpl-root *::after { box-sizing: border-box; }\n.dpl-root button { font: inherit; color: inherit; }\n\n/* ---- header (droplets Topbar shape) ---- */\n.dpl-header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  height: 44px;\n  padding: 0 12px;\n  border-bottom: 1px solid var(--dpl-border);\n  flex: none;\n}\n.dpl-brand { display: flex; align-items: center; gap: 8px; min-width: 0; }\n.dpl-brand strong { font-size: 14px; font-weight: 600; }\n.dpl-spaces { display: flex; gap: 2px; margin-left: 10px; background: var(--dpl-bg-2); border-radius: var(--dpl-radius); padding: 2px; }\n.dpl-space-tab {\n  border: none;\n  background: transparent;\n  padding: 4px 12px;\n  border-radius: calc(var(--dpl-radius) - 2px);\n  cursor: pointer;\n  color: var(--dpl-muted);\n  font-size: 13px;\n}\n.dpl-space-tab:hover { color: var(--dpl-fg); background: var(--dpl-bg-hover); }\n.dpl-space-tab.is-active { background: var(--dpl-bg); color: var(--dpl-fg); font-weight: 600; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.1); }\n.dpl-header-actions { display: flex; gap: 6px; align-items: center; }\n\n.dpl-body { display: flex; flex: 1; min-height: 0; }\n.dpl-space { flex: 1; min-width: 0; display: flex; }\n.dpl-space > * { flex: 1; min-width: 0; }\n\n/* ---- shared controls (DSH ghost-button feel) ---- */\n.dpl-btn {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  border: none;\n  background: transparent;\n  border-radius: var(--dpl-radius-sm);\n  padding: 5px 10px;\n  min-height: 28px;\n  cursor: pointer;\n  font-size: 13px;\n  color: var(--dpl-fg);\n  white-space: nowrap;\n}\n.dpl-btn:hover { background: var(--dpl-bg-hover); }\n.dpl-btn.is-danger { color: var(--dpl-danger); }\n.dpl-btn.is-danger:hover { background: color-mix(in srgb, var(--dpl-danger) 12%, transparent); }\n.dpl-btn.is-on { background: var(--dpl-bg-active); }\n.dpl-btn.is-primary { background: var(--dpl-accent); color: #fff; }\n.dpl-btn.is-primary:hover { background: color-mix(in srgb, var(--dpl-accent) 88%, #000); }\n.dpl-btn:disabled { opacity: 0.45; cursor: default; background: transparent; }\n.dpl-icon-btn {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 28px;\n  height: 28px;\n  border: none;\n  background: transparent;\n  border-radius: var(--dpl-radius-sm);\n  cursor: pointer;\n  color: var(--dpl-muted);\n  font-size: 14px;\n  line-height: 1;\n}\n.dpl-icon-btn:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-chip {\n  border: none;\n  background: transparent;\n  border-radius: 999px;\n  padding: 3px 10px;\n  min-height: 24px;\n  cursor: pointer;\n  color: var(--dpl-muted);\n  font-size: 12px;\n}\n.dpl-chip:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-chip.is-active { background: var(--dpl-bg-active); color: var(--dpl-fg); font-weight: 600; }\n.dpl-root input, .dpl-root textarea {\n  font: inherit;\n  color: var(--dpl-fg);\n  background: var(--dpl-bg-2);\n  border: 1px solid transparent;\n  border-radius: var(--dpl-radius-sm);\n  padding: 5px 10px;\n  min-height: 30px;\n  outline: none;\n}\n.dpl-root input:focus, .dpl-root textarea:focus { border-color: var(--dpl-accent); background: var(--dpl-bg); }\n.dpl-root input::placeholder, .dpl-root textarea::placeholder { color: var(--dpl-faint); }\n\n/* ---- panes ---- */\n.dpl-feed, .dpl-inbox, .dpl-vault { display: flex; flex: 1; min-width: 0; }\n.dpl-col { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--dpl-border); background: var(--dpl-bg); }\n.dpl-sources, .dpl-vault-tree { width: var(--dpl-sources-width); flex: none; }\n.dpl-entries, .dpl-inbox-list { width: var(--dpl-list-width); flex: none; }\n.dpl-reader { flex: 1; min-width: 0; overflow: auto; padding: 20px clamp(16px, 3%, 36px); }\n.dpl-col-head {\n  display: flex;\n  align-items: center;\n  gap: 4px;\n  height: 40px;\n  padding: 0 8px;\n  border-bottom: 1px solid var(--dpl-border);\n  flex: none;\n}\n.dpl-pane-title { font-size: 12px; font-weight: 600; color: var(--dpl-muted); padding: 0 4px; }\n.dpl-search { padding: 8px; flex: none; }\n.dpl-search input { width: 100%; }\n\n/* ---- sources pane (droplets: title row, search+refresh row, collapsible groups) ---- */\n.dpl-source-tools { display: flex; gap: 6px; padding: 0 8px 8px; }\n.dpl-source-tools .dpl-search { flex: 1; padding: 0; }\n.dpl-source {\n  display: flex;\n  width: 100%;\n  align-items: center;\n  justify-content: space-between;\n  gap: 6px;\n  border: none;\n  background: transparent;\n  padding: 6px 10px;\n  cursor: pointer;\n  color: var(--dpl-fg);\n  text-align: left;\n  border-radius: var(--dpl-radius-sm);\n  margin: 0 4px;\n  width: calc(100% - 8px);\n}\n.dpl-source span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }\n.dpl-source em { font-style: normal; font-size: 12px; font-weight: 600; color: var(--dpl-accent); flex: none; }\n.dpl-source:hover { background: var(--dpl-bg-hover); }\n.dpl-source.is-active { background: var(--dpl-bg-active); font-weight: 600; }\n.dpl-source.has-error span { color: var(--dpl-danger); }\n.dpl-source-group-name {\n  padding: 10px 12px 2px;\n  font-size: 11px;\n  font-weight: 600;\n  letter-spacing: 0.02em;\n  text-transform: uppercase;\n  color: var(--dpl-faint);\n}\n.dpl-sources-list { overflow: auto; flex: 1; padding-bottom: 8px; }\n\n/* ---- entry list ---- */\n.dpl-entry-list { list-style: none; margin: 0; padding: 0; overflow: auto; flex: 1; }\n.dpl-entry-list li { display: flex; align-items: stretch; }\n.dpl-entry {\n  flex: 1;\n  min-width: 0;\n  border: none;\n  background: transparent;\n  text-align: left;\n  padding: 9px 10px 9px 14px;\n  cursor: pointer;\n  color: var(--dpl-fg);\n  display: flex;\n  flex-direction: column;\n  gap: 3px;\n}\n.dpl-entry:hover { background: var(--dpl-bg-hover); }\n.dpl-entry.is-active { background: var(--dpl-bg-active); }\n.dpl-entry-title { font-weight: 550; font-size: 13px; line-height: 1.45; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }\n.dpl-entry.is-unread .dpl-entry-title::before {\n  content: '';\n  display: inline-block;\n  width: 6px;\n  height: 6px;\n  border-radius: 50%;\n  background: var(--dpl-accent);\n  margin-right: 7px;\n  vertical-align: 2px;\n}\n.dpl-entry-meta { font-size: 12px; color: var(--dpl-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.dpl-warn { color: var(--dpl-danger); }\n.dpl-star {\n  border: none;\n  background: transparent;\n  cursor: pointer;\n  color: var(--dpl-faint);\n  padding: 0 8px 0 2px;\n  flex: none;\n  font-size: 14px;\n}\n.dpl-star:hover { color: var(--dpl-muted); }\n.dpl-star.is-on { color: #e6a700; }\n\n.dpl-empty { padding: 32px 20px; text-align: center; color: var(--dpl-faint); font-size: 13px; }\n.dpl-reader-empty { display: flex; align-items: center; justify-content: center; height: 100%; }\n.dpl-hint { font-size: 12px; color: var(--dpl-faint); }\n.dpl-error {\n  margin: 8px;\n  padding: 8px 10px;\n  border-radius: var(--dpl-radius-sm);\n  background: color-mix(in srgb, var(--dpl-danger) 10%, transparent);\n  color: var(--dpl-danger);\n  font-size: 12px;\n  word-break: break-all;\n}\n\n/* ---- reader ---- */\n.dpl-article, .dpl-note { max-width: var(--dpl-measure); margin: 0 auto; }\n.dpl-article h1, .dpl-note h1 { font-size: 22px; line-height: 1.35; margin: 0 0 8px; font-weight: 650; }\n.dpl-article-meta { display: flex; gap: 10px; font-size: 13px; color: var(--dpl-muted); margin-bottom: 18px; flex-wrap: wrap; }\n.dpl-article-meta a { color: var(--dpl-link); text-decoration: none; }\n.dpl-article-meta a:hover { text-decoration: underline; }\n.dpl-article-body { line-height: 1.75; font-size: 14.5px; }\n.dpl-article-body img { max-width: 100%; height: auto; border-radius: var(--dpl-radius-sm); }\n.dpl-article-body pre { overflow: auto; padding: 12px; border-radius: var(--dpl-radius-sm); background: var(--dpl-bg-2); font-size: 13px; }\n.dpl-article-body code { font-size: 0.92em; background: var(--dpl-bg-2); border-radius: 4px; padding: 1px 5px; }\n.dpl-article-body pre code { background: transparent; padding: 0; }\n.dpl-article-body blockquote { border-left: 3px solid var(--dpl-border); margin: 8px 0; padding: 2px 14px; color: var(--dpl-muted); }\n.dpl-reader-toolbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }\n.dpl-reader-toolbar h1 { font-size: 20px; margin: 0 0 4px; }\n.dpl-reader-actions { display: flex; gap: 4px; flex: none; }\n\n/* ---- inbox ---- */\n.dpl-inbox-add { display: flex; gap: 6px; padding: 8px; border-bottom: 1px solid var(--dpl-border); flex: none; }\n.dpl-inbox-add input { flex: 1; min-width: 0; }\n\n/* ---- pdf / epub ---- */\n.dpl-pdf { display: flex; flex-direction: column; align-items: center; gap: 12px; }\n.dpl-pdf-canvas { max-width: 100%; box-shadow: 0 2px 14px rgba(15, 23, 42, 0.18); border-radius: 6px; background: #fff; }\n.dpl-pager { display: flex; align-items: center; gap: 10px; color: var(--dpl-muted); font-size: 13px; }\n\n/* ---- vault ---- */\n.dpl-vault-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--dpl-muted); }\n.dpl-tree-stats { font-size: 12px; color: var(--dpl-faint); flex: 1; padding-left: 4px; }\n.dpl-tree details { margin-left: 4px; }\n.dpl-tree summary {\n  cursor: pointer;\n  padding: 4px 8px;\n  font-size: 12px;\n  font-weight: 600;\n  color: var(--dpl-muted);\n  border-radius: 6px;\n  list-style: none;\n  display: flex;\n  align-items: center;\n  gap: 4px;\n}\n.dpl-tree summary::before { content: '\u25B8'; font-size: 10px; transition: transform 0.12s; color: var(--dpl-faint); }\n.dpl-tree details[open] > summary::before { transform: rotate(90deg); }\n.dpl-tree summary:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-tree-file {\n  display: flex;\n  width: calc(100% - 8px);\n  margin: 0 4px;\n  border: none;\n  background: transparent;\n  text-align: left;\n  padding: 4px 10px;\n  cursor: pointer;\n  color: var(--dpl-fg);\n  border-radius: 6px;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  font-size: 13px;\n}\n.dpl-tree-file:hover { background: var(--dpl-bg-hover); }\n.dpl-tree-file.is-active { background: var(--dpl-bg-active); font-weight: 600; }\n.dpl-note-body { line-height: 1.75; font-size: 14.5px; }\n.dpl-note-body h1, .dpl-note-body h2 { border-bottom: 1px solid var(--dpl-border); padding-bottom: 6px; margin: 1.2em 0 0.6em; }\n.dpl-note-body pre { overflow: auto; padding: 12px; border-radius: var(--dpl-radius-sm); background: var(--dpl-bg-2); font-size: 13px; }\n.dpl-note-body code { background: var(--dpl-bg-2); border-radius: 4px; padding: 1px 5px; font-size: 0.92em; }\n.dpl-note-editor {\n  width: 100%;\n  min-height: 62vh;\n  font-family: var(--dsw-alias-font-mono, ui-monospace, 'SF Mono', monospace);\n  font-size: 13px;\n  line-height: 1.7;\n  border-radius: var(--dpl-radius);\n  border: 1px solid var(--dpl-border);\n  padding: 14px;\n  resize: vertical;\n  background: var(--dpl-bg);\n  color: var(--dpl-fg);\n}\n.dpl-note-editor:focus { border-color: var(--dpl-accent); }\n.dpl-wikilink { color: var(--dpl-link); text-decoration: none; border-bottom: 1px dashed currentColor; }\n.dpl-tag { color: var(--dpl-muted); background: var(--dpl-bg-2); border-radius: 4px; padding: 0 4px; font-size: 0.9em; }\n.dpl-backlinks h2, .dpl-search-results h2 { font-size: 14px; margin: 20px 0 8px; font-weight: 600; }\n.dpl-backlinks ul, .dpl-search-results ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }\n.dpl-backlinks button, .dpl-search-results button {\n  border: none;\n  background: transparent;\n  text-align: left;\n  cursor: pointer;\n  padding: 7px 9px;\n  border-radius: var(--dpl-radius-sm);\n  color: var(--dpl-fg);\n  display: block;\n  width: 100%;\n}\n.dpl-backlinks button:hover, .dpl-search-results button:hover { background: var(--dpl-bg-hover); }\n.dpl-search-results p { margin: 2px 0 0; font-size: 12px; color: var(--dpl-faint); }\n\n.dpl-graph { position: relative; height: 100%; }\n.dpl-graph svg { width: 100%; height: 100%; }\n.dpl-graph-edge { stroke: color-mix(in srgb, var(--dpl-fg) 20%, transparent); stroke-width: 1; }\n.dpl-graph-node { fill: var(--dpl-accent); cursor: pointer; }\n.dpl-graph-node.is-dangling { fill: color-mix(in srgb, var(--dpl-fg) 25%, transparent); }\n.dpl-graph-node.is-hover { stroke: var(--dpl-fg); stroke-width: 2; }\n.dpl-graph-label { position: absolute; top: 8px; left: 12px; font-size: 12px; color: var(--dpl-muted); }\n\n/* ---- companion (droplets: docked right panel) ---- */\n.dpl-companion {\n  width: 40%;\n  min-width: 360px;\n  flex: none;\n  display: flex;\n  flex-direction: column;\n  border-left: 1px solid var(--dpl-border);\n  min-height: 0;\n  background: var(--dpl-bg);\n}\n.dpl-companion-header { display: flex; align-items: center; gap: 4px; height: 40px; padding: 0 8px 0 12px; border-bottom: 1px solid var(--dpl-border); }\n.dpl-companion-header strong { flex: 1; font-size: 13px; font-weight: 600; }\n.dpl-companion-context { padding: 8px 12px; border-bottom: 1px solid var(--dpl-border); display: flex; flex-direction: column; gap: 2px; overflow: hidden; }\n.dpl-companion-context strong { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.dpl-companion-context small { font-size: 12px; color: var(--dpl-muted); }\n.dpl-native-chat { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }\n.dpl-companion-loading { padding: 24px; text-align: center; color: var(--dpl-faint); flex: 1; font-size: 13px; }\n.dpl-companion-error { margin: 10px; padding: 10px; border-radius: var(--dpl-radius-sm); background: color-mix(in srgb, var(--dpl-danger) 10%, transparent); color: var(--dpl-danger); font-size: 13px; }\n.dpl-companion-error p { margin: 6px 0 10px; font-size: 12px; word-break: break-all; }\n.dpl-companion-error button { margin-top: 2px; }\n.dpl-companion-notice { display: flex; align-items: center; gap: 6px; margin: 6px 10px; padding: 6px 10px; border-radius: var(--dpl-radius-sm); background: var(--dpl-bg-2); color: var(--dpl-muted); font-size: 12px; }\n.dpl-companion-notice span { flex: 1; }\n.dpl-companion-quote { margin: 8px 10px; border-left: 3px solid var(--dpl-accent); padding: 6px 10px; background: var(--dpl-bg-2); border-radius: 0 var(--dpl-radius-sm) var(--dpl-radius-sm) 0; }\n.dpl-companion-quote strong { font-size: 11px; color: var(--dpl-muted); display: block; margin-bottom: 4px; }\n.dpl-companion-quote blockquote { margin: 0; font-size: 12px; max-height: 90px; overflow: auto; white-space: pre-wrap; }\n.dpl-companion-prompt-strip { display: flex; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--dpl-border); flex: none; overflow-x: auto; }\n.dpl-prompt-ghost { border: 1px solid var(--dpl-border); background: transparent; border-radius: 999px; padding: 4px 12px; font-size: 12px; cursor: pointer; color: var(--dpl-fg); white-space: nowrap; }\n.dpl-prompt-ghost:hover { background: var(--dpl-bg-hover); }\n.dpl-prompt-ghost:disabled { opacity: 0.45; cursor: default; }\n\n/* ---- modal (DSH dialog feel) ---- */\n.dpl-modal-backdrop { position: fixed; inset: 0; background: color-mix(in srgb, var(--dpl-fg) 32%, transparent); display: flex; align-items: center; justify-content: center; z-index: 60; }\n.dpl-modal {\n  background: var(--dpl-bg);\n  border-radius: 14px;\n  width: min(480px, 92vw);\n  max-height: 80vh;\n  display: flex;\n  flex-direction: column;\n  box-shadow: 0 16px 48px rgba(15, 23, 42, 0.28);\n  border: 1px solid var(--dpl-border);\n}\n.dpl-modal.is-wide { width: min(680px, 94vw); }\n.dpl-modal header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--dpl-border); font-weight: 600; }\n.dpl-modal-body { padding: 14px 16px; overflow: auto; }\n.dpl-form-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }\n.dpl-form-row input { flex: 1; min-width: 120px; }\n.dpl-sub-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }\n.dpl-sub-list li { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: var(--dpl-radius-sm); }\n.dpl-sub-list li:hover { background: var(--dpl-bg-hover); }\n.dpl-sub-list label { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }\n.dpl-sub-list label.is-dim { opacity: 0.5; }\n.dpl-sub-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }\n.dpl-sub-meta { font-size: 12px; color: var(--dpl-faint); }\n.dpl-opml-input { width: 100%; }\n.dpl-settings-block h3 { font-size: 13px; margin: 14px 0 6px; font-weight: 600; }\n.dpl-settings-block h3:first-child { margin-top: 0; }\n.dpl-path { display: block; padding: 6px 9px; border-radius: 6px; background: var(--dpl-bg-2); font-size: 12px; font-family: var(--dsw-alias-font-mono, ui-monospace, monospace); word-break: break-all; margin: 6px 0; }\n.dpl-toggle { display: flex; align-items: center; gap: 8px; }\n.dpl-conflict-excerpt { margin: 8px 0; padding: 8px 10px; border-left: 3px solid var(--dpl-danger); font-size: 12px; color: var(--dpl-muted); max-height: 120px; overflow: auto; }\n\n/* ---- responsive: narrow windows stack companion below (qiaomu pattern) ---- */\n@container (max-width: 860px) {\n  .dpl-body { flex-direction: column; }\n  .dpl-companion { width: 100%; min-width: 0; min-height: 240px; border-left: none; border-top: 1px solid var(--dpl-border); }\n}\n";
+var styles_default = "/* droplets \xB7 panel styles.\n * Skin: DSH design tokens (--dsw-alias-*) so the panel follows the host\n * theme (light/dark) automatically. Layout & interaction: droplets'\n * three-pane shapes (sources 240 / entries 320 / reader, docked companion).\n * Details (measure, ghost buttons, list rhythm): qiaomu-rss refinements. */\n.dpl-root {\n  --dpl-bg: var(--dsw-alias-bg-base, #fff);\n  --dpl-bg-2: var(--dsw-alias-bg-layer-1, rgba(15, 23, 42, 0.03));\n  --dpl-bg-active: var(--dsw-alias-interactive-bg-active, rgba(15, 23, 42, 0.08));\n  --dpl-bg-hover: var(--dsw-alias-interactive-bg-hover, rgba(15, 23, 42, 0.05));\n  --dpl-border: var(--dsw-alias-border-l1, rgba(15, 23, 42, 0.08));\n  --dpl-fg: var(--dsw-alias-label-primary, #0f1115);\n  --dpl-muted: var(--dsw-alias-label-secondary, rgba(15, 23, 42, 0.6));\n  --dpl-faint: var(--dsw-alias-label-tertiary, rgba(15, 23, 42, 0.4));\n  --dpl-accent: var(--dsw-alias-brand-primary, #4f46e5);\n  --dpl-link: var(--dsw-alias-link, #3567d6);\n  --dpl-danger: var(--dsw-alias-state-error-primary, #d5484f);\n  --dpl-radius: 10px;\n  --dpl-radius-sm: 8px;\n  --dpl-sources-width: 240px;\n  --dpl-list-width: 320px;\n  --dpl-measure: 720px;\n  display: flex;\n  flex-direction: column;\n  height: 100%;\n  min-height: 0;\n  background: var(--dpl-bg);\n  color: var(--dpl-fg);\n  font-size: 14px;\n  container-type: inline-size;\n}\n.dpl-root *, .dpl-root *::before, .dpl-root *::after { box-sizing: border-box; }\n.dpl-root button { font: inherit; color: inherit; }\n\n/* ---- header (droplets Topbar shape) ---- */\n.dpl-header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  height: 44px;\n  padding: 0 12px;\n  border-bottom: 1px solid var(--dpl-border);\n  flex: none;\n}\n.dpl-brand { display: flex; align-items: center; gap: 8px; min-width: 0; }\n.dpl-brand strong { font-size: 14px; font-weight: 600; }\n.dpl-spaces { display: flex; gap: 2px; margin-left: 10px; background: var(--dpl-bg-2); border-radius: var(--dpl-radius); padding: 2px; }\n.dpl-space-tab {\n  border: none;\n  background: transparent;\n  padding: 4px 12px;\n  border-radius: calc(var(--dpl-radius) - 2px);\n  cursor: pointer;\n  color: var(--dpl-muted);\n  font-size: 13px;\n}\n.dpl-space-tab:hover { color: var(--dpl-fg); background: var(--dpl-bg-hover); }\n.dpl-space-tab.is-active { background: var(--dpl-bg); color: var(--dpl-fg); font-weight: 600; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.1); }\n.dpl-header-actions { display: flex; gap: 6px; align-items: center; }\n\n.dpl-body { display: flex; flex: 1; min-height: 0; }\n.dpl-space { flex: 1; min-width: 0; display: flex; }\n.dpl-space > * { flex: 1; min-width: 0; }\n\n/* ---- shared controls (DSH ghost-button feel) ---- */\n.dpl-btn {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  border: none;\n  background: transparent;\n  border-radius: var(--dpl-radius-sm);\n  padding: 5px 10px;\n  min-height: 28px;\n  cursor: pointer;\n  font-size: 13px;\n  color: var(--dpl-fg);\n  white-space: nowrap;\n}\n.dpl-btn:hover { background: var(--dpl-bg-hover); }\n.dpl-btn.is-danger { color: var(--dpl-danger); }\n.dpl-btn.is-danger:hover { background: color-mix(in srgb, var(--dpl-danger) 12%, transparent); }\n.dpl-btn.is-on { background: var(--dpl-bg-active); }\n.dpl-btn.is-primary { background: var(--dpl-accent); color: #fff; }\n.dpl-btn.is-primary:hover { background: color-mix(in srgb, var(--dpl-accent) 88%, #000); }\n.dpl-btn:disabled { opacity: 0.45; cursor: default; background: transparent; }\n.dpl-icon-btn {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 28px;\n  height: 28px;\n  border: none;\n  background: transparent;\n  border-radius: var(--dpl-radius-sm);\n  cursor: pointer;\n  color: var(--dpl-muted);\n  font-size: 14px;\n  line-height: 1;\n}\n.dpl-icon-btn:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-chip {\n  border: none;\n  background: transparent;\n  border-radius: 999px;\n  padding: 3px 10px;\n  min-height: 24px;\n  cursor: pointer;\n  color: var(--dpl-muted);\n  font-size: 12px;\n}\n.dpl-chip:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-chip.is-active { background: var(--dpl-bg-active); color: var(--dpl-fg); font-weight: 600; }\n.dpl-root input, .dpl-root textarea {\n  font: inherit;\n  color: var(--dpl-fg);\n  background: var(--dpl-bg-2);\n  border: 1px solid transparent;\n  border-radius: var(--dpl-radius-sm);\n  padding: 5px 10px;\n  min-height: 30px;\n  outline: none;\n}\n.dpl-root input:focus, .dpl-root textarea:focus { border-color: var(--dpl-accent); background: var(--dpl-bg); }\n.dpl-root input::placeholder, .dpl-root textarea::placeholder { color: var(--dpl-faint); }\n\n/* ---- panes ---- */\n.dpl-feed, .dpl-inbox, .dpl-vault { display: flex; flex: 1; min-width: 0; }\n.dpl-col { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--dpl-border); background: var(--dpl-bg); }\n.dpl-sources, .dpl-vault-tree { width: var(--dpl-sources-width); flex: none; }\n.dpl-entries, .dpl-inbox-list { width: var(--dpl-list-width); flex: none; }\n.dpl-reader { flex: 1; min-width: 0; overflow: auto; padding: 20px clamp(16px, 3%, 36px); }\n.dpl-col-head {\n  display: flex;\n  align-items: center;\n  gap: 4px;\n  height: 40px;\n  padding: 0 8px;\n  border-bottom: 1px solid var(--dpl-border);\n  flex: none;\n}\n.dpl-pane-title { font-size: 12px; font-weight: 600; color: var(--dpl-muted); padding: 0 4px; }\n.dpl-search { padding: 8px; flex: none; }\n.dpl-search input { width: 100%; }\n\n/* ---- sources pane (droplets: title row, search+refresh row, collapsible groups) ---- */\n.dpl-source-tools { display: flex; gap: 6px; padding: 0 8px 8px; }\n.dpl-source-tools .dpl-search { flex: 1; padding: 0; }\n.dpl-source {\n  display: flex;\n  width: 100%;\n  align-items: center;\n  justify-content: space-between;\n  gap: 6px;\n  border: none;\n  background: transparent;\n  padding: 6px 10px;\n  cursor: pointer;\n  color: var(--dpl-fg);\n  text-align: left;\n  border-radius: var(--dpl-radius-sm);\n  margin: 0 4px;\n  width: calc(100% - 8px);\n}\n.dpl-source span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }\n.dpl-source em { font-style: normal; font-size: 12px; font-weight: 600; color: var(--dpl-accent); flex: none; }\n.dpl-source:hover { background: var(--dpl-bg-hover); }\n.dpl-source.is-active { background: var(--dpl-bg-active); font-weight: 600; }\n.dpl-source.has-error span { color: var(--dpl-danger); }\n.dpl-source-group-name {\n  padding: 10px 12px 2px;\n  font-size: 11px;\n  font-weight: 600;\n  letter-spacing: 0.02em;\n  text-transform: uppercase;\n  color: var(--dpl-faint);\n}\n.dpl-sources-list { overflow: auto; flex: 1; padding-bottom: 8px; }\n\n/* ---- entry list ---- */\n.dpl-entry-list { list-style: none; margin: 0; padding: 0; overflow: auto; flex: 1; }\n.dpl-entry-list li { display: flex; align-items: stretch; }\n.dpl-entry {\n  flex: 1;\n  min-width: 0;\n  border: none;\n  background: transparent;\n  text-align: left;\n  padding: 9px 10px 9px 14px;\n  cursor: pointer;\n  color: var(--dpl-fg);\n  display: flex;\n  flex-direction: column;\n  gap: 3px;\n}\n.dpl-entry:hover { background: var(--dpl-bg-hover); }\n.dpl-entry.is-active { background: var(--dpl-bg-active); }\n.dpl-entry-title { font-weight: 550; font-size: 13px; line-height: 1.45; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }\n.dpl-entry.is-unread .dpl-entry-title::before {\n  content: '';\n  display: inline-block;\n  width: 6px;\n  height: 6px;\n  border-radius: 50%;\n  background: var(--dpl-accent);\n  margin-right: 7px;\n  vertical-align: 2px;\n}\n.dpl-entry-meta { font-size: 12px; color: var(--dpl-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.dpl-warn { color: var(--dpl-danger); }\n.dpl-star {\n  border: none;\n  background: transparent;\n  cursor: pointer;\n  color: var(--dpl-faint);\n  padding: 0 8px 0 2px;\n  flex: none;\n  font-size: 14px;\n}\n.dpl-star:hover { color: var(--dpl-muted); }\n.dpl-star.is-on { color: #e6a700; }\n\n.dpl-empty { padding: 32px 20px; text-align: center; color: var(--dpl-faint); font-size: 13px; }\n.dpl-reader-empty { display: flex; align-items: center; justify-content: center; height: 100%; }\n.dpl-hint { font-size: 12px; color: var(--dpl-faint); }\n.dpl-error {\n  margin: 8px;\n  padding: 8px 10px;\n  border-radius: var(--dpl-radius-sm);\n  background: color-mix(in srgb, var(--dpl-danger) 10%, transparent);\n  color: var(--dpl-danger);\n  font-size: 12px;\n  word-break: break-all;\n}\n\n/* ---- reader ---- */\n.dpl-article, .dpl-note { max-width: var(--dpl-measure); margin: 0 auto; }\n.dpl-article h1, .dpl-note h1 { font-size: 22px; line-height: 1.35; margin: 0 0 8px; font-weight: 650; }\n.dpl-article-meta { display: flex; gap: 10px; font-size: 13px; color: var(--dpl-muted); margin-bottom: 18px; flex-wrap: wrap; }\n.dpl-article-meta a { color: var(--dpl-link); text-decoration: none; }\n.dpl-article-meta a:hover { text-decoration: underline; }\n.dpl-article-body { line-height: 1.75; font-size: 14.5px; }\n.dpl-article-body img { max-width: 100%; height: auto; border-radius: var(--dpl-radius-sm); }\n.dpl-article-body pre { overflow: auto; padding: 12px; border-radius: var(--dpl-radius-sm); background: var(--dpl-bg-2); font-size: 13px; }\n.dpl-article-body code { font-size: 0.92em; background: var(--dpl-bg-2); border-radius: 4px; padding: 1px 5px; }\n.dpl-article-body pre code { background: transparent; padding: 0; }\n.dpl-article-body blockquote { border-left: 3px solid var(--dpl-border); margin: 8px 0; padding: 2px 14px; color: var(--dpl-muted); }\n.dpl-reader-toolbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }\n.dpl-reader-toolbar h1 { font-size: 20px; margin: 0 0 4px; }\n.dpl-reader-actions { display: flex; gap: 4px; flex: none; }\n\n/* ---- inbox ---- */\n.dpl-inbox-add { display: flex; gap: 6px; padding: 8px; border-bottom: 1px solid var(--dpl-border); flex: none; }\n.dpl-inbox-add input { flex: 1; min-width: 0; }\n\n/* ---- pdf / epub ---- */\n.dpl-pdf { display: flex; flex-direction: column; align-items: center; gap: 12px; }\n.dpl-pdf-canvas { max-width: 100%; box-shadow: 0 2px 14px rgba(15, 23, 42, 0.18); border-radius: 6px; background: #fff; }\n.dpl-pager { display: flex; align-items: center; gap: 10px; color: var(--dpl-muted); font-size: 13px; }\n\n/* ---- vault ---- */\n.dpl-vault-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--dpl-muted); }\n.dpl-tree-stats { font-size: 12px; color: var(--dpl-faint); flex: 1; padding-left: 4px; }\n.dpl-tree details { margin-left: 4px; }\n.dpl-tree summary {\n  cursor: pointer;\n  padding: 4px 8px;\n  font-size: 12px;\n  font-weight: 600;\n  color: var(--dpl-muted);\n  border-radius: 6px;\n  list-style: none;\n  display: flex;\n  align-items: center;\n  gap: 4px;\n}\n.dpl-tree summary::before { content: '\u25B8'; font-size: 10px; transition: transform 0.12s; color: var(--dpl-faint); }\n.dpl-tree details[open] > summary::before { transform: rotate(90deg); }\n.dpl-tree summary:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-tree-file {\n  display: flex;\n  width: calc(100% - 8px);\n  margin: 0 4px;\n  border: none;\n  background: transparent;\n  text-align: left;\n  padding: 4px 10px;\n  cursor: pointer;\n  color: var(--dpl-fg);\n  border-radius: 6px;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  font-size: 13px;\n}\n.dpl-tree-file:hover { background: var(--dpl-bg-hover); }\n.dpl-tree-file.is-active { background: var(--dpl-bg-active); font-weight: 600; }\n.dpl-note-body { line-height: 1.75; font-size: 14.5px; }\n.dpl-note-body h1, .dpl-note-body h2 { border-bottom: 1px solid var(--dpl-border); padding-bottom: 6px; margin: 1.2em 0 0.6em; }\n.dpl-note-body pre { overflow: auto; padding: 12px; border-radius: var(--dpl-radius-sm); background: var(--dpl-bg-2); font-size: 13px; }\n.dpl-note-body code { background: var(--dpl-bg-2); border-radius: 4px; padding: 1px 5px; font-size: 0.92em; }\n.dpl-note-editor {\n  width: 100%;\n  min-height: 62vh;\n  font-family: var(--dsw-alias-font-mono, ui-monospace, 'SF Mono', monospace);\n  font-size: 13px;\n  line-height: 1.7;\n  border-radius: var(--dpl-radius);\n  border: 1px solid var(--dpl-border);\n  padding: 14px;\n  resize: vertical;\n  background: var(--dpl-bg);\n  color: var(--dpl-fg);\n}\n.dpl-note-editor:focus { border-color: var(--dpl-accent); }\n.dpl-wikilink { color: var(--dpl-link); text-decoration: none; border-bottom: 1px dashed currentColor; }\n.dpl-tag { color: var(--dpl-muted); background: var(--dpl-bg-2); border-radius: 4px; padding: 0 4px; font-size: 0.9em; }\n.dpl-backlinks h2, .dpl-search-results h2 { font-size: 14px; margin: 20px 0 8px; font-weight: 600; }\n.dpl-backlinks ul, .dpl-search-results ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }\n.dpl-backlinks button, .dpl-search-results button {\n  border: none;\n  background: transparent;\n  text-align: left;\n  cursor: pointer;\n  padding: 7px 9px;\n  border-radius: var(--dpl-radius-sm);\n  color: var(--dpl-fg);\n  display: block;\n  width: 100%;\n}\n.dpl-backlinks button:hover, .dpl-search-results button:hover { background: var(--dpl-bg-hover); }\n.dpl-search-results p { margin: 2px 0 0; font-size: 12px; color: var(--dpl-faint); }\n\n.dpl-graph { position: relative; height: 100%; }\n.dpl-graph svg { width: 100%; height: 100%; }\n.dpl-graph-edge { stroke: color-mix(in srgb, var(--dpl-fg) 20%, transparent); stroke-width: 1; }\n.dpl-graph-node { fill: var(--dpl-accent); cursor: pointer; }\n.dpl-graph-node.is-dangling { fill: color-mix(in srgb, var(--dpl-fg) 25%, transparent); }\n.dpl-graph-node.is-hover { stroke: var(--dpl-fg); stroke-width: 2; }\n.dpl-graph-label { position: absolute; top: 8px; left: 12px; font-size: 12px; color: var(--dpl-muted); }\n\n/* ---- companion (droplets: docked right panel) ---- */\n.dpl-companion {\n  width: 40%;\n  min-width: 360px;\n  flex: none;\n  display: flex;\n  flex-direction: column;\n  border-left: 1px solid var(--dpl-border);\n  min-height: 0;\n  background: var(--dpl-bg);\n}\n.dpl-companion-header { display: flex; align-items: center; gap: 4px; height: 40px; padding: 0 8px 0 12px; border-bottom: 1px solid var(--dpl-border); }\n.dpl-companion-header strong { flex: 1; font-size: 13px; font-weight: 600; }\n.dpl-companion-context { padding: 8px 12px; border-bottom: 1px solid var(--dpl-border); display: flex; flex-direction: column; gap: 2px; overflow: hidden; }\n.dpl-companion-context strong { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.dpl-companion-context small { font-size: 12px; color: var(--dpl-muted); }\n.dpl-native-chat { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }\n.dpl-companion-loading { padding: 24px; text-align: center; color: var(--dpl-faint); flex: 1; font-size: 13px; }\n.dpl-companion-error { margin: 10px; padding: 10px; border-radius: var(--dpl-radius-sm); background: color-mix(in srgb, var(--dpl-danger) 10%, transparent); color: var(--dpl-danger); font-size: 13px; }\n.dpl-companion-error p { margin: 6px 0 10px; font-size: 12px; word-break: break-all; }\n.dpl-companion-error button { margin-top: 2px; }\n.dpl-companion-notice { display: flex; align-items: center; gap: 6px; margin: 6px 10px; padding: 6px 10px; border-radius: var(--dpl-radius-sm); background: var(--dpl-bg-2); color: var(--dpl-muted); font-size: 12px; }\n.dpl-companion-notice span { flex: 1; }\n.dpl-companion-quote { margin: 8px 10px; border-left: 3px solid var(--dpl-accent); padding: 6px 10px; background: var(--dpl-bg-2); border-radius: 0 var(--dpl-radius-sm) var(--dpl-radius-sm) 0; }\n.dpl-companion-quote strong { font-size: 11px; color: var(--dpl-muted); display: block; margin-bottom: 4px; }\n.dpl-companion-quote blockquote { margin: 0; font-size: 12px; max-height: 90px; overflow: auto; white-space: pre-wrap; }\n.dpl-companion-prompt-strip { display: flex; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--dpl-border); flex: none; overflow-x: auto; }\n.dpl-prompt-ghost { border: 1px solid var(--dpl-border); background: transparent; border-radius: 999px; padding: 4px 12px; font-size: 12px; cursor: pointer; color: var(--dpl-fg); white-space: nowrap; }\n.dpl-prompt-ghost:hover { background: var(--dpl-bg-hover); }\n.dpl-prompt-ghost:disabled { opacity: 0.45; cursor: default; }\n\n/* ---- modal (DSH dialog feel) ---- */\n.dpl-modal-backdrop { position: fixed; inset: 0; background: color-mix(in srgb, var(--dpl-fg) 32%, transparent); display: flex; align-items: center; justify-content: center; z-index: 60; }\n.dpl-modal {\n  background: var(--dpl-bg);\n  border-radius: 14px;\n  width: min(480px, 92vw);\n  max-height: 80vh;\n  display: flex;\n  flex-direction: column;\n  box-shadow: 0 16px 48px rgba(15, 23, 42, 0.28);\n  border: 1px solid var(--dpl-border);\n}\n.dpl-modal.is-wide { width: min(680px, 94vw); }\n.dpl-modal header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--dpl-border); font-weight: 600; }\n.dpl-modal-body { padding: 14px 16px; overflow: auto; }\n.dpl-form-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }\n.dpl-form-row input { flex: 1; min-width: 120px; }\n.dpl-sub-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }\n.dpl-sub-list li { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: var(--dpl-radius-sm); }\n.dpl-sub-list li:hover { background: var(--dpl-bg-hover); }\n.dpl-sub-list label { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }\n.dpl-sub-list label.is-dim { opacity: 0.5; }\n.dpl-sub-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }\n.dpl-sub-meta { font-size: 12px; color: var(--dpl-faint); }\n.dpl-opml-input { width: 100%; }\n.dpl-settings-block h3 { font-size: 13px; margin: 14px 0 6px; font-weight: 600; }\n.dpl-settings-block h3:first-child { margin-top: 0; }\n.dpl-path { display: block; padding: 6px 9px; border-radius: 6px; background: var(--dpl-bg-2); font-size: 12px; font-family: var(--dsw-alias-font-mono, ui-monospace, monospace); word-break: break-all; margin: 6px 0; }\n.dpl-toggle { display: flex; align-items: center; gap: 8px; }\n.dpl-conflict-excerpt { margin: 8px 0; padding: 8px 10px; border-left: 3px solid var(--dpl-danger); font-size: 12px; color: var(--dpl-muted); max-height: 120px; overflow: auto; }\n\n/* ---- responsive: narrow windows stack companion below (qiaomu pattern) ---- */\n@container (max-width: 860px) {\n  .dpl-body { flex-direction: column; }\n  .dpl-companion { width: 100%; min-width: 0; min-height: 240px; border-left: none; border-top: 1px solid var(--dpl-border); }\n}\n\n/* ---- feed page v2 (droplets interaction port) ---- */\n.dpl-flex-fill { flex: 1; min-width: 0; }\n.dpl-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.dpl-spin { animation: dpl-spin 0.9s linear infinite; }\n@keyframes dpl-spin { to { transform: rotate(360deg); } }\n\n.dpl-source { gap: 7px; }\n.dpl-source .dpl-badge { flex: none; }\n.dpl-source-error { color: var(--dpl-danger); flex: none; }\n.dpl-source em { margin-left: auto; }\n.dpl-source em:empty { display: none; }\n\n.dpl-icon-btn.is-on { color: var(--dpl-accent); }\n.dpl-icon-btn .dpl-fill { fill: currentColor; }\n\n.dpl-entry-scroll { min-height: 0; flex: 1; overflow: auto; }\n.dpl-entry-row {\n  cursor: pointer;\n  border-bottom: 1px solid var(--dpl-border);\n  padding: 9px 10px 9px 12px;\n  transition: background-color 0.1s;\n  content-visibility: auto;\n  contain-intrinsic-size: auto 74px;\n}\n.dpl-entry-row:hover { background: var(--dpl-bg-hover); }\n.dpl-entry-row.is-active { background: color-mix(in srgb, var(--dpl-accent) 9%, transparent); }\n.dpl-entry-src { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--dpl-faint); }\n.dpl-entry-src .dpl-star { padding: 0; font-size: 13px; opacity: 0; }\n.dpl-entry-row:hover .dpl-entry-src .dpl-star { opacity: 0.5; }\n.dpl-entry-src .dpl-star.is-on { opacity: 1; }\n.dpl-entry-main { display: flex; align-items: center; gap: 8px; margin-top: 4px; }\n.dpl-entry-main span:last-child { font-size: 13.5px; color: var(--dpl-muted); min-width: 0; flex: 1; }\n.dpl-entry-main span.is-unread { color: var(--dpl-fg); font-weight: 550; }\n.dpl-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--dpl-accent); flex: none; }\n.dpl-dot.is-read { background: var(--dpl-border); }\n.dpl-entry-sum { margin: 3px 0 0 15px; font-size: 12px; color: var(--dpl-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n\n.dpl-badge {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 16px;\n  border-radius: 5px;\n  font-size: 10px;\n  font-weight: 700;\n  flex: none;\n}\n\n.dpl-new-pill {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  gap: 4px;\n  margin: 6px 10px 0;\n  padding: 4px 10px;\n  border: none;\n  border-radius: 999px;\n  background: color-mix(in srgb, var(--dpl-accent) 14%, transparent);\n  color: var(--dpl-accent);\n  font-size: 12px;\n  font-weight: 600;\n  cursor: pointer;\n  flex: none;\n}\n.dpl-new-pill:hover { background: color-mix(in srgb, var(--dpl-accent) 22%, transparent); }\n\n.dpl-reader-actions-float {\n  position: sticky;\n  top: 0;\n  z-index: 5;\n  display: flex;\n  align-items: center;\n  justify-content: flex-end;\n  gap: 2px;\n  padding: 6px 0 14px;\n  background: linear-gradient(to bottom, var(--dpl-bg) 55%, transparent);\n}\n.dpl-round-btn {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 32px;\n  height: 32px;\n  border: none;\n  border-radius: 50%;\n  background: transparent;\n  color: var(--dpl-muted);\n  cursor: pointer;\n}\n.dpl-round-btn:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n\n.dpl-notice {\n  margin: 0 0 10px;\n  padding: 6px 10px;\n  border-radius: var(--dpl-radius-sm);\n  background: color-mix(in srgb, var(--dpl-accent) 10%, transparent);\n  color: var(--dpl-accent);\n  font-size: 12.5px;\n}\n";
 
 // src/client/index.jsx
 var PLUGIN_ID = "droplets-dsh";
