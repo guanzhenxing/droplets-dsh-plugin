@@ -992,12 +992,34 @@
   box-shadow: 0 18px 48px rgba(15, 23, 42, 0.3);
 }
 .dpl-companion.is-docked {
-  /* droplets viewport guard: the docked pane never starves the reading
-     column — its basis is clamped by what the three-pane minimum leaves. */
-  flex-basis: clamp(320px, 38%, calc(100% - 880px));
+  position: relative;
+  flex: 0 0 auto;
   min-width: 320px;
   border-left: 1px solid var(--dpl-border);
 }
+/* Left-edge resize handle (droplets ai-panel-resize): always-visible thin
+   line on a wide invisible hit area; accent while hovering/dragging. */
+.dpl-companion-resize {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -3px;
+  z-index: 10;
+  width: 8px;
+  cursor: col-resize;
+}
+.dpl-companion-resize::after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-50%);
+  background: var(--dpl-border);
+}
+.dpl-companion-resize:hover::after,
+.dpl-companion-resize:active::after { background: var(--dpl-accent); }
 .dpl-companion-header.is-draggable { cursor: move; user-select: none; touch-action: none; }
 .dpl-companion-spark { color: var(--dpl-accent); flex: none; }
 .dpl-companion-header .dpl-icon-btn { width: 24px; height: 24px; }

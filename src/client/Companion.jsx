@@ -25,6 +25,29 @@ export function Companion({ api, material, form = 'docked', onFormChange, onClos
     try { return JSON.parse(localStorage.getItem(storagePrefix + '.ai.pos') ?? 'null'); } catch { return null; }
   });
   const dragRef = useRef(null);
+  // Docked-width resize (droplets AiPanel left-edge handle): drag left to
+  // widen, clamped 360-720; double-click resets to 420; persisted.
+  const [dockedWidth, setDockedWidth] = useState(() => {
+    const saved = Number(localStorage.getItem(storagePrefix + '.ai.width'));
+    return Number.isFinite(saved) && saved >= 360 && saved <= 720 ? saved : 420;
+  });
+  const resizeRef = useRef(null);
+  const normalizeWidth = (w) => Math.min(720, Math.max(360, Math.round(w)));
+  const onResizePointerDown = (event) => {
+    resizeRef.current = { startX: event.clientX, baseWidth: dockedWidth };
+    event.target.setPointerCapture?.(event.pointerId);
+  };
+  const onResizePointerMove = (event) => {
+    const drag = resizeRef.current;
+    if (!drag) return;
+    setDockedWidth(normalizeWidth(drag.baseWidth - (event.clientX - drag.startX)));
+  };
+  const onResizePointerUp = () => {
+    if (resizeRef.current) {
+      resizeRef.current = null;
+      try { localStorage.setItem(storagePrefix + '.ai.width', String(dockedWidth)); } catch { /* ignore */ }
+    }
+  };
   const clampPos = useCallback((p) => {
     const width = Math.min(480, window.innerWidth - 32);
     return {
@@ -155,8 +178,23 @@ export function Companion({ api, material, form = 'docked', onFormChange, onClos
       aria-label={t('companion.title')}
       {...(form === 'floating' ? {
         style: { top: 'calc(3.5rem + ' + clamped.y + 'px)', right: 'calc(1rem - ' + clamped.x + 'px)' },
-      } : {})}
+      } : {
+        style: { width: dockedWidth + 'px' },
+      })}
     >
+      {form === 'docked' ? (
+        <div
+          className="dpl-companion-resize"
+          onPointerDown={onResizePointerDown}
+          onPointerMove={onResizePointerMove}
+          onPointerUp={onResizePointerUp}
+          onDoubleClick={() => { setDockedWidth(420); try { localStorage.setItem(storagePrefix + '.ai.width', '420'); } catch { /* ignore */ } }}
+          title="拖拽调整面板宽度（360–720px，双击恢复默认）"
+          aria-label="拖拽调整面板宽度"
+          role="separator"
+          aria-orientation="vertical"
+        />
+      ) : null}
       <header
         className={'dpl-companion-header' + (form === 'floating' ? ' is-draggable' : '')}
         onPointerDown={onHeaderPointerDown}
