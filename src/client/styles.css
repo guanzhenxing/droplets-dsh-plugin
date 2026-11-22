@@ -12,11 +12,12 @@
   --dpl-fg: var(--dsw-alias-label-primary, #0f1115);
   --dpl-muted: var(--dsw-alias-label-secondary, rgba(15, 23, 42, 0.6));
   --dpl-faint: var(--dsw-alias-label-tertiary, rgba(15, 23, 42, 0.4));
-  /* droplets accent: Radix violet scale (its own brand, not the host's
-     near-black brand-primary which turned every accent black). */
-  --dpl-accent: #5b4bd1;
-  --dpl-accent-solid: #6e56cf;
-  --dpl-accent-soft: rgba(110, 86, 207, 0.13);
+  /* Accent follows the DSH system exactly: interactive/link blue for
+     selection & unread, the host's black primary fill for solid actions. */
+  --dpl-accent: var(--dsw-alias-link, #4176e6);
+  --dpl-accent-solid: var(--dsw-alias-button-primary-fill, #0f1115);
+  --dpl-accent-solid-hover: var(--dsw-alias-button-primary-hover, #43454a);
+  --dpl-accent-soft: var(--dsw-alias-interactive-bg-hover-accent, rgba(38, 49, 72, 0.14));
   --dpl-link: var(--dsw-alias-link, #4176e6);
   --dpl-danger: var(--dsw-alias-state-error-primary, #d5484f);
   --dpl-radius: 10px;
@@ -87,7 +88,7 @@
 .dpl-btn.is-danger:hover { background: color-mix(in srgb, var(--dpl-danger) 12%, transparent); }
 .dpl-btn.is-on { background: var(--dpl-bg-active); }
 .dpl-btn.is-primary { background: var(--dpl-accent); color: #fff; }
-.dpl-btn.is-primary:hover { background: color-mix(in srgb, var(--dpl-accent) 88%, #000); }
+.dpl-btn.is-primary:hover { background: var(--dpl-accent-solid-hover); }
 .dpl-btn:disabled { opacity: 0.45; cursor: default; background: transparent; }
 .dpl-icon-btn {
   display: inline-flex;
@@ -762,7 +763,7 @@
 .dpl-form-row.dpl-end { justify-content: flex-end; }
 .dpl-form-row.dpl-between { justify-content: space-between; }
 .dpl-btn.dpl-primary-solid { background: var(--dpl-accent); color: #fff; }
-.dpl-btn.dpl-primary-solid:hover { background: color-mix(in srgb, var(--dpl-accent) 86%, #000); }
+.dpl-btn.dpl-primary-solid:hover { background: var(--dpl-accent-solid-hover); }
 .dpl-btn.dpl-danger-solid { background: var(--dpl-danger); color: #fff; }
 .dpl-modal-title { font-size: 13.5px; font-weight: 600; }
 .dpl-modal-text { margin: 8px 0 0; font-size: 12.5px; color: var(--dpl-muted); line-height: 1.6; }
@@ -1061,7 +1062,7 @@
   border-radius: 7px;
   background: var(--dpl-accent-solid);
   color: #fff;
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--dpl-accent-solid) 45%, transparent);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18);
 }
 .dpl-aux-ask:hover { opacity: 0.88; background: var(--dpl-accent-solid); }
 .dpl-aux-ask svg { width: 12px; height: 12px; }
