@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { ChevronDown, Loader2, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
+import { ChevronDown, ClipboardPaste, FileUp, Link, Loader2, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { sortManageFeeds } from './feed-sorting.js';
 import { FeedBadge } from './SourcesPane.jsx';
 import { formatWhenFull } from './format.js';
@@ -427,72 +427,159 @@ function isLanUrl(u) {
 }
 
 function ImportDialog({ api, onClose, onImported }) {
+  // Three entry modes (file picker / paste XML / URL) -> preview with
+  // per-source checkboxes -> import. Shared dialog system styling; no
+  // native prompts (unsupported in the sandboxed renderer).
+  const [mode, setMode] = useState(null);
   const [text, setText] = useState('');
   const [entries, setEntries] = useState(null);
   const [picked, setPicked] = useState(new Set());
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const fileRef = useRef(null);
 
-  async function preview() {
+  const previewOf = (result) => {
+    setEntries(result.entries);
+    setPicked(new Set(result.entries.filter((entry) => !entry.duplicate).map((entry) => entry.url)));
+  };
+
+  const loadXml = async (xml) => {
     setBusy(true);
     setError('');
-    try {
-      const trimmed = text.trim();
-      const result = await api.opmlPreview(trimmed.startsWith('http') ? { url: trimmed } : { xml: trimmed });
-      setEntries(result.entries);
-      setPicked(new Set(result.entries.filter((entry) => !entry.duplicate).map((entry) => entry.url)));
-    } catch (cause) { setError(String(cause?.message ?? cause)); }
+    try { previewOf(await api.opmlPreview({ xml })); }
+    catch (cause) { setError(String(cause?.message ?? cause)); }
     finally { setBusy(false); }
-  }
+  };
 
-  async function importAll() {
+  const loadUrl = async () => {
+    setBusy(true);
+    setError('');
+    try { previewOf(await api.opmlPreview({ url: text.trim() })); }
+    catch (cause) { setError(String(cause?.message ?? cause)); }
+    finally { setBusy(false); }
+  };
+
+  const onFile = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => void loadXml(String(reader.result ?? ''));
+    reader.readAsText(file);
+  };
+
+  const toggle = (url, duplicate) => {
+    if (duplicate) return;
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (next.has(url)) next.delete(url); else next.add(url);
+      return next;
+    });
+  };
+
+  const importPicked = async () => {
     setBusy(true);
     setError('');
     try {
-      // Previewed: import only the picked (non-duplicate) urls; otherwise
-      // import everything the xml contains.
-      await api.opmlImport(text, entries ? [...picked] : undefined);
+      if (mode === 'url') {
+        const fresh = await api.opmlPreview({ url: text.trim() });
+        await api.opmlImport(fresh.xml, [...picked]);
+      } else {
+        await api.opmlImport(text, [...picked]);
+      }
       await onImported();
       onClose();
     } catch (cause) { setError(String(cause?.message ?? cause)); }
     finally { setBusy(false); }
-  }
+  };
+
+  const duplicates = entries ? entries.filter((entry) => entry.duplicate).length : 0;
 
   return (
     <div className="dpl-dialog-backdrop" onClick={onClose}>
-      <div className="dpl-dialog dpl-add-dialog" onClick={(e) => e.stopPropagation()}>
+      <div className="dpl-dialog dpl-import-dialog" onClick={(event) => event.stopPropagation()}>
         <div className="dpl-dialog-headline">
-          <span className="dpl-dialog-title">导入 OPML</span>
+          <span className="dpl-dialog-title">导入订阅源</span>
           <span className="dpl-grow" />
           <button type="button" className="dpl-icon-btn dpl-round" onClick={onClose} aria-label="关闭"><X size={15} /></button>
         </div>
-        <div className="dpl-dialog-body">
-          <label className="dpl-dialog-field">
-            <span>OPML 内容或地址</span>
-            <textarea
-              autoFocus
-              rows={6}
-              placeholder="粘贴 OPML XML,或填 http(s) 地址"
-              value={text}
-              onChange={(event) => setText(event.target.value)}
-              spellCheck={false}
-            />
-          </label>
-          {error ? <div className="dpl-dialog-error">{error}</div> : null}
-          {entries ? (
+
+        {!mode ? (
+          <div className="dpl-import-choices">
+            <button type="button" className="dpl-import-choice" onClick={() => fileRef.current?.click()}>
+              <FileUp size={20} />
+              <strong>选择 OPML 文件</strong>
+              <span>从本机选取 .opml 文件</span>
+            </button>
+            <button type="button" className="dpl-import-choice" onClick={() => setMode('paste')}>
+              <ClipboardPaste size={20} />
+              <strong>粘贴 OPML 内容</strong>
+              <span>直接粘贴 XML 文本</span>
+            </button>
+            <button type="button" className="dpl-import-choice" onClick={() => setMode('url')}>
+              <Link size={20} />
+              <strong>从地址导入</strong>
+              <span>填一个 http(s) OPML 链接</span>
+            </button>
+            <input ref={fileRef} type="file" accept=".opml,.xml,text/xml,application/xml" style={{ display: 'none' }} onChange={onFile} />
+          </div>
+        ) : null}
+
+        {mode && !entries ? (
+          <div className="dpl-dialog-body">
+            {mode === 'paste' ? (
+              <label className="dpl-dialog-field">
+                <span>OPML 内容</span>
+                <textarea autoFocus rows={8} placeholder="粘贴 OPML XML" value={text} onChange={(event) => setText(event.target.value)} spellCheck={false} />
+              </label>
+            ) : (
+              <label className="dpl-dialog-field">
+                <span>OPML 地址</span>
+                <input autoFocus placeholder="https://example.com/subscriptions.opml" value={text} onChange={(event) => setText(event.target.value)} spellCheck={false} />
+              </label>
+            )}
+            {error ? <div className="dpl-dialog-error">{error}</div> : null}
+          </div>
+        ) : null}
+
+        {entries ? (
+          <div className="dpl-import-preview">
             <div className="dpl-import-summary">
-              共 {entries.length} 个源,已存在 {entries.filter((e) => e.duplicate).length} 个,将导入 <strong>{picked.size}</strong> 个
+              <span>共 {entries.length} 个源 · 已存在 {duplicates} · 将导入 <strong>{picked.size}</strong></span>
+              <button type="button" className="dpl-btn dpl-sm" onClick={() => { setEntries(null); setPicked(new Set()); }}>重选来源</button>
             </div>
-          ) : null}
-        </div>
+            <div className="dpl-import-list">
+              {entries.map((entry) => (
+                <label key={entry.url} className={'dpl-import-row' + (entry.duplicate ? ' is-dim' : '')}>
+                  <input type="checkbox" checked={picked.has(entry.url)} disabled={entry.duplicate} onChange={() => toggle(entry.url, entry.duplicate)} />
+                  <FeedBadge feed={{ id: entry.url, title: entry.name ?? entry.url }} />
+                  <span className="dpl-truncate dpl-import-name">{entry.name ?? entry.url}</span>
+                  {entry.group ? <span className="dpl-import-group">{entry.group}</span> : null}
+                  {entry.duplicate ? <span className="dpl-import-dup">已订阅</span> : null}
+                </label>
+              ))}
+            </div>
+            {error ? <div className="dpl-dialog-error">{error}</div> : null}
+          </div>
+        ) : null}
+
         <div className="dpl-dialog-footer">
+          {mode && !entries ? <button type="button" className="dpl-btn dpl-sm" onClick={() => { setMode(null); setText(''); setError(''); }}>返回</button> : null}
           <span className="dpl-grow" />
-          <button type="button" className="dpl-btn dpl-sm" disabled={busy || text.trim() === ''} onClick={() => void preview()}>
-            {busy && !entries ? <Loader2 size={13} className="dpl-spin" /> : null} 预览
-          </button>
-          <button type="button" className="dpl-btn dpl-sm dpl-primary-solid" disabled={busy || (entries ? picked.size === 0 : text.trim() === '')} onClick={() => void importAll()}>
-            {busy ? <Loader2 size={13} className="dpl-spin" /> : null} 导入 {entries ? picked.size : ''}
-          </button>
+          {mode === 'paste' && !entries ? (
+            <button type="button" className="dpl-btn dpl-sm dpl-primary-solid" disabled={busy || text.trim() === ''} onClick={() => void loadXml(text)}>
+              {busy ? <Loader2 size={13} className="dpl-spin" /> : null} 下一步
+            </button>
+          ) : null}
+          {mode === 'url' && !entries ? (
+            <button type="button" className="dpl-btn dpl-sm dpl-primary-solid" disabled={busy || text.trim() === ''} onClick={() => void loadUrl()}>
+              {busy ? <Loader2 size={13} className="dpl-spin" /> : null} 下一步
+            </button>
+          ) : null}
+          {entries ? (
+            <button type="button" className="dpl-btn dpl-sm dpl-primary-solid" disabled={busy || picked.size === 0} onClick={() => void importPicked()}>
+              {busy ? <Loader2 size={13} className="dpl-spin" /> : null} 导入 {picked.size} 个源
+            </button>
+          ) : null}
         </div>
       </div>
     </div>
