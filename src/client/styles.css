@@ -48,7 +48,7 @@
      collapsed the macOS traffic lights sit over this header, and the frame
      publishes the required inset as --dsh-frame-leading-clearance (same
      formula the host's own title cluster uses). */
-  padding-inline-start: max(0px, calc(var(--dsh-frame-leading-clearance, 0px) - 20px));
+  padding-inline-start: max(0px, var(--dsh-frame-leading-clearance, 0px));
   padding-inline-end: 12px;
   border-bottom: 1px solid var(--dpl-border);
   flex: none;
