@@ -41,7 +41,11 @@ test('host bundle preserves request parameter names (typert introspection)', () 
   // every parameterized Remote call fails with an unexpected-"request" args
   // error. Freeze the signatures of representative methods.
   const host = readFileSync(new URL('../index.js', import.meta.url), 'utf8');
-  for (const signature of ['async listEntries(request)', 'async inboxRead(request)', 'async vaultWrite(request)', 'async setReadingContext(request)']) {
+  for (const signature of [
+    'async listEntries(request)', 'async inboxRead(request)', 'async vaultWrite(request)', 'async setReadingContext(request)',
+    'async inboxGet(request)', 'async inboxUpdate(request)', 'async inboxRetry(request)', 'async inboxRetryAllFailed()',
+    'async inboxImportMarkdown(request)', 'async inboxMoveToLibrary(request)', 'async inboxMoveToTrash(request)', 'async inboxReadOriginal(request)',
+  ]) {
     assert.ok(host.includes(signature), 'host bundle must keep ' + signature);
   }
 });
@@ -97,4 +101,21 @@ test('every zero-arg client api method is registered in NO_PARAM_METHODS', async
   assert.ok(allApi.length > 20, 'api object keys not discovered');
   const undeclared = allApi.filter((name) => !declaredNames.has(name));
   assert.deepEqual(undeclared, [], 'these api methods must be added to TYPERT_REMOTE.descriptors');
+});
+
+test('client bundle exports the inbox UI against the new remote methods', () => {
+  // The registerPanel api object must cover every method InboxView calls;
+  // a missing entry throws "Droplets 服务未就绪" only at click time.
+  const client = readFileSync(new URL('../client.js', import.meta.url), 'utf8');
+  for (const method of [
+    'inboxAddUrl', 'inboxList', 'inboxGet', 'inboxReadOriginal', 'inboxUpdate',
+    'inboxRetry', 'inboxRetryAllFailed', 'inboxImportMarkdown', 'inboxMoveToLibrary', 'inboxMoveToTrash',
+  ]) {
+    assert.ok(client.includes(method + ':'), 'client api must expose ' + method);
+  }
+  // The new inbox page must render through the shared panel group.
+  assert.ok(client.includes('dpl-ib-filter'), 'inbox FilterPane styles present');
+  assert.ok(client.includes('dpl-ib-reader'), 'inbox Reader present');
+  assert.ok(client.includes('"retry-all-failed"'), 'retry-all-failed control present');
+  assert.ok(client.includes('"done-dialog"'), '处理完成 dialog present');
 });
