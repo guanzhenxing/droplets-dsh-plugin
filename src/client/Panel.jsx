@@ -4,6 +4,8 @@ import { DropletIcon, Modal } from './components.jsx';
 import { FeedView } from './FeedView.jsx';
 import { InboxView } from './InboxView.jsx';
 import { VaultView } from './VaultView.jsx';
+import { SettingsView } from './SettingsView.jsx';
+import { Settings } from 'lucide-react';
 import { Companion } from './Companion.jsx';
 
 const SPACES = [
@@ -19,6 +21,7 @@ const SPACES = [
  */
 export function DropletsPanel({ api, SessionProvider, renderSlot }) {
   const [space, setSpace] = useState('feed');
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [companionOpen, setCompanionOpen] = useState(false);
   // Docked = a real flex pane that squeezes the spaces (never covers the
   // article); floating = the draggable fixed window. Panel owns the form so
@@ -110,13 +113,29 @@ export function DropletsPanel({ api, SessionProvider, renderSlot }) {
             ))}
           </nav>
         </div>
+        <button
+          type="button"
+          className={'dpl-header-gear' + (settingsOpen ? ' is-active' : '')}
+          onClick={() => setSettingsOpen((value) => !value)}
+          aria-label={t('settings.open')}
+          aria-pressed={settingsOpen}
+          data-tip={t('settings.open')}
+        >
+          <Settings size={15} />
+        </button>
       </header>
 
       <div className={'dpl-body' + (companionOpen && companionForm === 'docked' ? ' has-docked' : '')}>
         <div className="dpl-space">
-          {space === 'feed' && <FeedView api={api} onMaterial={onMaterial} onJumpSpace={setSpace} />}
-          {space === 'inbox' && <InboxView api={api} onMaterial={onMaterial} />}
-          {space === 'vault' && <VaultView api={api} onMaterial={onMaterial} />}
+          {settingsOpen ? (
+            <SettingsView api={api} onClose={() => setSettingsOpen(false)} />
+          ) : (
+            <>
+              {space === 'feed' && <FeedView api={api} onMaterial={onMaterial} onJumpSpace={setSpace} />}
+              {space === 'inbox' && <InboxView api={api} onMaterial={onMaterial} />}
+              {space === 'vault' && <VaultView api={api} onMaterial={onMaterial} />}
+            </>
+          )}
         </div>
         {companionOpen && companionForm === 'docked' && (
           <Companion

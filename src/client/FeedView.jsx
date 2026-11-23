@@ -15,7 +15,7 @@ import { t } from './i18n.js';
 // droplets D09: open-on-hover is an opt-in setting; the default is click.
 // Opening marks unseen → seen, so hover-opening by default would let a
 // careless sweep of the list silently mutate read state (not undoable).
-const OPEN_ON_HOVER = false;
+// Hover-to-open stays off unless enabled in settings (droplets default too).
 const STATE_LABEL = { unseen: '未读', seen: '已读', skipped: '略过' };
 
 /**
@@ -38,6 +38,16 @@ export function FeedView({ api, onMaterial, onJumpSpace }) {
       const { feeds: next } = await api.listFeeds();
       setFeeds(next);
     } catch { /* surfaced by list load */ }
+  }, [api]);
+
+  // Settings → 信息流「鼠标悬停自动打开阅读」
+  const [hoverPreviewEnabled, setHoverPreviewEnabled] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    void api.getSettings?.().then((result) => {
+      if (alive) setHoverPreviewEnabled(result?.settings?.hoverPreview === true);
+    }).catch(() => {});
+    return () => { alive = false; };
   }, [api]);
 
   useEffect(() => { void loadFeeds(); }, [loadFeeds]);
@@ -263,7 +273,7 @@ function ItemList(props) {
               key={item.sourceId + ':' + item.key}
               className={'dpl-entry-row' + (selected?.key === item.key && selected?.sourceId === item.sourceId ? ' is-active' : '')}
               onMouseEnter={() => {
-                if (!OPEN_ON_HOVER) return;
+                if (!hoverPreviewEnabled) return;
                 clearHoverTimer();
                 hoverTimer.current = setTimeout(() => {
                   hoverTimer.current = null;

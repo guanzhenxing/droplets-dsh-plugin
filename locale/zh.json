@@ -160,5 +160,14 @@
     "feed": "Droplets 信息流",
     "inbox": "Droplets 收件箱",
     "vault": "Droplets 知识库"
+  },
+  "settings": {
+    "open": "设置",
+    "title": "设置",
+    "workspace": "Workspace",
+    "feed": "信息流",
+    "appearance": "外观",
+    "data": "数据",
+    "about": "关于"
   }
 }

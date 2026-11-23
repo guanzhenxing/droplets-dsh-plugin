@@ -160,5 +160,14 @@
     "feed": "Droplets feed",
     "inbox": "Droplets inbox",
     "vault": "Droplets vault"
+  },
+  "settings": {
+    "open": "Settings",
+    "title": "Settings",
+    "workspace": "Workspace",
+    "feed": "Feeds",
+    "appearance": "Appearance",
+    "data": "Data",
+    "about": "About"
   }
 }

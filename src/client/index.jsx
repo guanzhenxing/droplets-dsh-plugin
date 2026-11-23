@@ -37,7 +37,7 @@ function method(name, params = true) {
 
 const NO_PARAM_METHODS = new Set([
   'listChannels', 'listFeeds', 'refreshStatus', 'listSubscriptions', 'opmlExport', 'vaultStatus', 'vaultReindex',
-  'vaultTree', 'vaultGraph', 'getSettings', 'getStorageInfo', 'clearData',
+  'vaultTree', 'vaultGraph', 'getSettings', 'getWorkspace', 'getStorageInfo', 'clearData',
 ]);
 
 const TYPERT_REMOTE = {
@@ -49,7 +49,7 @@ const TYPERT_REMOTE = {
     'opmlPreview', 'opmlImport', 'opmlExport', 'refresh',
     'inboxAddUrl', 'inboxList', 'inboxRead', 'inboxMarkDone',
     'vaultStatus', 'vaultReindex', 'vaultTree', 'vaultRead', 'vaultSearch', 'vaultGraph', 'vaultBacklinks', 'vaultWrite',
-    'getSettings', 'saveSettings', 'getStorageInfo', 'clearData', 'setReadingContext', 'prepareChat',
+    'getSettings', 'saveSettings', 'getWorkspace', 'openPath', 'getStorageInfo', 'clearData', 'setReadingContext', 'prepareChat',
   ].map((name) => method(name, !NO_PARAM_METHODS.has(name))),
 };
 
@@ -122,7 +122,11 @@ function registerPanel(ctx) {
     vaultBacklinks: (path) => call('vaultBacklinks', { path }),
     vaultWrite: (params) => call('vaultWrite', params),
     getSettings: () => call('getSettings'),
-    saveSettings: (patch) => call('saveSettings', { patch }),
+    getWorkspace: () => call('getWorkspace'),
+    openPath: (params) => call('openPath', params),
+    // The remote layer takes the argument object flat (a wrapped { patch }
+    // object is silently ignored), so send the patch as the request itself.
+    saveSettings: (patch) => call('saveSettings', patch),
     getStorageInfo: () => call('getStorageInfo'),
     clearData: () => call('clearData'),
   };

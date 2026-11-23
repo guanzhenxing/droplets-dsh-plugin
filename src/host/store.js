@@ -6,7 +6,7 @@
  * per-session companion contexts live in the metadata document; article and
  * inbox bodies live in bodies.json and are only read once opened.
  */
-import { mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { resolveDshHome } from '@deepseek-ai/dsh-home-paths';
 import { BodyStore } from './body-store.js';
@@ -21,11 +21,36 @@ export function defaultVaultPath() {
   return join(storageDir(), 'vault');
 }
 
+/** Per-feed entry files live here so data.json stays small. */
+export function entriesDir() {
+  return join(storageDir(), 'entries');
+}
+
+function entryFileName(feedId) {
+  // Feed ids are opaque and may contain ':' or '/'; encodeURIComponent keeps
+  // the mapping reversible and filename-safe on every platform.
+  return encodeURIComponent(feedId) + '.json';
+}
+
+/** Cheap change detector for an entry list: refresh only ever appends or
+ * replaces the head of the list, so length + boundary keys are sufficient. */
+function entrySignature(entries) {
+  if (!entries || entries.length === 0) return '0';
+  return entries.length + '|' + (entries[entries.length - 1]?.key ?? '') + '|' + (entries[0]?.key ?? '');
+}
+
 function defaults() {
   return {
     version: 1,
     settings: {
       showImages: true,
+      // Feed preferences mirrored from the droplets settings screen.
+      refreshMinutes: 60,
+      refreshOnStart: true,
+      hoverPreview: false,
+      cacheDays: 60,
+      refreshWorkers: 3,
+      fetchTimeoutSec: 20,
     },
     subscriptions: [],
     read: {},
@@ -58,6 +83,63 @@ export class DropletsStore {
     this.saveTimer = undefined;
     this.saving = Promise.resolve();
     this.lastKnownMtime = 0;
+    // Signature of what is already persisted per feed, so a flush only rewrites
+    // the feeds whose entries actually changed.
+    this.persistedSignatures = new Map();
+  }
+
+  /** Remove temp files a killed process left behind (atomic writes are
+   * tmp+rename; a SIGKILL between them strands the whole document). */
+  async cleanStaleTemps() {
+    try {
+      const names = await readdir(this.dir);
+      const cutoff = Date.now() - 10 * 60 * 1000;
+      for (const name of names) {
+        if (!/\.tmp$/.test(name) && !/\.json\.\d+\.tmp$/.test(name)) continue;
+        const full = join(this.dir, name);
+        try {
+          const info = await stat(full);
+          if (info.mtimeMs < cutoff) await rm(full, { force: true });
+        } catch { /* raced with another instance */ }
+      }
+    } catch { /* first run: no directory yet */ }
+  }
+
+  /** Load one feed's entries from its own file. */
+  async loadEntries(feedId) {
+    try {
+      const raw = await readFile(join(entriesDir(), entryFileName(feedId)), 'utf8');
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return undefined;
+    }
+  }
+
+  /** Write one feed's entries; no-op when the signature is unchanged. */
+  async saveEntries(feedId, entries) {
+    const signature = entrySignature(entries);
+    if (this.persistedSignatures.get(feedId) === signature) return;
+    // An empty feed with no file yet needs none; record that so we do not
+    // recreate hundreds of empty files on every flush.
+    if (signature === '0') {
+      const existing = await stat(join(entriesDir(), entryFileName(feedId))).catch(() => null);
+      if (!existing) {
+        this.persistedSignatures.set(feedId, signature);
+        return;
+      }
+    }
+    await mkdir(entriesDir(), { recursive: true });
+    const target = join(entriesDir(), entryFileName(feedId));
+    const temp = `${target}.${process.pid}.tmp`;
+    try {
+      await writeFile(temp, JSON.stringify(entries), { encoding: 'utf8', mode: 0o600 });
+      await rename(temp, target);
+      this.persistedSignatures.set(feedId, signature);
+    } catch (error) {
+      await rm(temp, { force: true }).catch(() => {});
+      throw error;
+    }
   }
 
   async load() {
@@ -78,6 +160,23 @@ export class DropletsStore {
         delete this.data.read[key];
       }
       if (!this.data.companionContexts || typeof this.data.companionContexts !== 'object') this.data.companionContexts = {};
+      // Hydrate entries from their own files. Legacy documents carried entries
+      // inline; those stay in memory and get split out on the next flush.
+      await mkdir(entriesDir(), { recursive: true });
+      for (const sub of this.data.subscriptions) {
+        const inline = Array.isArray(sub.entries) ? sub.entries : [];
+        const stored = await this.loadEntries(sub.id);
+        if (stored !== undefined) {
+          sub.entries = stored;
+          this.persistedSignatures.set(sub.id, entrySignature(stored));
+        } else {
+          // Legacy document: entries exist only inline. Keep them in memory and
+          // leave the signature UNSET so the next flush writes the per-feed
+          // file — data.json is written without them from now on.
+          sub.entries = inline;
+        }
+      }
+      await this.cleanStaleTemps();
     } catch (error) {
       if (error?.code !== 'ENOENT') {
         throw new Error('droplets: cannot read saved data; refusing to overwrite it', { cause: error });
@@ -140,14 +239,34 @@ export class DropletsStore {
             } catch { /* unreadable foreign file: proceed with ours */ }
           }
         } catch { /* no file yet */ }
+        // Hydrate entries for subscriptions a foreign writer added (their own
+        // documents never carry entries).
+        for (const sub of this.data.subscriptions) {
+          if (!Array.isArray(sub.entries)) sub.entries = (await this.loadEntries(sub.id)) ?? [];
+        }
+        // Entries go to per-feed files; only changed feeds are rewritten.
+        for (const sub of this.data.subscriptions) {
+          await this.saveEntries(sub.id, sub.entries ?? []);
+        }
+        // data.json now holds metadata only — small enough that a rewrite is
+        // cheap and a crash can never strand a 40 MB document.
+        const document = {
+          ...this.data,
+          subscriptions: this.data.subscriptions.map(({ entries, ...rest }) => rest),
+        };
         // Keep the previous good copy for recovery before replacing.
         try {
           const previous = await readFile(this.path, 'utf8');
           if (previous.length > 2) await writeFile(this.path + '.bak', previous, 'utf8');
         } catch { /* first write */ }
         const temp = `${this.path}.${process.pid}.tmp`;
-        await writeFile(temp, JSON.stringify(this.data), { encoding: 'utf8', mode: 0o600 });
-        await rename(temp, this.path);
+        try {
+          await writeFile(temp, JSON.stringify(document), { encoding: 'utf8', mode: 0o600 });
+          await rename(temp, this.path);
+        } catch (error) {
+          await rm(temp, { force: true }).catch(() => {});
+          throw error;
+        }
         this.lastKnownMtime = (await stat(this.path)).mtimeMs;
       } catch (error) {
         this.logger?.warn?.('droplets: failed to save data: %s', String(error));

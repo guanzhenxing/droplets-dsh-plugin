@@ -5129,9 +5129,9 @@ var require_dispatcher_base = __commonJS({
       }
       close(callback) {
         if (callback === void 0) {
-          return new Promise((resolve, reject) => {
+          return new Promise((resolve2, reject) => {
             this.close((err2, data) => {
-              return err2 ? reject(err2) : resolve(data);
+              return err2 ? reject(err2) : resolve2(data);
             });
           });
         }
@@ -5169,9 +5169,9 @@ var require_dispatcher_base = __commonJS({
           err2 = null;
         }
         if (callback === void 0) {
-          return new Promise((resolve, reject) => {
+          return new Promise((resolve2, reject) => {
             this.destroy(err2, (err3, data) => {
-              return err3 ? reject(err3) : resolve(data);
+              return err3 ? reject(err3) : resolve2(data);
             });
           });
         }
@@ -8677,8 +8677,8 @@ var require_promise = __commonJS({
     function createDeferredPromise() {
       let res;
       let rej;
-      const promise = new Promise((resolve, reject) => {
-        res = resolve;
+      const promise = new Promise((resolve2, reject) => {
+        res = resolve2;
         rej = reject;
       });
       return { promise, resolve: res, reject: rej };
@@ -10104,12 +10104,12 @@ upgrade: ${upgrade}\r
           cb();
         }
       }
-      const waitForDrain = () => new Promise((resolve, reject) => {
+      const waitForDrain = () => new Promise((resolve2, reject) => {
         assert(callback === null);
         if (socket[kError]) {
           reject(socket[kError]);
         } else {
-          callback = resolve;
+          callback = resolve2;
         }
       });
       socket.on("close", onDrain).on("drain", onDrain);
@@ -10993,12 +10993,12 @@ var require_client_h2 = __commonJS({
           cb();
         }
       }
-      const waitForDrain = () => new Promise((resolve, reject) => {
+      const waitForDrain = () => new Promise((resolve2, reject) => {
         assert(callback === null);
         if (socket[kError]) {
           reject(socket[kError]);
         } else {
-          callback = resolve;
+          callback = resolve2;
         }
       });
       h2stream.on("close", onDrain).on("drain", onDrain);
@@ -11315,16 +11315,16 @@ var require_client = __commonJS({
         return this[kNeedDrain] < 2;
       }
       [kClose]() {
-        return new Promise((resolve) => {
+        return new Promise((resolve2) => {
           if (this[kSize]) {
-            this[kClosedResolve] = resolve;
+            this[kClosedResolve] = resolve2;
           } else {
-            resolve(null);
+            resolve2(null);
           }
         });
       }
       [kDestroy](err2) {
-        return new Promise((resolve) => {
+        return new Promise((resolve2) => {
           const requests = this[kQueue].splice(this[kPendingIdx]);
           for (let i2 = 0; i2 < requests.length; i2++) {
             const request = requests[i2];
@@ -11337,7 +11337,7 @@ var require_client = __commonJS({
               this[kClosedResolve]();
               this[kClosedResolve] = null;
             }
-            resolve(null);
+            resolve2(null);
           };
           if (this[kHTTPContext]) {
             this[kHTTPContext].destroy(err2, callback);
@@ -11744,8 +11744,8 @@ var require_pool_base = __commonJS({
           }
           return Promise.all(closeAll);
         } else {
-          return new Promise((resolve) => {
-            this[kClosedResolve] = resolve;
+          return new Promise((resolve2) => {
+            this[kClosedResolve] = resolve2;
           });
         }
       }
@@ -12867,7 +12867,7 @@ var require_socks5_proxy_agent = __commonJS({
         const proxyHost = this[kProxyUrl].hostname;
         const proxyPort = parseInt(this[kProxyUrl].port) || 1080;
         debug("creating SOCKS5 connection to", proxyHost, proxyPort);
-        const socket = await new Promise((resolve, reject) => {
+        const socket = await new Promise((resolve2, reject) => {
           this[kConnector]({
             hostname: proxyHost,
             host: proxyHost,
@@ -12877,7 +12877,7 @@ var require_socks5_proxy_agent = __commonJS({
             if (err2) {
               reject(err2);
             } else {
-              resolve(socket2);
+              resolve2(socket2);
             }
           });
         });
@@ -12887,14 +12887,14 @@ var require_socks5_proxy_agent = __commonJS({
           socket.destroy();
         });
         await socks5Client.handshake();
-        await new Promise((resolve, reject) => {
+        await new Promise((resolve2, reject) => {
           const timeout = setTimeout(() => {
             reject(new Error("SOCKS5 authentication timeout"));
           }, 5e3);
           const onAuthenticated = () => {
             clearTimeout(timeout);
             socks5Client.removeListener("error", onError);
-            resolve();
+            resolve2();
           };
           const onError = (err2) => {
             clearTimeout(timeout);
@@ -12903,14 +12903,14 @@ var require_socks5_proxy_agent = __commonJS({
           };
           if (socks5Client.state === STATES.AUTHENTICATED) {
             clearTimeout(timeout);
-            resolve();
+            resolve2();
           } else {
             socks5Client.once("authenticated", onAuthenticated);
             socks5Client.once("error", onError);
           }
         });
         await socks5Client.connect(targetHost, targetPort);
-        await new Promise((resolve, reject) => {
+        await new Promise((resolve2, reject) => {
           const timeout = setTimeout(() => {
             reject(new Error("SOCKS5 connection timeout"));
           }, 5e3);
@@ -12918,7 +12918,7 @@ var require_socks5_proxy_agent = __commonJS({
             debug("SOCKS5 tunnel established to", targetHost, targetPort, "via", info3);
             clearTimeout(timeout);
             socks5Client.removeListener("error", onError);
-            resolve();
+            resolve2();
           };
           const onError = (err2) => {
             clearTimeout(timeout);
@@ -12961,8 +12961,8 @@ var require_socks5_proxy_agent = __commonJS({
                       socket,
                       servername: this[kRequestTls]?.servername || targetHost
                     });
-                    await new Promise((resolve, reject) => {
-                      finalSocket.once("secureConnect", resolve);
+                    await new Promise((resolve2, reject) => {
+                      finalSocket.once("secureConnect", resolve2);
                       finalSocket.once("error", reject);
                     });
                   }
@@ -14095,7 +14095,7 @@ var require_readable = __commonJS({
         if (this._readableState.closeEmitted) {
           return Promise.resolve(null);
         }
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve2, reject) => {
           if (this[kContentLength] && this[kContentLength] > limit || this[kBytesRead] > limit) {
             this.destroy(new AbortError());
           }
@@ -14109,11 +14109,11 @@ var require_readable = __commonJS({
               if (signal.aborted) {
                 reject(signal.reason ?? new AbortError());
               } else {
-                resolve(null);
+                resolve2(null);
               }
             });
           } else {
-            this.on("close", resolve);
+            this.on("close", resolve2);
           }
           this.on("error", noop).on("data", () => {
             if (this[kBytesRead] > limit) {
@@ -14141,7 +14141,7 @@ var require_readable = __commonJS({
     }
     function consume(stream, type) {
       assert(!stream[kConsume]);
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve2, reject) => {
         if (isUnusable(stream)) {
           const rState = stream._readableState;
           if (rState.destroyed && rState.closeEmitted === false) {
@@ -14156,7 +14156,7 @@ var require_readable = __commonJS({
             stream[kConsume] = {
               type,
               stream,
-              resolve,
+              resolve: resolve2,
               reject,
               length: 0,
               body: []
@@ -14230,18 +14230,18 @@ var require_readable = __commonJS({
       return buffer;
     }
     function consumeEnd(consume2, encoding) {
-      const { type, body, resolve, stream, length } = consume2;
+      const { type, body, resolve: resolve2, stream, length } = consume2;
       try {
         if (type === "text") {
-          resolve(chunksDecode(body, length, encoding));
+          resolve2(chunksDecode(body, length, encoding));
         } else if (type === "json") {
-          resolve(JSON.parse(chunksDecode(body, length, encoding)));
+          resolve2(JSON.parse(chunksDecode(body, length, encoding)));
         } else if (type === "arrayBuffer") {
-          resolve(chunksConcat(body, length).buffer);
+          resolve2(chunksConcat(body, length).buffer);
         } else if (type === "blob") {
-          resolve(new Blob(body, { type: stream[kContentType] }));
+          resolve2(new Blob(body, { type: stream[kContentType] }));
         } else if (type === "bytes") {
-          resolve(chunksConcat(body, length));
+          resolve2(chunksConcat(body, length));
         }
         consumeFinish(consume2);
       } catch (err2) {
@@ -14431,9 +14431,9 @@ var require_api_request = __commonJS({
     };
     function request(opts, callback) {
       if (callback === void 0) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve2, reject) => {
           request.call(this, opts, (err2, data) => {
-            return err2 ? reject(err2) : resolve(data);
+            return err2 ? reject(err2) : resolve2(data);
           });
         });
       }
@@ -14645,9 +14645,9 @@ var require_api_stream = __commonJS({
     };
     function stream(opts, factory, callback) {
       if (callback === void 0) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve2, reject) => {
           stream.call(this, opts, factory, (err2, data) => {
-            return err2 ? reject(err2) : resolve(data);
+            return err2 ? reject(err2) : resolve2(data);
           });
         });
       }
@@ -14935,9 +14935,9 @@ var require_api_upgrade = __commonJS({
     };
     function upgrade(opts, callback) {
       if (callback === void 0) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve2, reject) => {
           upgrade.call(this, opts, (err2, data) => {
-            return err2 ? reject(err2) : resolve(data);
+            return err2 ? reject(err2) : resolve2(data);
           });
         });
       }
@@ -15030,9 +15030,9 @@ var require_api_connect = __commonJS({
     };
     function connect(opts, callback) {
       if (callback === void 0) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve2, reject) => {
           connect.call(this, opts, (err2, data) => {
-            return err2 ? reject(err2) : resolve(data);
+            return err2 ? reject(err2) : resolve2(data);
           });
         });
       }
@@ -16306,7 +16306,7 @@ var require_snapshot_recorder = __commonJS({
   "node_modules/undici/lib/mock/snapshot-recorder.js"(exports2, module) {
     "use strict";
     var { writeFile: writeFile5, readFile: readFile5, mkdir: mkdir5 } = __require("node:fs/promises");
-    var { dirname: dirname3, resolve } = __require("node:path");
+    var { dirname: dirname3, resolve: resolve2 } = __require("node:path");
     var { setTimeout: setTimeout2, clearTimeout: clearTimeout2 } = __require("node:timers");
     var { InvalidArgumentError, UndiciError } = require_errors();
     var { hashId, isUrlExcludedFactory, normalizeHeaders, createHeaderFilters } = require_snapshot_utils();
@@ -16507,7 +16507,7 @@ var require_snapshot_recorder = __commonJS({
           throw new InvalidArgumentError("Snapshot path is required");
         }
         try {
-          const data = await readFile5(resolve(path4), "utf8");
+          const data = await readFile5(resolve2(path4), "utf8");
           const parsed = JSON.parse(data);
           if (Array.isArray(parsed)) {
             this.#snapshots.clear();
@@ -16536,7 +16536,7 @@ var require_snapshot_recorder = __commonJS({
         if (!path4) {
           throw new InvalidArgumentError("Snapshot path is required");
         }
-        const resolvedPath = resolve(path4);
+        const resolvedPath = resolve2(path4);
         await mkdir5(dirname3(resolvedPath), { recursive: true });
         const data = Array.from(this.#snapshots.entries()).map(([hash, snapshot]) => ({
           hash,
@@ -24516,7 +24516,7 @@ var require_fetch = __commonJS({
         const agent = fetchParams.controller.dispatcher;
         const path4 = url.pathname + url.search;
         const hasTrailingQuestionMark = url.search.length === 0 && url.href[url.href.length - url.hash.length - 1] === "?";
-        return new Promise((resolve, reject) => agent.dispatch(
+        return new Promise((resolve2, reject) => agent.dispatch(
           {
             path: hasTrailingQuestionMark ? `${path4}?` : path4,
             origin: url.origin,
@@ -24604,7 +24604,7 @@ var require_fetch = __commonJS({
               }
               this.body = new Readable({ read: resume });
               const onError = this.onError.bind(this);
-              resolve({
+              resolve2({
                 status,
                 statusText,
                 headersList,
@@ -24657,7 +24657,7 @@ var require_fetch = __commonJS({
                   headersList.append(headerName, String(value), true);
                 }
               }
-              resolve({
+              resolve2({
                 status,
                 statusText: STATUS_CODES[status],
                 headersList,
@@ -24681,7 +24681,7 @@ var require_fetch = __commonJS({
                   headersList.append(nameStr, value.toString("latin1"), true);
                 }
               }
-              resolve({
+              resolve2({
                 status,
                 statusText: STATUS_CODES[status],
                 headersList,
@@ -29776,7 +29776,7 @@ async function fetchData(url, type = "text") {
     }
     return response.text();
   }
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve2, reject) => {
     const request = new XMLHttpRequest();
     request.open("GET", url, true);
     request.responseType = type === "bytes" ? "arraybuffer" : type;
@@ -29787,14 +29787,14 @@ async function fetchData(url, type = "text") {
       if (request.status === 200 || request.status === 0) {
         switch (type) {
           case "bytes":
-            resolve(new Uint8Array(request.response));
+            resolve2(new Uint8Array(request.response));
             return;
           case "blob":
           case "json":
-            resolve(request.response);
+            resolve2(request.response);
             return;
         }
-        resolve(request.responseText);
+        resolve2(request.responseText);
         return;
       }
       reject(new Error(request.statusText));
@@ -32696,7 +32696,7 @@ var init_pdf = __esm({
       var defineProperty = Object.defineProperty;
       var stringSlice = uncurryThis("".slice);
       var replace = uncurryThis("".replace);
-      var join2 = uncurryThis([].join);
+      var join3 = uncurryThis([].join);
       var CONFIGURABLE_LENGTH = DESCRIPTORS && !fails(function() {
         return defineProperty(function() {
         }, "length", { value: 8 }).length !== 8;
@@ -32723,7 +32723,7 @@ var init_pdf = __esm({
         }
         var state = enforceInternalState(value);
         if (!hasOwn(state, "source")) {
-          state.source = join2(TEMPLATE, typeof name2 == "string" ? name2 : "");
+          state.source = join3(TEMPLATE, typeof name2 == "string" ? name2 : "");
         }
         return value;
       };
@@ -32756,13 +32756,13 @@ var init_pdf = __esm({
       var aCallable = a_callable_namespaceFn();
       var $TypeError = TypeError;
       var PromiseCapability = function(C) {
-        var resolve, reject;
+        var resolve2, reject;
         this.promise = new C(function($$resolve, $$reject) {
-          if (resolve !== void 0 || reject !== void 0) throw new $TypeError("Bad Promise constructor");
-          resolve = $$resolve;
+          if (resolve2 !== void 0 || reject !== void 0) throw new $TypeError("Bad Promise constructor");
+          resolve2 = $$resolve;
           reject = $$reject;
         });
-        this.resolve = aCallable(resolve);
+        this.resolve = aCallable(resolve2);
         this.reject = aCallable(reject);
       };
       module.exports.f = function(C) {
@@ -33101,8 +33101,8 @@ var init_pdf = __esm({
         anObject(C);
         if (isObject(x2) && x2.constructor === C) return x2;
         var promiseCapability = newPromiseCapability.f(C);
-        var resolve = promiseCapability.resolve;
-        resolve(x2);
+        var resolve2 = promiseCapability.resolve;
+        resolve2(x2);
         return promiseCapability.promise;
       };
     });
@@ -35104,7 +35104,7 @@ var init_pdf = __esm({
       var charAt = uncurryThis("".charAt);
       var Uint8Array2 = globalThis2.Uint8Array;
       var $Array = globalThis2.Array;
-      var join2 = uncurryThis([].join);
+      var join3 = uncurryThis([].join);
       var INCORRECT_BEHAVIOR_OR_DOESNT_EXISTS = !Uint8Array2 || !Uint8Array2.prototype.toBase64 || !(function() {
         try {
           var target = new Uint8Array2();
@@ -35150,7 +35150,7 @@ var init_pdf = __esm({
               result[written++] = "=";
             }
           }
-          return join2(result, "");
+          return join3(result, "");
         }
       });
     });
@@ -35161,7 +35161,7 @@ var init_pdf = __esm({
       var anUint8Array = an_uint8_array_namespaceFn();
       var notDetached = array_buffer_not_detached_namespaceFn();
       var numberToString = uncurryThis(1.1.toString);
-      var join2 = uncurryThis([].join);
+      var join3 = uncurryThis([].join);
       var $Array = Array;
       var Uint8Array2 = globalThis2.Uint8Array;
       var INCORRECT_BEHAVIOR_OR_DOESNT_EXISTS = !Uint8Array2 || !Uint8Array2.prototype.toHex || !(function() {
@@ -35181,7 +35181,7 @@ var init_pdf = __esm({
             var hex = numberToString(this[i2], 16);
             result[i2] = hex.length === 1 ? "0" + hex : hex;
           }
-          return join2(result, "");
+          return join3(result, "");
         }
       });
     });
@@ -36797,11 +36797,11 @@ var init_pdf = __esm({
             const mustRemoveAspectRatioPromise = _ImageManager._isSVGFittingCanvas;
             const fileReader = new FileReader();
             const imageElement = new Image();
-            const imagePromise = new Promise((resolve, reject) => {
+            const imagePromise = new Promise((resolve2, reject) => {
               imageElement.onload = () => {
                 data.bitmap = imageElement;
                 data.isSvg = true;
-                resolve();
+                resolve2();
               };
               fileReader.onload = async () => {
                 const url = data.svgUrl = fileReader.result;
@@ -37479,13 +37479,13 @@ var init_pdf = __esm({
           return;
         }
         const {
-          resolve,
+          resolve: resolve2,
           promise
         } = Promise.withResolvers();
         const onEditorsRendered = (evt) => {
           if (evt.pageNumber === pageNumber) {
             this._eventBus.off("editorsrendered", onEditorsRendered);
-            resolve();
+            resolve2();
           }
         };
         this._eventBus.on("editorsrendered", onEditorsRendered, internalOpt);
@@ -46839,11 +46839,11 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
         } = this;
         const {
           promise,
-          resolve
+          resolve: resolve2
         } = Promise.withResolvers();
         const request = {
           done: false,
-          resolve
+          resolve: resolve2
         };
         loadingRequests.push(request);
         this._loadTestFont ??= atob("T1RUTwALAIAAAwAwQ0ZGIDHtZg4AAAOYAAAAgUZGVE1lkzZwAAAEHAAAABxHREVGABQAFQAABDgAAAAeT1MvMlYNYwkAAAEgAAAAYGNtYXABDQLUAAACNAAAAUJoZWFk/xVFDQAAALwAAAA2aGhlYQdkA+oAAAD0AAAAJGhtdHgD6AAAAAAEWAAAAAZtYXhwAAJQAAAAARgAAAAGbmFtZVjmdH4AAAGAAAAAsXBvc3T/hgAzAAADeAAAACAAAQAAAAEAALZRFsRfDzz1AAsD6AAAAADOBOTLAAAAAM4KHDwAAAAAA+gDIQAAAAgAAgAAAAAAAAABAAADIQAAAFoD6AAAAAAD6AABAAAAAAAAAAAAAAAAAAAAAQAAUAAAAgAAAAQD6AH0AAUAAAKKArwAAACMAooCvAAAAeAAMQECAAACAAYJAAAAAAAAAAAAAQAAAAAAAAAAAAAAAFBmRWQAwAAuAC4DIP84AFoDIQAAAAAAAQAAAAAAAAAAACAAIAABAAAADgCuAAEAAAAAAAAAAQAAAAEAAAAAAAEAAQAAAAEAAAAAAAIAAQAAAAEAAAAAAAMAAQAAAAEAAAAAAAQAAQAAAAEAAAAAAAUAAQAAAAEAAAAAAAYAAQAAAAMAAQQJAAAAAgABAAMAAQQJAAEAAgABAAMAAQQJAAIAAgABAAMAAQQJAAMAAgABAAMAAQQJAAQAAgABAAMAAQQJAAUAAgABAAMAAQQJAAYAAgABWABYAAAAAAAAAwAAAAMAAAAcAAEAAAAAADwAAwABAAAAHAAEACAAAAAEAAQAAQAAAC7//wAAAC7////TAAEAAAAAAAABBgAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMAAAAAAAD/gwAyAAAAAQAAAAAAAAAAAAAAAAAAAAABAAQEAAEBAQJYAAEBASH4DwD4GwHEAvgcA/gXBIwMAYuL+nz5tQXkD5j3CBLnEQACAQEBIVhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYAAABAQAADwACAQEEE/t3Dov6fAH6fAT+fPp8+nwHDosMCvm1Cvm1DAz6fBQAAAAAAAABAAAAAMmJbzEAAAAAzgTjFQAAAADOBOQpAAEAAAAAAAAADAAUAAQAAAABAAAAAgABAAAAAAAAAAAD6AAAAAAAAA==");
@@ -47755,12 +47755,12 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
         } = stream._source;
         this._isStreamingSupported = !disableStream;
         const fs = process.getBuiltinModule("fs/promises");
-        fs.lstat(url).then((stat3) => {
+        fs.lstat(url).then((stat4) => {
           const readableStream = getReadableStream(url);
           this._reader = readableStream.getReader();
           const {
             size
-          } = stat3;
+          } = stat4;
           this._contentLength = size;
           this._isRangeSupported = !disableRange && size > 2 * rangeChunkSize;
           if (!this._isStreamingSupported && this._isRangeSupported) {
@@ -49297,11 +49297,11 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
         }
         const {
           promise,
-          resolve,
+          resolve: resolve2,
           reject
         } = Promise.withResolvers();
         this.#pendingRequests.add(reject);
-        handler.sendWithPromise(action, data).then(resolve, reject);
+        handler.sendWithPromise(action, data).then(resolve2, reject);
         return promise.finally(() => {
           this.#pendingRequests.delete(reject);
         });
@@ -60425,7 +60425,7 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
         input.type = "file";
         input.accept = SupportedImageMimeTypes.keys().join(",");
         const signal = this._uiManager._signal;
-        this.#bitmapPromise = new Promise((resolve) => {
+        this.#bitmapPromise = new Promise((resolve2) => {
           input.addEventListener("change", async () => {
             if (!input.files || input.files.length === 0) {
               this.remove();
@@ -60440,13 +60440,13 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
               });
               this.#getBitmapFetched(data);
             }
-            resolve();
+            resolve2();
           }, {
             signal
           });
           input.addEventListener("cancel", () => {
             this.remove();
-            resolve();
+            resolve2();
           }, {
             signal
           });
@@ -64124,8 +64124,8 @@ async function JBig2(moduleArg = {}) {
     }
     var info3 = getWasmImports();
     var instantiateWasm = Module["instantiateWasm"];
-    return new Promise((resolve) => {
-      instantiateWasm(info3, (inst) => resolve(receiveInstance(inst)));
+    return new Promise((resolve2) => {
+      instantiateWasm(info3, (inst) => resolve2(receiveInstance(inst)));
     });
   }
   class ExitStatus {
@@ -64298,7 +64298,7 @@ async function JBig2(moduleArg = {}) {
     var setStatus = Module["setStatus"];
     if (setStatus) {
       setStatus("Running...");
-      await new Promise((resolve) => setTimeout(resolve, 1));
+      await new Promise((resolve2) => setTimeout(resolve2, 1));
       setTimeout(setStatus, 1, "");
     }
     if (ABORT) return;
@@ -64392,8 +64392,8 @@ async function OpenJPEG(moduleArg = {}) {
     }
     var info3 = getWasmImports();
     var instantiateWasm = Module["instantiateWasm"];
-    return new Promise((resolve) => {
-      instantiateWasm(info3, (inst) => resolve(receiveInstance(inst)));
+    return new Promise((resolve2) => {
+      instantiateWasm(info3, (inst) => resolve2(receiveInstance(inst)));
     });
   }
   class ExitStatus {
@@ -64581,7 +64581,7 @@ async function OpenJPEG(moduleArg = {}) {
     var setStatus = Module["setStatus"];
     if (setStatus) {
       setStatus("Running...");
-      await new Promise((resolve) => setTimeout(resolve, 1));
+      await new Promise((resolve2) => setTimeout(resolve2, 1));
       setTimeout(setStatus, 1, "");
     }
     if (ABORT) return;
@@ -71998,7 +71998,7 @@ var init_pdf_worker = __esm({
       var defineProperty = Object.defineProperty;
       var stringSlice = uncurryThis("".slice);
       var replace = uncurryThis("".replace);
-      var join2 = uncurryThis([].join);
+      var join3 = uncurryThis([].join);
       var CONFIGURABLE_LENGTH = DESCRIPTORS && !fails(function() {
         return defineProperty(function() {
         }, "length", { value: 8 }).length !== 8;
@@ -72025,7 +72025,7 @@ var init_pdf_worker = __esm({
         }
         var state = enforceInternalState(value);
         if (!hasOwn(state, "source")) {
-          state.source = join2(TEMPLATE, typeof name2 == "string" ? name2 : "");
+          state.source = join3(TEMPLATE, typeof name2 == "string" ? name2 : "");
         }
         return value;
       };
@@ -72058,13 +72058,13 @@ var init_pdf_worker = __esm({
       var aCallable = a_callable_namespaceFn2();
       var $TypeError = TypeError;
       var PromiseCapability = function(C) {
-        var resolve, reject;
+        var resolve2, reject;
         this.promise = new C(function($$resolve, $$reject) {
-          if (resolve !== void 0 || reject !== void 0) throw new $TypeError("Bad Promise constructor");
-          resolve = $$resolve;
+          if (resolve2 !== void 0 || reject !== void 0) throw new $TypeError("Bad Promise constructor");
+          resolve2 = $$resolve;
           reject = $$reject;
         });
-        this.resolve = aCallable(resolve);
+        this.resolve = aCallable(resolve2);
         this.reject = aCallable(reject);
       };
       module.exports.f = function(C) {
@@ -72394,8 +72394,8 @@ var init_pdf_worker = __esm({
         anObject(C);
         if (isObject(x2) && x2.constructor === C) return x2;
         var promiseCapability = newPromiseCapability.f(C);
-        var resolve = promiseCapability.resolve;
-        resolve(x2);
+        var resolve2 = promiseCapability.resolve;
+        resolve2(x2);
         return promiseCapability.promise;
       };
     });
@@ -74033,7 +74033,7 @@ var init_pdf_worker = __esm({
       var charAt = uncurryThis("".charAt);
       var Uint8Array2 = globalThis2.Uint8Array;
       var $Array = globalThis2.Array;
-      var join2 = uncurryThis([].join);
+      var join3 = uncurryThis([].join);
       var INCORRECT_BEHAVIOR_OR_DOESNT_EXISTS = !Uint8Array2 || !Uint8Array2.prototype.toBase64 || !(function() {
         try {
           var target = new Uint8Array2();
@@ -74079,7 +74079,7 @@ var init_pdf_worker = __esm({
               result[written++] = "=";
             }
           }
-          return join2(result, "");
+          return join3(result, "");
         }
       });
     });
@@ -74090,7 +74090,7 @@ var init_pdf_worker = __esm({
       var anUint8Array = an_uint8_array_namespaceFn2();
       var notDetached = array_buffer_not_detached_namespaceFn2();
       var numberToString = uncurryThis(1.1.toString);
-      var join2 = uncurryThis([].join);
+      var join3 = uncurryThis([].join);
       var $Array = Array;
       var Uint8Array2 = globalThis2.Uint8Array;
       var INCORRECT_BEHAVIOR_OR_DOESNT_EXISTS = !Uint8Array2 || !Uint8Array2.prototype.toHex || !(function() {
@@ -74110,7 +74110,7 @@ var init_pdf_worker = __esm({
             var hex = numberToString(this[i2], 16);
             result[i2] = hex.length === 1 ? "0" + hex : hex;
           }
-          return join2(result, "");
+          return join3(result, "");
         }
       });
     });
@@ -80865,11 +80865,11 @@ var init_pdf_worker = __esm({
         if (!this.#modulePromise) {
           const {
             promise,
-            resolve
+            resolve: resolve2
           } = Promise.withResolvers();
           this.#modulePromise = Promise.race([promise, ImageDecoder2({
             warn: warn2,
-            instantiateWasm: this.#instantiateWasm.bind(this, resolve)
+            instantiateWasm: this.#instantiateWasm.bind(this, resolve2)
           })]);
         }
         return this.#modulePromise;
@@ -103079,7 +103079,7 @@ var init_pdf_worker = __esm({
         }
         const {
           promise,
-          resolve
+          resolve: resolve2
         } = Promise.withResolvers();
         let preEvaluatedFont;
         try {
@@ -103136,10 +103136,10 @@ var init_pdf_worker = __esm({
               throw new Error(`Type3 font load error: ${reason}`);
             }
           }
-          resolve(translated);
+          resolve2(translated);
         }).catch((reason) => {
           warn2(`loadFont - translateFont failed: "${reason}".`);
-          resolve(new TranslatedFont({
+          resolve2(new TranslatedFont({
             loadedName: font.loadedName,
             font: new ErrorFont(reason?.message),
             dict: font
@@ -103374,11 +103374,11 @@ var init_pdf_worker = __esm({
             operatorList.addOp(OPS2.endMarkedContent, []);
           }
         }
-        return new Promise(function promiseBody(resolve, reject) {
+        return new Promise(function promiseBody(resolve2, reject) {
           const next = function(promise) {
             Promise.all([promise, operatorList.ready]).then(function() {
               try {
-                promiseBody(resolve, reject);
+                promiseBody(resolve2, reject);
               } catch (ex) {
                 reject(ex);
               }
@@ -103876,7 +103876,7 @@ var init_pdf_worker = __esm({
           }
           closePendingMarkedContentOPS();
           closePendingRestoreOPS();
-          resolve();
+          resolve2();
         }).catch((reason) => {
           if (reason instanceof AbortException2) {
             return;
@@ -104409,12 +104409,12 @@ var init_pdf_worker = __esm({
           textContent.styles = /* @__PURE__ */ Object.create(null);
         }
         const timeSlotManager = new TimeSlotManager();
-        return new Promise(function promiseBody(resolve, reject) {
+        return new Promise(function promiseBody(resolve2, reject) {
           const next = function(promise) {
             enqueueChunk(true);
             Promise.all([promise, sink.ready]).then(function() {
               try {
-                promiseBody(resolve, reject);
+                promiseBody(resolve2, reject);
               } catch (ex) {
                 reject(ex);
               }
@@ -104713,7 +104713,7 @@ var init_pdf_worker = __esm({
           flushTextContentItem();
           closePendingMarkedContentItems();
           enqueueChunk();
-          resolve();
+          resolve2();
         }).catch((reason) => {
           if (reason instanceof AbortException2) {
             return;
@@ -105646,7 +105646,7 @@ var init_pdf_worker = __esm({
         util_assert2(font.isType3Font, "Must be a Type3 font.");
         const {
           promise,
-          resolve
+          resolve: resolve2
         } = Promise.withResolvers();
         this.#type3Loaded = promise;
         const type3Evaluator = evaluator.clone({
@@ -105698,7 +105698,7 @@ var init_pdf_worker = __esm({
           font.isCharBBox = true;
           font.bbox = this._bbox;
         }
-        resolve();
+        resolve2();
         return this.#type3Loaded;
       }
       #removeType3ColorOperators(operatorList, fontBBoxSize = NaN) {
@@ -118981,12 +118981,12 @@ var init_pdf_worker = __esm({
       }
       _createPagesHelper() {
         const iterator = this.form[$toPages]();
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve2, reject) => {
           const nextIteration = () => {
             try {
               const value = iterator.next();
               if (value.done) {
-                resolve(value.value);
+                resolve2(value.value);
               } else {
                 setTimeout(nextIteration, 0);
               }
@@ -129579,7 +129579,7 @@ var init_pdf_worker = __esm({
           }), fullReader = pdfStream.getFullReader();
           const {
             promise,
-            resolve,
+            resolve: resolve2,
             reject
           } = Promise.withResolvers();
           let newPdfManager, cachedChunks = [];
@@ -129596,7 +129596,7 @@ var init_pdf_worker = __esm({
               newPdfManager.sendProgressiveData(chunk);
             }
             cachedChunks = null;
-            resolve(newPdfManager);
+            resolve2(newPdfManager);
             cancelXHRs = null;
           }).catch((reason) => {
             reject(reason);
@@ -129630,7 +129630,7 @@ var init_pdf_worker = __esm({
               pdfManagerArgs.source = arrayBuffersToBytes(cachedChunks);
               cachedChunks = null;
               newPdfManager = new LocalPdfManager(pdfManagerArgs);
-              resolve(newPdfManager);
+              resolve2(newPdfManager);
             }
             cancelXHRs = null;
           }
@@ -130199,11 +130199,13 @@ var init_pdf_worker = __esm({
 
 // src/host/index.js
 import path3 from "node:path";
+import { readdir as readdir3, stat as stat3 } from "node:fs/promises";
+import { join as join2, resolve, sep as sep2 } from "node:path";
 import { TypertRemoteService, Remote } from "@deepseek-ai/dsh-typert-protocol";
 import { defineTool as defineTool2 } from "@deepseek-ai/dsh-tools";
 
 // src/host/store.js
-import { mkdir as mkdir2, readFile as readFile2, rename as rename2, rm as rm2, stat, writeFile as writeFile2 } from "node:fs/promises";
+import { mkdir as mkdir2, readFile as readFile2, readdir, rename as rename2, rm as rm2, stat, writeFile as writeFile2 } from "node:fs/promises";
 import { dirname as dirname2, join } from "node:path";
 import { resolveDshHome } from "@deepseek-ai/dsh-home-paths";
 
@@ -130344,11 +130346,28 @@ function storageDir() {
 function defaultVaultPath() {
   return join(storageDir(), "vault");
 }
+function entriesDir() {
+  return join(storageDir(), "entries");
+}
+function entryFileName(feedId) {
+  return encodeURIComponent(feedId) + ".json";
+}
+function entrySignature(entries) {
+  if (!entries || entries.length === 0) return "0";
+  return entries.length + "|" + (entries[entries.length - 1]?.key ?? "") + "|" + (entries[0]?.key ?? "");
+}
 function defaults() {
   return {
     version: 1,
     settings: {
-      showImages: true
+      showImages: true,
+      // Feed preferences mirrored from the droplets settings screen.
+      refreshMinutes: 60,
+      refreshOnStart: true,
+      hoverPreview: false,
+      cacheDays: 60,
+      refreshWorkers: 3,
+      fetchTimeoutSec: 20
     },
     subscriptions: [],
     read: {},
@@ -130377,6 +130396,59 @@ var DropletsStore = class {
     this.saveTimer = void 0;
     this.saving = Promise.resolve();
     this.lastKnownMtime = 0;
+    this.persistedSignatures = /* @__PURE__ */ new Map();
+  }
+  /** Remove temp files a killed process left behind (atomic writes are
+   * tmp+rename; a SIGKILL between them strands the whole document). */
+  async cleanStaleTemps() {
+    try {
+      const names = await readdir(this.dir);
+      const cutoff = Date.now() - 10 * 60 * 1e3;
+      for (const name2 of names) {
+        if (!/\.tmp$/.test(name2) && !/\.json\.\d+\.tmp$/.test(name2)) continue;
+        const full = join(this.dir, name2);
+        try {
+          const info3 = await stat(full);
+          if (info3.mtimeMs < cutoff) await rm2(full, { force: true });
+        } catch {
+        }
+      }
+    } catch {
+    }
+  }
+  /** Load one feed's entries from its own file. */
+  async loadEntries(feedId) {
+    try {
+      const raw = await readFile2(join(entriesDir(), entryFileName(feedId)), "utf8");
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return void 0;
+    }
+  }
+  /** Write one feed's entries; no-op when the signature is unchanged. */
+  async saveEntries(feedId, entries) {
+    const signature = entrySignature(entries);
+    if (this.persistedSignatures.get(feedId) === signature) return;
+    if (signature === "0") {
+      const existing = await stat(join(entriesDir(), entryFileName(feedId))).catch(() => null);
+      if (!existing) {
+        this.persistedSignatures.set(feedId, signature);
+        return;
+      }
+    }
+    await mkdir2(entriesDir(), { recursive: true });
+    const target = join(entriesDir(), entryFileName(feedId));
+    const temp = `${target}.${process.pid}.tmp`;
+    try {
+      await writeFile2(temp, JSON.stringify(entries), { encoding: "utf8", mode: 384 });
+      await rename2(temp, target);
+      this.persistedSignatures.set(feedId, signature);
+    } catch (error) {
+      await rm2(temp, { force: true }).catch(() => {
+      });
+      throw error;
+    }
   }
   async load() {
     try {
@@ -130395,6 +130467,18 @@ var DropletsStore = class {
         delete this.data.read[key];
       }
       if (!this.data.companionContexts || typeof this.data.companionContexts !== "object") this.data.companionContexts = {};
+      await mkdir2(entriesDir(), { recursive: true });
+      for (const sub of this.data.subscriptions) {
+        const inline = Array.isArray(sub.entries) ? sub.entries : [];
+        const stored = await this.loadEntries(sub.id);
+        if (stored !== void 0) {
+          sub.entries = stored;
+          this.persistedSignatures.set(sub.id, entrySignature(stored));
+        } else {
+          sub.entries = inline;
+        }
+      }
+      await this.cleanStaleTemps();
     } catch (error) {
       if (error?.code !== "ENOENT") {
         throw new Error("droplets: cannot read saved data; refusing to overwrite it", { cause: error });
@@ -130457,14 +130541,30 @@ var DropletsStore = class {
           }
         } catch {
         }
+        for (const sub of this.data.subscriptions) {
+          if (!Array.isArray(sub.entries)) sub.entries = await this.loadEntries(sub.id) ?? [];
+        }
+        for (const sub of this.data.subscriptions) {
+          await this.saveEntries(sub.id, sub.entries ?? []);
+        }
+        const document2 = {
+          ...this.data,
+          subscriptions: this.data.subscriptions.map(({ entries, ...rest }) => rest)
+        };
         try {
           const previous = await readFile2(this.path, "utf8");
           if (previous.length > 2) await writeFile2(this.path + ".bak", previous, "utf8");
         } catch {
         }
         const temp = `${this.path}.${process.pid}.tmp`;
-        await writeFile2(temp, JSON.stringify(this.data), { encoding: "utf8", mode: 384 });
-        await rename2(temp, this.path);
+        try {
+          await writeFile2(temp, JSON.stringify(document2), { encoding: "utf8", mode: 384 });
+          await rename2(temp, this.path);
+        } catch (error) {
+          await rm2(temp, { force: true }).catch(() => {
+          });
+          throw error;
+        }
         this.lastKnownMtime = (await stat(this.path)).mtimeMs;
       } catch (error) {
         this.logger?.warn?.("droplets: failed to save data: %s", String(error));
@@ -131118,8 +131218,8 @@ async function getSystemProxyUrl() {
   if (typeof fromEnv === "string" && /^https?:\/\//i.test(fromEnv)) return fromEnv;
   try {
     const { execFile } = await import("node:child_process");
-    const stdout = await new Promise((resolve, reject) => {
-      execFile("scutil", ["--proxy"], { timeout: 2e3 }, (error, out) => error ? reject(error) : resolve(String(out ?? "")));
+    const stdout = await new Promise((resolve2, reject) => {
+      execFile("scutil", ["--proxy"], { timeout: 2e3 }, (error, out) => error ? reject(error) : resolve2(String(out ?? "")));
     });
     const https = /HTTPSEnable\s*:\s*1/.test(stdout);
     const http = /HTTPEnable\s*:\s*1/.test(stdout);
@@ -133907,21 +134007,21 @@ var Matcher = class {
    * @returns {string}
    */
   toString(separator, includeNamespace = true) {
-    const sep2 = separator || this.separator;
-    const isDefault = sep2 === this.separator && includeNamespace === true;
+    const sep3 = separator || this.separator;
+    const isDefault = sep3 === this.separator && includeNamespace === true;
     if (isDefault) {
       if (this._pathStringCache !== null) {
         return this._pathStringCache;
       }
       const result = this.path.map(
         (n) => n.namespace ? `${n.namespace}:${n.tag}` : n.tag
-      ).join(sep2);
+      ).join(sep3);
       this._pathStringCache = result;
       return result;
     }
     return this.path.map(
       (n) => includeNamespace && n.namespace ? `${n.namespace}:${n.tag}` : n.tag
-    ).join(sep2);
+    ).join(sep3);
   }
   /**
    * Get path as array of tag names.
@@ -135440,8 +135540,8 @@ function readStopNodeData(xmlData, tagName, i2) {
           const nextLt = xmlData.indexOf("<", i2 + 1);
           if (nextLt === -1 || nextLt > nextGt) {
             const exp = xmlData.substring(i2 + 1, nextGt);
-            const sep2 = exp.search(/\s/);
-            const name2 = sep2 === -1 ? exp : exp.substring(0, sep2);
+            const sep3 = exp.search(/\s/);
+            const name2 = sep3 === -1 ? exp : exp.substring(0, sep3);
             if (name2 === tagName && exp[exp.length - 1] !== "/") openTagCount++;
             i2 = nextGt;
           }
@@ -136377,7 +136477,7 @@ function epubPlainText(bytes, limits = INBOX_LIMITS.epub, { maxChars = 4e5 } = {
 
 // src/host/vault.js
 import { createHash as createHash3 } from "node:crypto";
-import { lstat, mkdir as mkdir4, readFile as readFile4, readdir, realpath, rename as rename3, writeFile as writeFile4 } from "node:fs/promises";
+import { lstat, mkdir as mkdir4, readFile as readFile4, readdir as readdir2, realpath, rename as rename3, writeFile as writeFile4 } from "node:fs/promises";
 import path2 from "node:path";
 var EXCLUDED_DIRS = /* @__PURE__ */ new Set([".obsidian", ".trash", ".stfolder", ".git"]);
 var PARA_FOLDERS = ["0-Inbox", "1-Projects", "2-Areas", "3-Resources", "4-Archives"];
@@ -136430,7 +136530,7 @@ async function safeResolve(root, rel) {
   return target;
 }
 async function walkVault(root, dir = "", out = []) {
-  const entries = await readdir(path2.join(root, dir), { withFileTypes: true }).catch(() => []);
+  const entries = await readdir2(path2.join(root, dir), { withFileTypes: true }).catch(() => []);
   for (const entry of entries) {
     if (entry.name.startsWith(".") || EXCLUDED_DIRS.has(entry.name)) continue;
     const rel = dir === "" ? entry.name : `${dir}/${entry.name}`;
@@ -137559,10 +137659,17 @@ var DropletsService = class extends TypertRemoteService {
     await this.ready;
     return { xml: buildOpml(this.store.data.subscriptions) };
   }
+  /** Per-feed fetch timeout, preferring the user's setting. */
+  feedTimeoutMs() {
+    const seconds = this.store.data.settings.fetchTimeoutSec;
+    if (typeof seconds === "number" && seconds >= 5 && seconds <= 300) return seconds * 1e3;
+    return FEED_TIMEOUT_MS;
+  }
   async fetchFeedText(url) {
+    const budget = this.feedTimeoutMs();
     const response = await this.fetcher.fetch(url, {
-      connectTimeoutMs: FEED_TIMEOUT_MS,
-      totalTimeoutMs: FEED_TIMEOUT_MS,
+      connectTimeoutMs: budget,
+      totalTimeoutMs: budget,
       maxBodyBytes: 5 * 1024 * 1024
     });
     if (response.status >= 400) throw new Error(`HTTP ${response.status} for ${url}`);
@@ -137613,7 +137720,8 @@ var DropletsService = class extends TypertRemoteService {
     const outcome = { feeds: 0, entries: 0, errors: 0 };
     const subs = this.selectSubscriptions(channel);
     this.refreshProgress = { running: true, total: subs.length, done: 0, ok: 0, failed: 0, startedAt: Date.now(), errors: [] };
-    await this.forEachWithPool(subs, REFRESH_WORKERS, async (sub) => {
+    const workers = Math.min(8, Math.max(1, Number(this.store.data.settings.refreshWorkers) || REFRESH_WORKERS));
+    await this.forEachWithPool(subs, workers, async (sub) => {
       const count = await this.refreshSubscription(sub);
       outcome.feeds += 1;
       outcome.entries += count;
@@ -137809,11 +137917,115 @@ var DropletsService = class extends TypertRemoteService {
   }
   async saveSettings(request) {
     await this.ready;
-    const patch = request?.patch ?? {};
-    if (patch.showImages !== void 0) this.store.data.settings.showImages = patch.showImages !== false;
+    const patch = request?.patch ?? request ?? {};
+    const settings = this.store.data.settings;
+    if (patch.showImages !== void 0) settings.showImages = patch.showImages !== false;
+    for (const key of ["refreshOnStart", "hoverPreview"]) {
+      if (patch[key] !== void 0) settings[key] = patch[key] === true;
+    }
+    if (patch.refreshMinutes !== void 0) {
+      const minutes = Number(patch.refreshMinutes);
+      if ([15, 30, 60, 180].includes(minutes)) settings.refreshMinutes = minutes;
+    }
+    if (patch.cacheDays !== void 0) {
+      const days = Number(patch.cacheDays);
+      if (Number.isFinite(days) && days >= 1 && days <= 3650) settings.cacheDays = Math.floor(days);
+    }
+    if (patch.refreshWorkers !== void 0) {
+      const workers = Number(patch.refreshWorkers);
+      if (Number.isFinite(workers) && workers >= 1 && workers <= 8) settings.refreshWorkers = Math.floor(workers);
+    }
+    if (patch.fetchTimeoutSec !== void 0) {
+      const seconds = Number(patch.fetchTimeoutSec);
+      if (Number.isFinite(seconds) && seconds >= 5 && seconds <= 300) settings.fetchTimeoutSec = Math.floor(seconds);
+    }
     this.store.touch();
     await this.store.flush();
     return this.getSettings();
+  }
+  /** Workspace screen: where the data actually lives, its layout and git state. */
+  async getWorkspace() {
+    await this.ready;
+    const root = storageDir();
+    const entryDir = entriesDir();
+    const directory = [];
+    const probe = async (relPath, label, kind) => {
+      const full = join2(root, relPath);
+      const info3 = await stat3(full).catch(() => null);
+      directory.push({
+        path: relPath,
+        label,
+        kind,
+        exists: Boolean(info3),
+        isDirectory: Boolean(info3?.isDirectory?.()),
+        bytes: info3 && info3.isFile?.() ? info3.size : void 0
+      });
+    };
+    await probe("data.json", "\u8BA2\u9605\u6E90\u4E0E\u5DF2\u8BFB/\u6536\u85CF\u72B6\u6001(\u5143\u6570\u636E)", "\u5185\u5BB9");
+    await probe("entries", "\u6BCF\u4E2A\u8BA2\u9605\u6E90\u7684\u6761\u76EE(\u6309\u6E90\u5206\u6587\u4EF6)", "\u5185\u5BB9");
+    await probe("bodies.json", "\u6B63\u6587\u7F13\u5B58", "\u5185\u5BB9");
+    await probe("vault", "\u77E5\u8BC6\u5E93\u7B14\u8BB0", "\u5185\u5BB9");
+    await probe("inbox", "\u6536\u4EF6\u7BB1\u6293\u53D6\u7684\u539F\u4EF6", "\u5185\u5BB9");
+    await probe("backups", "\u5E94\u7528\u5185\u5907\u4EFD\u5F52\u6863", "\u6D3E\u751F");
+    await probe(".trash", "\u5220\u9664\u5185\u5BB9\u6682\u5B58", "\u6D3E\u751F");
+    let documentBytes = 0;
+    let entryBytes = 0;
+    let entryFiles = 0;
+    try {
+      documentBytes = (await stat3(this.store.path)).size;
+    } catch {
+    }
+    try {
+      for (const name2 of await readdir3(entryDir)) {
+        if (!name2.endsWith(".json")) continue;
+        entryFiles += 1;
+        entryBytes += (await stat3(join2(entryDir, name2))).size;
+      }
+    } catch {
+    }
+    let git = null;
+    try {
+      const { execFile } = await import("node:child_process");
+      const run = (args) => new Promise((resolve2) => {
+        execFile("git", args, { cwd: root, timeout: 3e3 }, (error, stdout) => {
+          resolve2(error ? "" : String(stdout).trim());
+        });
+      });
+      const branch = await run(["rev-parse", "--abbrev-ref", "HEAD"]);
+      if (branch) {
+        const dirty = await run(["status", "--porcelain"]);
+        git = {
+          branch,
+          changed: dirty === "" ? 0 : dirty.split("\n").filter(Boolean).length
+        };
+      }
+    } catch {
+    }
+    return {
+      root,
+      directory,
+      storage: { documentBytes, entryBytes, entryFiles, subscriptionCount: this.store.data.subscriptions.length },
+      git
+    };
+  }
+  /** Reveal a path inside the storage root in the OS file manager. */
+  async openPath(request) {
+    await this.ready;
+    const requested = String(request?.path ?? "");
+    const root = storageDir();
+    const target = requested === "" ? root : resolve(root, requested);
+    if (target !== root && !target.startsWith(root + sep2)) {
+      throw new Error("droplets\uFF1A\u53EA\u80FD\u6253\u5F00\u6570\u636E\u76EE\u5F55\u5185\u7684\u4F4D\u7F6E");
+    }
+    const { execFile } = await import("node:child_process");
+    await new Promise((resolve2, reject) => {
+      execFile(
+        process.platform === "darwin" ? "open" : process.platform === "win32" ? "explorer" : "xdg-open",
+        [target],
+        (error) => error ? reject(error) : resolve2()
+      );
+    });
+    return { opened: target };
   }
   async getStorageInfo() {
     await this.ready;
@@ -137899,6 +138111,8 @@ var DropletsService = class extends TypertRemoteService {
     "getSettings",
     "saveSettings",
     "getStorageInfo",
+    "getWorkspace",
+    "openPath",
     "clearData",
     "setReadingContext",
     "prepareChat"

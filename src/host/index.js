@@ -10,9 +10,11 @@
  * refreshes feeds with bounded concurrency, per-feed timeouts and caps.
  */
 import path from 'node:path';
+import { readdir, stat } from 'node:fs/promises';
+import { join, resolve, sep } from 'node:path';
 import { TypertRemoteService, Remote } from '@deepseek-ai/dsh-typert-protocol';
 import { defineTool } from '@deepseek-ai/dsh-tools';
-import { DropletsStore, defaultVaultPath, storageDir } from './store.js';
+import { DropletsStore, defaultVaultPath, entriesDir, storageDir } from './store.js';
 import { Inbox } from './inbox.js';
 import { Vault, ensureDefaultVault } from './vault.js';
 import { buildAskPrompt, buildReadingContext, storeContext } from './context.js';
@@ -588,10 +590,18 @@ export class DropletsService extends TypertRemoteService {
     return { xml: buildOpml(this.store.data.subscriptions) };
   }
 
+  /** Per-feed fetch timeout, preferring the user's setting. */
+  feedTimeoutMs() {
+    const seconds = this.store.data.settings.fetchTimeoutSec;
+    if (typeof seconds === 'number' && seconds >= 5 && seconds <= 300) return seconds * 1000;
+    return FEED_TIMEOUT_MS;
+  }
+
   async fetchFeedText(url) {
+    const budget = this.feedTimeoutMs();
     const response = await this.fetcher.fetch(url, {
-      connectTimeoutMs: FEED_TIMEOUT_MS,
-      totalTimeoutMs: FEED_TIMEOUT_MS,
+      connectTimeoutMs: budget,
+      totalTimeoutMs: budget,
       maxBodyBytes: 5 * 1024 * 1024,
     });
     if (response.status >= 400) throw new Error(`HTTP ${response.status} for ${url}`);
@@ -652,7 +662,8 @@ export class DropletsService extends TypertRemoteService {
     const outcome = { feeds: 0, entries: 0, errors: 0 };
     const subs = this.selectSubscriptions(channel);
     this.refreshProgress = { running: true, total: subs.length, done: 0, ok: 0, failed: 0, startedAt: Date.now(), errors: [] };
-    await this.forEachWithPool(subs, REFRESH_WORKERS, async (sub) => {
+    const workers = Math.min(8, Math.max(1, Number(this.store.data.settings.refreshWorkers) || REFRESH_WORKERS));
+    await this.forEachWithPool(subs, workers, async (sub) => {
       const count = await this.refreshSubscription(sub);
       outcome.feeds += 1;
       outcome.entries += count;
@@ -878,11 +889,117 @@ export class DropletsService extends TypertRemoteService {
 
   async saveSettings(request) {
     await this.ready;
-    const patch = request?.patch ?? {};
-    if (patch.showImages !== undefined) this.store.data.settings.showImages = patch.showImages !== false;
+    // The remote layer may deliver either { patch } or the patch itself;
+    // accept both so the settings screen is not silently a no-op.
+    const patch = request?.patch ?? request ?? {};
+    const settings = this.store.data.settings;
+    if (patch.showImages !== undefined) settings.showImages = patch.showImages !== false;
+    for (const key of ['refreshOnStart', 'hoverPreview']) {
+      if (patch[key] !== undefined) settings[key] = patch[key] === true;
+    }
+    if (patch.refreshMinutes !== undefined) {
+      const minutes = Number(patch.refreshMinutes);
+      if ([15, 30, 60, 180].includes(minutes)) settings.refreshMinutes = minutes;
+    }
+    if (patch.cacheDays !== undefined) {
+      const days = Number(patch.cacheDays);
+      if (Number.isFinite(days) && days >= 1 && days <= 3650) settings.cacheDays = Math.floor(days);
+    }
+    if (patch.refreshWorkers !== undefined) {
+      const workers = Number(patch.refreshWorkers);
+      if (Number.isFinite(workers) && workers >= 1 && workers <= 8) settings.refreshWorkers = Math.floor(workers);
+    }
+    if (patch.fetchTimeoutSec !== undefined) {
+      const seconds = Number(patch.fetchTimeoutSec);
+      if (Number.isFinite(seconds) && seconds >= 5 && seconds <= 300) settings.fetchTimeoutSec = Math.floor(seconds);
+    }
     this.store.touch();
     await this.store.flush();
     return this.getSettings();
+  }
+
+  /** Workspace screen: where the data actually lives, its layout and git state. */
+  async getWorkspace() {
+    await this.ready;
+    const root = storageDir();
+    const entryDir = entriesDir();
+    const directory = [];
+    const probe = async (relPath, label, kind) => {
+      const full = join(root, relPath);
+      const info = await stat(full).catch(() => null);
+      directory.push({
+        path: relPath,
+        label,
+        kind,
+        exists: Boolean(info),
+        isDirectory: Boolean(info?.isDirectory?.()),
+        bytes: info && info.isFile?.() ? info.size : undefined,
+      });
+    };
+    await probe('data.json', '订阅源与已读/收藏状态(元数据)', '内容');
+    await probe('entries', '每个订阅源的条目(按源分文件)', '内容');
+    await probe('bodies.json', '正文缓存', '内容');
+    await probe('vault', '知识库笔记', '内容');
+    await probe('inbox', '收件箱抓取的原件', '内容');
+    await probe('backups', '应用内备份归档', '派生');
+    await probe('.trash', '删除内容暂存', '派生');
+
+    let documentBytes = 0;
+    let entryBytes = 0;
+    let entryFiles = 0;
+    try {
+      documentBytes = (await stat(this.store.path)).size;
+    } catch { /* not written yet */ }
+    try {
+      for (const name of await readdir(entryDir)) {
+        if (!name.endsWith('.json')) continue;
+        entryFiles += 1;
+        entryBytes += (await stat(join(entryDir, name))).size;
+      }
+    } catch { /* no entries yet */ }
+
+    let git = null;
+    try {
+      const { execFile } = await import('node:child_process');
+      const run = (args) => new Promise((resolve) => {
+        execFile('git', args, { cwd: root, timeout: 3000 }, (error, stdout) => {
+          resolve(error ? '' : String(stdout).trim());
+        });
+      });
+      const branch = await run(['rev-parse', '--abbrev-ref', 'HEAD']);
+      if (branch) {
+        const dirty = await run(['status', '--porcelain']);
+        git = {
+          branch,
+          changed: dirty === '' ? 0 : dirty.split('\n').filter(Boolean).length,
+        };
+      }
+    } catch { /* git optional */ }
+
+    return {
+      root,
+      directory,
+      storage: { documentBytes, entryBytes, entryFiles, subscriptionCount: this.store.data.subscriptions.length },
+      git,
+    };
+  }
+
+  /** Reveal a path inside the storage root in the OS file manager. */
+  async openPath(request) {
+    await this.ready;
+    const requested = String(request?.path ?? '');
+    const root = storageDir();
+    const target = requested === '' ? root : resolve(root, requested);
+    // Never let the renderer ask the host to open an arbitrary path.
+    if (target !== root && !target.startsWith(root + sep)) {
+      throw new Error('droplets：只能打开数据目录内的位置');
+    }
+    const { execFile } = await import('node:child_process');
+    await new Promise((resolve, reject) => {
+      execFile(process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'explorer' : 'xdg-open',
+        [target], (error) => (error ? reject(error) : resolve()));
+    });
+    return { opened: target };
   }
 
   async getStorageInfo() {
@@ -946,7 +1063,7 @@ export class DropletsService extends TypertRemoteService {
     // vault
     'vaultStatus', 'vaultReindex', 'vaultTree', 'vaultRead', 'vaultSearch', 'vaultGraph', 'vaultBacklinks', 'vaultWrite',
     // settings / companion
-    'getSettings', 'saveSettings', 'getStorageInfo', 'clearData', 'setReadingContext', 'prepareChat',
+    'getSettings', 'saveSettings', 'getStorageInfo', 'getWorkspace', 'openPath', 'clearData', 'setReadingContext', 'prepareChat',
   ];
   const prototype = DropletsService.prototype;
   for (const method of names) {

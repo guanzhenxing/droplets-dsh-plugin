@@ -33,7 +33,7 @@ __export(index_exports, {
 module.exports = __toCommonJS(index_exports);
 
 // src/client/Panel.jsx
-var import_react13 = require("react");
+var import_react14 = require("react");
 
 // locale/zh.json
 var zh_default = {
@@ -198,6 +198,15 @@ var zh_default = {
     feed: "Droplets \u4FE1\u606F\u6D41",
     inbox: "Droplets \u6536\u4EF6\u7BB1",
     vault: "Droplets \u77E5\u8BC6\u5E93"
+  },
+  settings: {
+    open: "\u8BBE\u7F6E",
+    title: "\u8BBE\u7F6E",
+    workspace: "Workspace",
+    feed: "\u4FE1\u606F\u6D41",
+    appearance: "\u5916\u89C2",
+    data: "\u6570\u636E",
+    about: "\u5173\u4E8E"
   }
 };
 
@@ -364,6 +373,15 @@ var en_default = {
     feed: "Droplets feed",
     inbox: "Droplets inbox",
     vault: "Droplets vault"
+  },
+  settings: {
+    open: "Settings",
+    title: "Settings",
+    workspace: "Workspace",
+    feed: "Feeds",
+    appearance: "Appearance",
+    data: "Data",
+    about: "About"
   }
 };
 
@@ -2882,8 +2900,20 @@ var __iconData = {
 __iconData.node;
 var Archive = createLucideIcon(__iconData);
 
-// node_modules/lucide-react/dist/esm/icons/arrow-up-narrow-wide.mjs
+// node_modules/lucide-react/dist/esm/icons/arrow-left.mjs
 var __iconData2 = {
+  name: "arrow-left",
+  size: 24,
+  node: [
+    ["path", { d: "m12 19-7-7 7-7", key: "1l729n" }],
+    ["path", { d: "M19 12H5", key: "x3x0zl" }]
+  ]
+};
+__iconData2.node;
+var ArrowLeft = createLucideIcon(__iconData2);
+
+// node_modules/lucide-react/dist/esm/icons/arrow-up-narrow-wide.mjs
+var __iconData3 = {
   name: "arrow-up-narrow-wide",
   size: 24,
   node: [
@@ -2895,11 +2925,11 @@ var __iconData2 = {
   ],
   aliases: ["sort-asc"]
 };
-__iconData2.node;
-var ArrowUpNarrowWide = createLucideIcon(__iconData2);
+__iconData3.node;
+var ArrowUpNarrowWide = createLucideIcon(__iconData3);
 
 // node_modules/lucide-react/dist/esm/icons/arrow-up.mjs
-var __iconData3 = {
+var __iconData4 = {
   name: "arrow-up",
   size: 24,
   node: [
@@ -2907,11 +2937,11 @@ var __iconData3 = {
     ["path", { d: "M12 19V5", key: "x0mq9r" }]
   ]
 };
-__iconData3.node;
-var ArrowUp = createLucideIcon(__iconData3);
+__iconData4.node;
+var ArrowUp = createLucideIcon(__iconData4);
 
 // node_modules/lucide-react/dist/esm/icons/check-check.mjs
-var __iconData4 = {
+var __iconData5 = {
   name: "check-check",
   size: 24,
   node: [
@@ -2919,38 +2949,47 @@ var __iconData4 = {
     ["path", { d: "m22 10-7.5 7.5L13 16", key: "ke71qq" }]
   ]
 };
-__iconData4.node;
-var CheckCheck = createLucideIcon(__iconData4);
+__iconData5.node;
+var CheckCheck = createLucideIcon(__iconData5);
+
+// node_modules/lucide-react/dist/esm/icons/check.mjs
+var __iconData6 = {
+  name: "check",
+  size: 24,
+  node: [["path", { d: "M20 6 9 17l-5-5", key: "1gmf2c" }]]
+};
+__iconData6.node;
+var Check = createLucideIcon(__iconData6);
 
 // node_modules/lucide-react/dist/esm/icons/chevron-down.mjs
-var __iconData5 = {
+var __iconData7 = {
   name: "chevron-down",
   size: 24,
   node: [["path", { d: "m6 9 6 6 6-6", key: "qrunsl" }]]
 };
-__iconData5.node;
-var ChevronDown = createLucideIcon(__iconData5);
+__iconData7.node;
+var ChevronDown = createLucideIcon(__iconData7);
 
 // node_modules/lucide-react/dist/esm/icons/chevron-left.mjs
-var __iconData6 = {
+var __iconData8 = {
   name: "chevron-left",
   size: 24,
   node: [["path", { d: "m15 18-6-6 6-6", key: "1wnfg3" }]]
 };
-__iconData6.node;
-var ChevronLeft = createLucideIcon(__iconData6);
+__iconData8.node;
+var ChevronLeft = createLucideIcon(__iconData8);
 
 // node_modules/lucide-react/dist/esm/icons/chevron-right.mjs
-var __iconData7 = {
+var __iconData9 = {
   name: "chevron-right",
   size: 24,
   node: [["path", { d: "m9 18 6-6-6-6", key: "mthhwq" }]]
 };
-__iconData7.node;
-var ChevronRight = createLucideIcon(__iconData7);
+__iconData9.node;
+var ChevronRight = createLucideIcon(__iconData9);
 
 // node_modules/lucide-react/dist/esm/icons/chevrons-down-up.mjs
-var __iconData8 = {
+var __iconData10 = {
   name: "chevrons-down-up",
   size: 24,
   node: [
@@ -2958,11 +2997,11 @@ var __iconData8 = {
     ["path", { d: "m7 4 5 5 5-5", key: "1kwcof" }]
   ]
 };
-__iconData8.node;
-var ChevronsDownUp = createLucideIcon(__iconData8);
+__iconData10.node;
+var ChevronsDownUp = createLucideIcon(__iconData10);
 
 // node_modules/lucide-react/dist/esm/icons/circle-check.mjs
-var __iconData9 = {
+var __iconData11 = {
   name: "circle-check",
   size: 24,
   node: [
@@ -2971,20 +3010,20 @@ var __iconData9 = {
   ],
   aliases: ["check-circle-2"]
 };
-__iconData9.node;
-var CircleCheck = createLucideIcon(__iconData9);
+__iconData11.node;
+var CircleCheck = createLucideIcon(__iconData11);
 
 // node_modules/lucide-react/dist/esm/icons/circle.mjs
-var __iconData10 = {
+var __iconData12 = {
   name: "circle",
   size: 24,
   node: [["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }]]
 };
-__iconData10.node;
-var Circle = createLucideIcon(__iconData10);
+__iconData12.node;
+var Circle = createLucideIcon(__iconData12);
 
 // node_modules/lucide-react/dist/esm/icons/clipboard-paste.mjs
-var __iconData11 = {
+var __iconData13 = {
   name: "clipboard-paste",
   size: 24,
   node: [
@@ -2998,11 +3037,11 @@ var __iconData11 = {
     ["rect", { x: "8", y: "2", width: "8", height: "4", rx: "1", key: "ublpy" }]
   ]
 };
-__iconData11.node;
-var ClipboardPaste = createLucideIcon(__iconData11);
+__iconData13.node;
+var ClipboardPaste = createLucideIcon(__iconData13);
 
 // node_modules/lucide-react/dist/esm/icons/external-link.mjs
-var __iconData12 = {
+var __iconData14 = {
   name: "external-link",
   size: 24,
   node: [
@@ -3011,11 +3050,11 @@ var __iconData12 = {
     ["path", { d: "M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6", key: "a6xqqp" }]
   ]
 };
-__iconData12.node;
-var ExternalLink = createLucideIcon(__iconData12);
+__iconData14.node;
+var ExternalLink = createLucideIcon(__iconData14);
 
 // node_modules/lucide-react/dist/esm/icons/file-up.mjs
-var __iconData13 = {
+var __iconData15 = {
   name: "file-up",
   size: 24,
   node: [
@@ -3031,11 +3070,28 @@ var __iconData13 = {
     ["path", { d: "m15 15-3-3-3 3", key: "15xj92" }]
   ]
 };
-__iconData13.node;
-var FileUp = createLucideIcon(__iconData13);
+__iconData15.node;
+var FileUp = createLucideIcon(__iconData15);
+
+// node_modules/lucide-react/dist/esm/icons/folder.mjs
+var __iconData16 = {
+  name: "folder",
+  size: 24,
+  node: [
+    [
+      "path",
+      {
+        d: "M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z",
+        key: "1kt360"
+      }
+    ]
+  ]
+};
+__iconData16.node;
+var Folder = createLucideIcon(__iconData16);
 
 // node_modules/lucide-react/dist/esm/icons/inbox.mjs
-var __iconData14 = {
+var __iconData17 = {
   name: "inbox",
   size: 24,
   node: [
@@ -3049,11 +3105,11 @@ var __iconData14 = {
     ]
   ]
 };
-__iconData14.node;
-var Inbox = createLucideIcon(__iconData14);
+__iconData17.node;
+var Inbox = createLucideIcon(__iconData17);
 
 // node_modules/lucide-react/dist/esm/icons/link.mjs
-var __iconData15 = {
+var __iconData18 = {
   name: "link",
   size: 24,
   node: [
@@ -3061,11 +3117,11 @@ var __iconData15 = {
     ["path", { d: "M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71", key: "19qd67" }]
   ]
 };
-__iconData15.node;
-var Link = createLucideIcon(__iconData15);
+__iconData18.node;
+var Link = createLucideIcon(__iconData18);
 
 // node_modules/lucide-react/dist/esm/icons/list-tree.mjs
-var __iconData16 = {
+var __iconData19 = {
   name: "list-tree",
   size: 24,
   node: [
@@ -3076,21 +3132,21 @@ var __iconData16 = {
     ["path", { d: "M3 5v12a2 2 0 0 0 2 2h3", key: "x1gjn2" }]
   ]
 };
-__iconData16.node;
-var ListTree = createLucideIcon(__iconData16);
+__iconData19.node;
+var ListTree = createLucideIcon(__iconData19);
 
 // node_modules/lucide-react/dist/esm/icons/loader-circle.mjs
-var __iconData17 = {
+var __iconData20 = {
   name: "loader-circle",
   size: 24,
   node: [["path", { d: "M21 12a9 9 0 1 1-6.219-8.56", key: "13zald" }]],
   aliases: ["loader-2"]
 };
-__iconData17.node;
-var LoaderCircle = createLucideIcon(__iconData17);
+__iconData20.node;
+var LoaderCircle = createLucideIcon(__iconData20);
 
 // node_modules/lucide-react/dist/esm/icons/pencil.mjs
-var __iconData18 = {
+var __iconData21 = {
   name: "pencil",
   size: 24,
   node: [
@@ -3104,11 +3160,11 @@ var __iconData18 = {
     ["path", { d: "m15 5 4 4", key: "1mk7zo" }]
   ]
 };
-__iconData18.node;
-var Pencil = createLucideIcon(__iconData18);
+__iconData21.node;
+var Pencil = createLucideIcon(__iconData21);
 
 // node_modules/lucide-react/dist/esm/icons/pin-off.mjs
-var __iconData19 = {
+var __iconData22 = {
   name: "pin-off",
   size: 24,
   node: [
@@ -3124,11 +3180,11 @@ var __iconData19 = {
     ]
   ]
 };
-__iconData19.node;
-var PinOff = createLucideIcon(__iconData19);
+__iconData22.node;
+var PinOff = createLucideIcon(__iconData22);
 
 // node_modules/lucide-react/dist/esm/icons/pin.mjs
-var __iconData20 = {
+var __iconData23 = {
   name: "pin",
   size: 24,
   node: [
@@ -3142,11 +3198,11 @@ var __iconData20 = {
     ]
   ]
 };
-__iconData20.node;
-var Pin = createLucideIcon(__iconData20);
+__iconData23.node;
+var Pin = createLucideIcon(__iconData23);
 
 // node_modules/lucide-react/dist/esm/icons/plus.mjs
-var __iconData21 = {
+var __iconData24 = {
   name: "plus",
   size: 24,
   node: [
@@ -3154,11 +3210,11 @@ var __iconData21 = {
     ["path", { d: "M12 5v14", key: "s699le" }]
   ]
 };
-__iconData21.node;
-var Plus = createLucideIcon(__iconData21);
+__iconData24.node;
+var Plus = createLucideIcon(__iconData24);
 
 // node_modules/lucide-react/dist/esm/icons/refresh-cw.mjs
-var __iconData22 = {
+var __iconData25 = {
   name: "refresh-cw",
   size: 24,
   node: [
@@ -3168,11 +3224,11 @@ var __iconData22 = {
     ["path", { d: "M8 16H3v5", key: "1cv678" }]
   ]
 };
-__iconData22.node;
-var RefreshCw = createLucideIcon(__iconData22);
+__iconData25.node;
+var RefreshCw = createLucideIcon(__iconData25);
 
 // node_modules/lucide-react/dist/esm/icons/scan-search.mjs
-var __iconData23 = {
+var __iconData26 = {
   name: "scan-search",
   size: 24,
   node: [
@@ -3184,11 +3240,29 @@ var __iconData23 = {
     ["path", { d: "m16 16-1.9-1.9", key: "1dq9hf" }]
   ]
 };
-__iconData23.node;
-var ScanSearch = createLucideIcon(__iconData23);
+__iconData26.node;
+var ScanSearch = createLucideIcon(__iconData26);
+
+// node_modules/lucide-react/dist/esm/icons/settings.mjs
+var __iconData27 = {
+  name: "settings",
+  size: 24,
+  node: [
+    [
+      "path",
+      {
+        d: "M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915",
+        key: "1i5ecw"
+      }
+    ],
+    ["circle", { cx: "12", cy: "12", r: "3", key: "1v7zrd" }]
+  ]
+};
+__iconData27.node;
+var Settings = createLucideIcon(__iconData27);
 
 // node_modules/lucide-react/dist/esm/icons/sparkles.mjs
-var __iconData24 = {
+var __iconData28 = {
   name: "sparkles",
   size: 24,
   node: [
@@ -3205,11 +3279,11 @@ var __iconData24 = {
   ],
   aliases: ["stars"]
 };
-__iconData24.node;
-var Sparkles = createLucideIcon(__iconData24);
+__iconData28.node;
+var Sparkles = createLucideIcon(__iconData28);
 
 // node_modules/lucide-react/dist/esm/icons/trash.mjs
-var __iconData25 = {
+var __iconData29 = {
   name: "trash",
   size: 24,
   node: [
@@ -3221,11 +3295,11 @@ var __iconData25 = {
   ],
   aliases: ["trash-2"]
 };
-__iconData25.node;
-var Trash = createLucideIcon(__iconData25);
+__iconData29.node;
+var Trash = createLucideIcon(__iconData29);
 
 // node_modules/lucide-react/dist/esm/icons/triangle-exclamation-point.mjs
-var __iconData26 = {
+var __iconData30 = {
   name: "triangle-exclamation-point",
   size: 24,
   node: [
@@ -3241,11 +3315,11 @@ var __iconData26 = {
   ],
   aliases: ["alert-triangle", "triangle-alert"]
 };
-__iconData26.node;
-var TriangleExclamationPoint = createLucideIcon(__iconData26);
+__iconData30.node;
+var TriangleExclamationPoint = createLucideIcon(__iconData30);
 
 // node_modules/lucide-react/dist/esm/icons/x.mjs
-var __iconData27 = {
+var __iconData31 = {
   name: "x",
   size: 24,
   node: [
@@ -3253,8 +3327,8 @@ var __iconData27 = {
     ["path", { d: "m6 6 12 12", key: "d8bk6v" }]
   ]
 };
-__iconData27.node;
-var X = createLucideIcon(__iconData27);
+__iconData31.node;
+var X = createLucideIcon(__iconData31);
 
 // src/client/feed/PanelGroup.jsx
 var import_react5 = require("react");
@@ -4446,7 +4520,6 @@ function htmlHeadings(html2) {
 
 // src/client/FeedView.jsx
 var import_jsx_runtime6 = require("react/jsx-runtime");
-var OPEN_ON_HOVER = false;
 var STATE_LABEL = { unseen: "\u672A\u8BFB", seen: "\u5DF2\u8BFB", skipped: "\u7565\u8FC7" };
 function FeedView({ api, onMaterial, onJumpSpace }) {
   const [feeds, setFeeds] = (0, import_react9.useState)([]);
@@ -4462,6 +4535,17 @@ function FeedView({ api, onMaterial, onJumpSpace }) {
       setFeeds(next);
     } catch {
     }
+  }, [api]);
+  const [hoverPreviewEnabled2, setHoverPreviewEnabled] = (0, import_react9.useState)(false);
+  (0, import_react9.useEffect)(() => {
+    let alive = true;
+    void api.getSettings?.().then((result) => {
+      if (alive) setHoverPreviewEnabled(result?.settings?.hoverPreview === true);
+    }).catch(() => {
+    });
+    return () => {
+      alive = false;
+    };
   }, [api]);
   (0, import_react9.useEffect)(() => {
     void loadFeeds();
@@ -4692,7 +4776,7 @@ function ItemList(props) {
           {
             className: "dpl-entry-row" + (selected?.key === item.key && selected?.sourceId === item.sourceId ? " is-active" : ""),
             onMouseEnter: () => {
-              if (!OPEN_ON_HOVER) return;
+              if (!hoverPreviewEnabled) return;
               clearHoverTimer();
               hoverTimer.current = setTimeout(() => {
                 hoverTimer.current = null;
@@ -107757,24 +107841,312 @@ function GraphView({ graph, onOpen }) {
   ] });
 }
 
-// src/client/Companion.jsx
+// src/client/SettingsView.jsx
 var import_react12 = require("react");
 var import_jsx_runtime9 = require("react/jsx-runtime");
+var SECTIONS = [
+  { id: "workspace", label: () => t("settings.workspace") },
+  { id: "feed", label: () => t("settings.feed") },
+  { id: "appearance", label: () => t("settings.appearance") },
+  { id: "data", label: () => t("settings.data") },
+  { id: "about", label: () => t("settings.about") }
+];
+var REFRESH_CHOICES = [15, 30, 60, 180];
+function SettingsView({ api, onClose }) {
+  const [section2, setSection] = (0, import_react12.useState)("workspace");
+  const [workspace, setWorkspace] = (0, import_react12.useState)(null);
+  const [settings, setSettings] = (0, import_react12.useState)(null);
+  const [storage, setStorage] = (0, import_react12.useState)(null);
+  const [busy, setBusy] = (0, import_react12.useState)(false);
+  const [error, setError] = (0, import_react12.useState)("");
+  const [savedFlash, setSavedFlash] = (0, import_react12.useState)("");
+  const load = (0, import_react12.useCallback)(async () => {
+    setBusy(true);
+    setError("");
+    try {
+      const [workspaceResult, settingsResult, storageResult] = await Promise.all([
+        api.getWorkspace?.() ?? Promise.resolve(null),
+        api.getSettings(),
+        api.getStorageInfo?.() ?? Promise.resolve(null)
+      ]);
+      setWorkspace(workspaceResult);
+      setSettings(settingsResult);
+      setStorage(storageResult);
+    } catch (cause) {
+      setError(String(cause?.message ?? cause));
+    } finally {
+      setBusy(false);
+    }
+  }, [api]);
+  (0, import_react12.useEffect)(() => {
+    void load();
+  }, [load]);
+  const patch = (0, import_react12.useCallback)(async (next) => {
+    setBusy(true);
+    setError("");
+    try {
+      const result = await api.saveSettings(next);
+      setSettings(result);
+      setSavedFlash("\u5DF2\u4FDD\u5B58");
+      setTimeout(() => setSavedFlash(""), 1500);
+    } catch (cause) {
+      setError(String(cause?.message ?? cause));
+    } finally {
+      setBusy(false);
+    }
+  }, [api]);
+  const openPath = (0, import_react12.useCallback)(async (relative) => {
+    try {
+      await api.openPath({ path: relative });
+    } catch (cause) {
+      setError(String(cause?.message ?? cause));
+    }
+  }, [api]);
+  const feedSettings = settings?.settings ?? {};
+  const formatBytes2 = (0, import_react12.useMemo)(() => (bytes) => {
+    if (!Number.isFinite(bytes)) return "\u2014";
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+  }, []);
+  return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "dpl-settings", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("aside", { className: "dpl-settings-nav", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "dpl-settings-navhead", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { type: "button", className: "dpl-icon-btn", onClick: onClose, "aria-label": t("common.back"), children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(ArrowLeft, { size: 14 }) }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("strong", { children: t("settings.title") })
+      ] }),
+      SECTIONS.map((item) => /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+        "button",
+        {
+          type: "button",
+          className: "dpl-settings-navitem" + (section2 === item.id ? " is-active" : ""),
+          onClick: () => setSection(item.id),
+          children: item.label()
+        },
+        item.id
+      ))
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("section", { className: "dpl-settings-body", children: [
+      error ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "dpl-error", role: "alert", children: error }) : null,
+      section2 === "workspace" ? /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "dpl-settings-section", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h2", { children: t("settings.workspace") }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "dpl-settings-card", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "dpl-settings-rowname", children: "\u6839\u76EE\u5F55" }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "dpl-settings-pathrow", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("code", { children: workspace?.root ?? storage?.storageDir ?? "\u2014" }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("button", { type: "button", className: "dpl-btn dpl-sm", onClick: () => void openPath(""), children: [
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(ExternalLink, { size: 12 }),
+              " \u5728 Finder \u4E2D\u6253\u5F00"
+            ] })
+          ] }),
+          storage ? /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("p", { className: "dpl-settings-hint", children: [
+            storage.subscriptions,
+            " \u4E2A\u8BA2\u9605\u6E90 \xB7 \u6536\u4EF6\u7BB1 ",
+            storage.inbox,
+            " \u6761 \xB7 \u77E5\u8BC6\u5E93 ",
+            storage.vaultFiles,
+            " \u7BC7"
+          ] }) : null
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "dpl-settings-card", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "dpl-settings-rowname", children: "\u76EE\u5F55\u7ED3\u6784" }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "dpl-settings-dirs", children: (workspace?.directory ?? []).map((item) => /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+            "button",
+            {
+              type: "button",
+              className: "dpl-settings-dir" + (item.exists ? "" : " is-missing"),
+              onClick: () => void openPath(item.path),
+              title: item.exists ? item.path : "\u5C1A\u672A\u521B\u5EFA",
+              children: [
+                /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Folder, { size: 14 }),
+                /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "dpl-settings-dirname", children: item.path }),
+                /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("em", { children: item.kind }),
+                /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "dpl-settings-dirlabel", children: item.label })
+              ]
+            },
+            item.path
+          )) })
+        ] }),
+        workspace ? /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "dpl-settings-card", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "dpl-settings-rowname", children: "\u5B58\u50A8\u5360\u7528" }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "dpl-settings-metrics", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { children: "\u5143\u6570\u636E data.json" }),
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("strong", { children: formatBytes2(workspace.storage.documentBytes) })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("span", { children: [
+                "\u6761\u76EE ",
+                workspace.storage.entryFiles,
+                " \u4E2A\u6587\u4EF6"
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("strong", { children: formatBytes2(workspace.storage.entryBytes) })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { children: "\u8BA2\u9605\u6E90" }),
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("strong", { children: workspace.storage.subscriptionCount })
+            ] })
+          ] })
+        ] }) : null,
+        workspace?.git ? /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "dpl-settings-card", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "dpl-settings-rowname", children: "Git \u72B6\u6001(\u53EA\u8BFB)" }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("p", { className: "dpl-settings-hint", children: [
+            "\u5206\u652F ",
+            workspace.git.branch,
+            " \xB7 \u672A\u63D0\u4EA4 ",
+            workspace.git.changed,
+            " \u9879"
+          ] })
+        ] }) : null
+      ] }) : null,
+      section2 === "feed" ? /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "dpl-settings-section", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h2", { children: t("settings.feed") }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "dpl-settings-card", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "dpl-settings-rowname", children: "\u5B9A\u65F6\u5237\u65B0" }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "dpl-settings-segmented", children: REFRESH_CHOICES.map((minutes) => /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+            "button",
+            {
+              type: "button",
+              className: "dpl-settings-seg" + ((feedSettings.refreshMinutes ?? 60) === minutes ? " is-active" : ""),
+              onClick: () => void patch({ refreshMinutes: minutes }),
+              children: [
+                "\u6BCF ",
+                minutes,
+                " \u5206\u949F"
+              ]
+            },
+            minutes
+          )) })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "dpl-settings-card", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("label", { className: "dpl-settings-toggle", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+              "input",
+              {
+                type: "checkbox",
+                checked: feedSettings.refreshOnStart !== false,
+                onChange: (event) => void patch({ refreshOnStart: event.target.checked })
+              }
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { children: "\u542F\u52A8\u65F6\u5237\u65B0(\u300C\u4EC5\u624B\u52A8\u300D\u6E90\u9664\u5916)" })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("label", { className: "dpl-settings-toggle", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+              "input",
+              {
+                type: "checkbox",
+                checked: feedSettings.hoverPreview === true,
+                onChange: (event) => void patch({ hoverPreview: event.target.checked })
+              }
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { children: "\u9F20\u6807\u60AC\u505C\u81EA\u52A8\u6253\u5F00\u9605\u8BFB(\u505C\u7559\u7EA6 0.5 \u79D2)" })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("label", { className: "dpl-settings-toggle", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+              "input",
+              {
+                type: "checkbox",
+                checked: feedSettings.showImages !== false,
+                onChange: (event) => void patch({ showImages: event.target.checked })
+              }
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { children: "\u6B63\u6587\u663E\u793A\u56FE\u7247" })
+          ] })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "dpl-settings-card", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("label", { className: "dpl-settings-field", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { children: "\u7F13\u5B58\u4FDD\u7559(\u5929,\u8D85\u671F\u6761\u76EE\u5728\u5237\u65B0\u540E\u6E05\u7406)" }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+              "input",
+              {
+                type: "number",
+                min: 1,
+                max: 3650,
+                value: feedSettings.cacheDays ?? 60,
+                onChange: (event) => void patch({ cacheDays: Number(event.target.value) })
+              }
+            )
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("label", { className: "dpl-settings-field", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { children: "\u5355\u8F6E\u5237\u65B0\u5E76\u53D1\u6570(1\u20138)" }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+              "input",
+              {
+                type: "number",
+                min: 1,
+                max: 8,
+                value: feedSettings.refreshWorkers ?? 3,
+                onChange: (event) => void patch({ refreshWorkers: Number(event.target.value) })
+              }
+            )
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("label", { className: "dpl-settings-field", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { children: "\u5355\u6E90\u6293\u53D6\u8D85\u65F6(\u79D2,5\u2013300)" }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+              "input",
+              {
+                type: "number",
+                min: 5,
+                max: 300,
+                value: feedSettings.fetchTimeoutSec ?? 20,
+                onChange: (event) => void patch({ fetchTimeoutSec: Number(event.target.value) })
+              }
+            )
+          ] })
+        ] })
+      ] }) : null,
+      section2 === "appearance" ? /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "dpl-settings-section", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h2", { children: t("settings.appearance") }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "dpl-settings-card", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { className: "dpl-settings-hint", children: "\u754C\u9762\u6CBF\u7528 DeepSeek Harness \u7684\u4E3B\u9898\u4EE4\u724C,\u989C\u8272\u3001\u5706\u89D2\u4E0E\u6309\u94AE\u6837\u5F0F\u968F\u5BBF\u4E3B\u5916\u89C2\u81EA\u52A8\u9002\u914D,\u4E0D\u63D0\u4F9B\u72EC\u7ACB\u914D\u8272\u3002" }) })
+      ] }) : null,
+      section2 === "data" ? /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "dpl-settings-section", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h2", { children: t("settings.data") }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "dpl-settings-card", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "dpl-settings-metrics", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { children: [
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { children: "\u6570\u636E\u76EE\u5F55" }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("strong", { className: "dpl-settings-mono", children: storage?.storageDir ?? "\u2014" })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { children: [
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { children: "\u77E5\u8BC6\u5E93" }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("strong", { className: "dpl-settings-mono", children: storage?.vaultRoot ?? "\u2014" })
+          ] })
+        ] }) })
+      ] }) : null,
+      section2 === "about" ? /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "dpl-settings-section", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h2", { children: t("settings.about") }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "dpl-settings-card", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { className: "dpl-settings-hint", children: "Droplets for DSH \u2014 \u4FE1\u606F\u6D41\u3001\u6536\u4EF6\u7BB1\u4E0E\u77E5\u8BC6\u5E93\u4E09\u7A7A\u95F4\u3002\u754C\u9762\u4F7F\u7528\u5BBF\u4E3B\u4E3B\u9898\u4EE4\u724C,\u4EA4\u4E92\u4E0E\u5E03\u5C40\u5BF9\u9F50 droplets\u3002" }) })
+      ] }) : null,
+      busy ? /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "dpl-settings-busy", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(LoaderCircle, { size: 13, className: "dpl-spin" }),
+        " \u5904\u7406\u4E2D\u2026"
+      ] }) : null,
+      savedFlash ? /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "dpl-settings-saved", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Check, { size: 13 }),
+        " ",
+        savedFlash
+      ] }) : null
+    ] })
+  ] });
+}
+
+// src/client/Companion.jsx
+var import_react13 = require("react");
+var import_jsx_runtime10 = require("react/jsx-runtime");
 function Companion({ api, material, form = "docked", onFormChange, onClose, SessionProvider, renderSlot, storagePrefix = "droplets" }) {
-  const [workspaceId, setWorkspaceId] = (0, import_react12.useState)(() => api.defaultChatWorkspace?.());
-  const [pos, setPos] = (0, import_react12.useState)(() => {
+  const [workspaceId, setWorkspaceId] = (0, import_react13.useState)(() => api.defaultChatWorkspace?.());
+  const [pos, setPos] = (0, import_react13.useState)(() => {
     try {
       return JSON.parse(localStorage.getItem(storagePrefix + ".ai.pos") ?? "null");
     } catch {
       return null;
     }
   });
-  const dragRef = (0, import_react12.useRef)(null);
-  const [dockedWidth, setDockedWidth] = (0, import_react12.useState)(() => {
+  const dragRef = (0, import_react13.useRef)(null);
+  const [dockedWidth, setDockedWidth] = (0, import_react13.useState)(() => {
     const saved = Number(localStorage.getItem(storagePrefix + ".ai.width"));
     return Number.isFinite(saved) && saved >= 360 && saved <= 720 ? saved : 420;
   });
-  const resizeRef = (0, import_react12.useRef)(null);
+  const resizeRef = (0, import_react13.useRef)(null);
   const normalizeWidth = (w) => Math.min(720, Math.max(360, Math.round(w)));
   const onResizePointerDown = (event) => {
     resizeRef.current = { startX: event.clientX, baseWidth: dockedWidth };
@@ -107794,7 +108166,7 @@ function Companion({ api, material, form = "docked", onFormChange, onClose, Sess
       }
     }
   };
-  const clampPos = (0, import_react12.useCallback)((p) => {
+  const clampPos = (0, import_react13.useCallback)((p) => {
     const width = Math.min(480, window.innerWidth - 32);
     return {
       x: Math.min(0, Math.max(-Math.max(0, window.innerWidth - width - 32), p?.x ?? 0)),
@@ -107823,17 +108195,17 @@ function Companion({ api, material, form = "docked", onFormChange, onClose, Sess
   const onHeaderPointerUp = () => {
     dragRef.current = null;
   };
-  const [chat, setChat] = (0, import_react12.useState)(null);
-  const [error, setError] = (0, import_react12.useState)("");
-  const [actionError, setActionError] = (0, import_react12.useState)("");
-  const [busy, setBusy] = (0, import_react12.useState)(true);
-  const [attached, setAttached] = (0, import_react12.useState)("");
-  const [notice, setNotice] = (0, import_react12.useState)("");
-  const sending = (0, import_react12.useRef)(false);
-  const owned = (0, import_react12.useRef)(null);
-  const generation = (0, import_react12.useRef)(0);
-  const started = (0, import_react12.useRef)(false);
-  const bindingQueue = (0, import_react12.useRef)(Promise.resolve());
+  const [chat, setChat] = (0, import_react13.useState)(null);
+  const [error, setError] = (0, import_react13.useState)("");
+  const [actionError, setActionError] = (0, import_react13.useState)("");
+  const [busy, setBusy] = (0, import_react13.useState)(true);
+  const [attached, setAttached] = (0, import_react13.useState)("");
+  const [notice, setNotice] = (0, import_react13.useState)("");
+  const sending = (0, import_react13.useRef)(false);
+  const owned = (0, import_react13.useRef)(null);
+  const generation = (0, import_react13.useRef)(0);
+  const started = (0, import_react13.useRef)(false);
+  const bindingQueue = (0, import_react13.useRef)(Promise.resolve());
   const materialKey = [material.space, material.key ?? material.path ?? "", material.selection || ""].join("|");
   const bindContext = (request) => {
     const pending = bindingQueue.current.catch(() => {
@@ -107841,15 +108213,15 @@ function Companion({ api, material, form = "docked", onFormChange, onClose, Sess
     bindingQueue.current = pending;
     return pending;
   };
-  (0, import_react12.useEffect)(() => {
+  (0, import_react13.useEffect)(() => {
     if (workspaceId) return;
     return api.watchChatWorkspaces?.(() => setWorkspaceId(api.defaultChatWorkspace?.()));
   }, [api, workspaceId]);
-  (0, import_react12.useEffect)(() => () => {
+  (0, import_react13.useEffect)(() => () => {
     generation.current += 1;
     owned.current?.release();
   }, []);
-  (0, import_react12.useEffect)(() => {
+  (0, import_react13.useEffect)(() => {
     setActionError("");
     setNotice("");
   }, [materialKey]);
@@ -107892,14 +108264,14 @@ function Companion({ api, material, form = "docked", onFormChange, onClose, Sess
       if (current === generation.current) setBusy(false);
     }
   }
-  (0, import_react12.useEffect)(() => {
+  (0, import_react13.useEffect)(() => {
     if (!workspaceId || started.current) return;
     started.current = true;
     void start();
   }, [workspaceId]);
   const autoPrompt = material.action === "organize" && typeof material.prompt === "string" ? material.prompt : "";
-  const autoSentFor = (0, import_react12.useRef)("");
-  (0, import_react12.useEffect)(() => {
+  const autoSentFor = (0, import_react13.useRef)("");
+  (0, import_react13.useEffect)(() => {
     if (!chat || attached !== materialKey || autoPrompt === "" || autoSentFor.current === materialKey) return;
     autoSentFor.current = materialKey;
     void chat.submitPrompt(autoPrompt).catch((cause) => {
@@ -107909,7 +108281,7 @@ function Companion({ api, material, form = "docked", onFormChange, onClose, Sess
       else setActionError(t("companion.sendFailed") + "\uFF1A" + message);
     });
   }, [chat, attached, materialKey, autoPrompt]);
-  (0, import_react12.useEffect)(() => {
+  (0, import_react13.useEffect)(() => {
     if (!chat || attached === materialKey) return;
     let stale = false;
     setError("");
@@ -107924,7 +108296,7 @@ function Companion({ api, material, form = "docked", onFormChange, onClose, Sess
   }, [chat, materialKey]);
   const clamped = clampPos(pos ?? { x: 0, y: 0 });
   const shellClass = "dpl-companion" + (form === "floating" ? " is-floating" : " is-docked");
-  return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(
     "aside",
     {
       className: shellClass,
@@ -107935,7 +108307,7 @@ function Companion({ api, material, form = "docked", onFormChange, onClose, Sess
         style: { width: dockedWidth + "px" }
       },
       children: [
-        form === "docked" ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+        form === "docked" ? /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
           "div",
           {
             className: "dpl-companion-resize",
@@ -107955,7 +108327,7 @@ function Companion({ api, material, form = "docked", onFormChange, onClose, Sess
             "aria-orientation": "vertical"
           }
         ) : null,
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(
           "header",
           {
             className: "dpl-companion-header" + (form === "floating" ? " is-draggable" : ""),
@@ -107963,46 +108335,46 @@ function Companion({ api, material, form = "docked", onFormChange, onClose, Sess
             onPointerMove: onHeaderPointerMove,
             onPointerUp: onHeaderPointerUp,
             children: [
-              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Sparkles, { size: 13, className: "dpl-companion-spark" }),
-              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("strong", { className: "dpl-truncate", children: material.space === "vault-search" ? t("companion.askVaultTitle") : t("companion.title") }),
-              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { className: "dpl-icon-btn", title: t("companion.newChat"), "aria-label": t("companion.newChat"), onClick: () => void start(true), disabled: busy || !workspaceId, children: "\uFF0B" }),
-              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { className: "dpl-icon-btn", "data-tip": form === "docked" ? "\u5207\u6362\u4E3A\u60AC\u6D6E\u7A97" : "\u505C\u9760\u9760\u53F3", "aria-label": form === "docked" ? "\u5207\u6362\u4E3A\u60AC\u6D6E\u7A97" : "\u505C\u9760\u9760\u53F3", onClick: toggleForm, children: form === "docked" ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(PinOff, { size: 13 }) : /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Pin, { size: 13 }) }),
-              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { className: "dpl-icon-btn", title: t("companion.close"), "aria-label": t("companion.close"), onClick: onClose, children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(X, { size: 13 }) })
+              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Sparkles, { size: 13, className: "dpl-companion-spark" }),
+              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("strong", { className: "dpl-truncate", children: material.space === "vault-search" ? t("companion.askVaultTitle") : t("companion.title") }),
+              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { className: "dpl-icon-btn", title: t("companion.newChat"), "aria-label": t("companion.newChat"), onClick: () => void start(true), disabled: busy || !workspaceId, children: "\uFF0B" }),
+              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { className: "dpl-icon-btn", "data-tip": form === "docked" ? "\u5207\u6362\u4E3A\u60AC\u6D6E\u7A97" : "\u505C\u9760\u9760\u53F3", "aria-label": form === "docked" ? "\u5207\u6362\u4E3A\u60AC\u6D6E\u7A97" : "\u505C\u9760\u9760\u53F3", onClick: toggleForm, children: form === "docked" ? /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(PinOff, { size: 13 }) : /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Pin, { size: 13 }) }),
+              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { className: "dpl-icon-btn", title: t("companion.close"), "aria-label": t("companion.close"), onClick: onClose, children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(X, { size: 13 }) })
             ]
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "dpl-companion-context", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("strong", { children: material.title }),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("small", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "dpl-companion-context", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("strong", { children: material.title }),
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("small", { children: [
             material.selection ? t("companion.contextSelection") : t("companion.contextArticle"),
             material.url ? ` \xB7 ${hostOf(material.url)}` : ""
           ] })
         ] }),
-        error && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "dpl-companion-error", role: "alert", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("strong", { children: error.includes("\u4E0D\u652F\u6301") ? t("companion.unsupported") : t("companion.connectionFailed") }),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { children: error }),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { type: "button", onClick: () => void start(), children: t("companion.reconnect") })
+        error && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "dpl-companion-error", role: "alert", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("strong", { children: error.includes("\u4E0D\u652F\u6301") ? t("companion.unsupported") : t("companion.connectionFailed") }),
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("p", { children: error }),
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { type: "button", onClick: () => void start(), children: t("companion.reconnect") })
         ] }),
-        actionError && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "dpl-companion-notice", role: "status", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { children: actionError }),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { type: "button", "aria-label": t("common.close"), onClick: () => setActionError(""), children: "\u2715" })
+        actionError && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "dpl-companion-notice", role: "status", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { children: actionError }),
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { type: "button", "aria-label": t("common.close"), onClick: () => setActionError(""), children: "\u2715" })
         ] }),
-        notice && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "dpl-companion-notice", role: "status", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { children: t("companion.manualSend") }),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { type: "button", "aria-label": t("common.close"), onClick: () => setNotice(""), children: "\u2715" })
+        notice && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "dpl-companion-notice", role: "status", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { children: t("companion.manualSend") }),
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { type: "button", "aria-label": t("common.close"), onClick: () => setNotice(""), children: "\u2715" })
         ] }),
-        !chat && !error && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "dpl-companion-loading", role: "status", children: workspaceId ? t("companion.opening") : t("companion.connecting") }),
-        chat && attached !== materialKey && !error && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "dpl-companion-loading", role: "status", children: t("companion.syncing") }),
-        chat && SessionProvider && renderSlot && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "dpl-native-chat", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(SessionProvider, { session: chat.reference, children: renderSlot("droplets.chat", {}) }) }),
-        material.selection && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("section", { className: "dpl-companion-quote", "aria-label": t("companion.quote"), "aria-busy": attached !== materialKey, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("strong", { children: [
+        !chat && !error && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "dpl-companion-loading", role: "status", children: workspaceId ? t("companion.opening") : t("companion.connecting") }),
+        chat && attached !== materialKey && !error && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "dpl-companion-loading", role: "status", children: t("companion.syncing") }),
+        chat && SessionProvider && renderSlot && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "dpl-native-chat", children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(SessionProvider, { session: chat.reference, children: renderSlot("droplets.chat", {}) }) }),
+        material.selection && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("section", { className: "dpl-companion-quote", "aria-label": t("companion.quote"), "aria-busy": attached !== materialKey, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("strong", { children: [
             t("companion.quote"),
             " \xB7 ",
             Array.from(material.selection).length,
             " ",
             t("companion.characters")
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("blockquote", { children: material.selection })
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("blockquote", { children: material.selection })
         ] })
       ]
     }
@@ -108017,37 +108389,38 @@ function hostOf(url) {
 }
 
 // src/client/Panel.jsx
-var import_jsx_runtime10 = require("react/jsx-runtime");
+var import_jsx_runtime11 = require("react/jsx-runtime");
 var SPACES = [
   { id: "feed", label: () => t("spaces.feed") },
   { id: "inbox", label: () => t("spaces.inbox") },
   { id: "vault", label: () => t("spaces.vault") }
 ];
 function DropletsPanel({ api, SessionProvider, renderSlot }) {
-  const [space, setSpace] = (0, import_react13.useState)("feed");
-  const [companionOpen, setCompanionOpen] = (0, import_react13.useState)(false);
-  const [companionForm, setCompanionForm] = (0, import_react13.useState)(() => localStorage.getItem("droplets.ai.form") ?? "docked");
-  const changeCompanionForm = (0, import_react13.useCallback)((next) => {
+  const [space, setSpace] = (0, import_react14.useState)("feed");
+  const [settingsOpen, setSettingsOpen] = (0, import_react14.useState)(false);
+  const [companionOpen, setCompanionOpen] = (0, import_react14.useState)(false);
+  const [companionForm, setCompanionForm] = (0, import_react14.useState)(() => localStorage.getItem("droplets.ai.form") ?? "docked");
+  const changeCompanionForm = (0, import_react14.useCallback)((next) => {
     setCompanionForm(next);
     try {
       localStorage.setItem("droplets.ai.form", next);
     } catch {
     }
   }, []);
-  const [material, setMaterial] = (0, import_react13.useState)({ space: "feed", title: "" });
-  const onFocus = (0, import_react13.useCallback)(() => {
+  const [material, setMaterial] = (0, import_react14.useState)({ space: "feed", title: "" });
+  const onFocus = (0, import_react14.useCallback)(() => {
     void api.vaultReindex?.().catch(() => {
     });
   }, [api]);
-  (0, import_react13.useEffect)(() => {
+  (0, import_react14.useEffect)(() => {
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, [onFocus]);
-  const onMaterial = (0, import_react13.useCallback)((next) => {
+  const onMaterial = (0, import_react14.useCallback)((next) => {
     setMaterial(next);
     setCompanionOpen(true);
   }, []);
-  (0, import_react13.useEffect)(() => {
+  (0, import_react14.useEffect)(() => {
     const tip = document.createElement("div");
     tip.className = "dpl-gtip";
     tip.setAttribute("role", "tooltip");
@@ -108095,30 +108468,44 @@ function DropletsPanel({ api, SessionProvider, renderSlot }) {
       tip.remove();
     };
   }, []);
-  return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "dpl-root", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("header", { className: "dpl-header", children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "dpl-brand", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(DropletIcon, {}),
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("strong", { children: t("title") }),
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("nav", { className: "dpl-spaces", role: "tablist", children: SPACES.map((item) => /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "dpl-root", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("header", { className: "dpl-header", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "dpl-brand", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(DropletIcon, {}),
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("strong", { children: t("title") }),
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("nav", { className: "dpl-spaces", role: "tablist", children: SPACES.map((item) => /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+          "button",
+          {
+            type: "button",
+            role: "tab",
+            "aria-selected": space === item.id,
+            className: "dpl-space-tab" + (space === item.id ? " is-active" : ""),
+            onClick: () => setSpace(item.id),
+            children: item.label()
+          },
+          item.id
+        )) })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
         "button",
         {
           type: "button",
-          role: "tab",
-          "aria-selected": space === item.id,
-          className: "dpl-space-tab" + (space === item.id ? " is-active" : ""),
-          onClick: () => setSpace(item.id),
-          children: item.label()
-        },
-        item.id
-      )) })
-    ] }) }),
-    /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "dpl-body" + (companionOpen && companionForm === "docked" ? " has-docked" : ""), children: [
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "dpl-space", children: [
-        space === "feed" && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(FeedView, { api, onMaterial, onJumpSpace: setSpace }),
-        space === "inbox" && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(InboxView, { api, onMaterial }),
-        space === "vault" && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(VaultView, { api, onMaterial })
-      ] }),
-      companionOpen && companionForm === "docked" && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+          className: "dpl-header-gear" + (settingsOpen ? " is-active" : ""),
+          onClick: () => setSettingsOpen((value) => !value),
+          "aria-label": t("settings.open"),
+          "aria-pressed": settingsOpen,
+          "data-tip": t("settings.open"),
+          children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Settings, { size: 15 })
+        }
+      )
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "dpl-body" + (companionOpen && companionForm === "docked" ? " has-docked" : ""), children: [
+      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "dpl-space", children: settingsOpen ? /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(SettingsView, { api, onClose: () => setSettingsOpen(false) }) : /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(import_jsx_runtime11.Fragment, { children: [
+        space === "feed" && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(FeedView, { api, onMaterial, onJumpSpace: setSpace }),
+        space === "inbox" && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(InboxView, { api, onMaterial }),
+        space === "vault" && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(VaultView, { api, onMaterial })
+      ] }) }),
+      companionOpen && companionForm === "docked" && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
         Companion,
         {
           api,
@@ -108131,7 +108518,7 @@ function DropletsPanel({ api, SessionProvider, renderSlot }) {
         }
       )
     ] }),
-    companionOpen && companionForm === "floating" && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+    companionOpen && companionForm === "floating" && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
       Companion,
       {
         api,
@@ -108266,7 +108653,7 @@ function nativeChatBridge(ctx) {
 }
 
 // src/client/styles.css
-var styles_default = "/* droplets \xB7 panel styles.\n * Skin: DSH design tokens (--dsw-alias-*) so the panel follows the host\n * theme (light/dark) automatically. Layout & interaction: droplets'\n * three-pane shapes (sources 240 / entries 320 / reader, docked companion).\n * Details (measure, ghost buttons, list rhythm): qiaomu-rss refinements. */\n.dpl-root {\n  --dpl-bg: var(--dsw-alias-bg-base, #fff);\n  --dpl-bg-2: var(--dsw-alias-bg-layer-1, rgba(15, 23, 42, 0.03));\n  --dpl-bg-active: var(--dsw-alias-interactive-bg-active, rgba(15, 23, 42, 0.08));\n  --dpl-bg-hover: var(--dsw-alias-interactive-bg-hover, rgba(15, 23, 42, 0.05));\n  --dpl-border: var(--dsw-alias-border-l1, rgba(15, 23, 42, 0.08));\n  --dpl-fg: var(--dsw-alias-label-primary, #0f1115);\n  --dpl-muted: var(--dsw-alias-label-secondary, rgba(15, 23, 42, 0.6));\n  --dpl-faint: var(--dsw-alias-label-tertiary, rgba(15, 23, 42, 0.4));\n  /* Accent follows the DSH system exactly: interactive/link blue for\n     selection & unread, the host's black primary fill for solid actions. */\n  --dpl-accent: var(--dsw-alias-link, #4176e6);\n  --dpl-accent-solid: var(--dsw-alias-button-primary-fill, #0f1115);\n  --dpl-accent-solid-hover: var(--dsw-alias-button-primary-hover, #43454a);\n  --dpl-accent-soft: var(--dsw-alias-interactive-bg-hover-accent, rgba(38, 49, 72, 0.14));\n  --dpl-link: var(--dsw-alias-link, #4176e6);\n  --dpl-danger: var(--dsw-alias-state-error-primary, #d5484f);\n  --dpl-radius: 10px;\n  --dpl-radius-sm: 8px;\n  --dpl-sources-width: 240px;\n  --dpl-list-width: 320px;\n  --dpl-measure: 720px;\n  display: flex;\n  flex-direction: column;\n  height: 100%;\n  min-height: 0;\n  background: var(--dpl-bg);\n  color: var(--dpl-fg);\n  font-size: 14px;\n  container-type: inline-size;\n}\n.dpl-root *, .dpl-root *::before, .dpl-root *::after { box-sizing: border-box; }\n.dpl-root button { font: inherit; color: inherit; }\n\n/* ---- header (droplets Topbar shape) ---- */\n.dpl-header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  height: 44px;\n  padding: 0 12px;\n  border-bottom: 1px solid var(--dpl-border);\n  flex: none;\n}\n.dpl-brand { display: flex; align-items: center; gap: 8px; min-width: 0; }\n.dpl-brand strong { font-size: 14px; font-weight: 600; }\n.dpl-spaces { display: flex; gap: 2px; margin-left: 10px; background: var(--dpl-bg-2); border-radius: var(--dpl-radius); padding: 2px; }\n.dpl-space-tab {\n  border: none;\n  background: transparent;\n  padding: 4px 12px;\n  border-radius: calc(var(--dpl-radius) - 2px);\n  cursor: pointer;\n  color: var(--dpl-muted);\n  font-size: 13px;\n}\n.dpl-space-tab:hover { color: var(--dpl-fg); background: var(--dpl-bg-hover); }\n.dpl-space-tab.is-active { background: var(--dpl-bg); color: var(--dpl-fg); font-weight: 600; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.1); }\n.dpl-header-actions { display: flex; gap: 6px; align-items: center; }\n\n.dpl-body { display: flex; flex: 1; min-height: 0; }\n.dpl-space { flex: 1; min-width: 0; display: flex; }\n.dpl-space > * { flex: 1; min-width: 0; }\n\n/* ---- shared controls (DSH ghost-button feel) ---- */\n.dpl-btn {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  border: none;\n  background: transparent;\n  border-radius: var(--dpl-radius-sm);\n  padding: 5px 10px;\n  min-height: 28px;\n  cursor: pointer;\n  font-size: 13px;\n  color: var(--dpl-fg);\n  white-space: nowrap;\n}\n.dpl-btn:hover { background: var(--dpl-bg-hover); }\n.dpl-btn.is-danger { color: var(--dpl-danger); }\n.dpl-btn.is-danger:hover { background: color-mix(in srgb, var(--dpl-danger) 12%, transparent); }\n.dpl-btn.is-on { background: var(--dpl-bg-active); }\n.dpl-root .dpl-btn.is-primary { background: var(--dpl-accent-solid); color: #fff; }\n.dpl-root .dpl-btn.is-primary:hover { background: var(--dpl-accent-solid-hover); }\n.dpl-btn:disabled { opacity: 0.45; cursor: default; background: transparent; }\n.dpl-icon-btn {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 28px;\n  height: 28px;\n  border: none;\n  background: transparent;\n  border-radius: var(--dpl-radius-sm);\n  cursor: pointer;\n  color: var(--dpl-muted);\n  font-size: 14px;\n  line-height: 1;\n}\n.dpl-icon-btn:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-chip {\n  border: none;\n  background: transparent;\n  border-radius: 999px;\n  padding: 3px 10px;\n  min-height: 24px;\n  cursor: pointer;\n  color: var(--dpl-muted);\n  font-size: 12px;\n}\n.dpl-chip:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-chip.is-active { background: var(--dpl-bg-active); color: var(--dpl-fg); font-weight: 600; }\n.dpl-root input, .dpl-root textarea {\n  font: inherit;\n  color: var(--dpl-fg);\n  background: var(--dpl-bg-2);\n  border: 1px solid transparent;\n  border-radius: var(--dpl-radius-sm);\n  padding: 5px 10px;\n  min-height: 30px;\n  outline: none;\n}\n.dpl-root input:focus, .dpl-root textarea:focus { border-color: var(--dpl-accent); background: var(--dpl-bg); }\n.dpl-root input::placeholder, .dpl-root textarea::placeholder { color: var(--dpl-faint); }\n\n/* ---- panes ---- */\n.dpl-feed, .dpl-inbox, .dpl-vault { display: flex; flex: 1; min-width: 0; }\n.dpl-col { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--dpl-border); background: var(--dpl-bg); }\n.dpl-vault-tree { width: var(--dpl-sources-width); flex: none; }\n.dpl-inbox-list { width: var(--dpl-list-width); flex: none; }\n.dpl-reader { flex: 1; min-width: 0; overflow: auto; padding: 20px clamp(16px, 3%, 36px); }\n.dpl-col-head {\n  display: flex;\n  align-items: center;\n  gap: 4px;\n  height: 40px;\n  padding: 0 8px;\n  border-bottom: 1px solid var(--dpl-border);\n  flex: none;\n}\n.dpl-pane-title { font-size: 12px; font-weight: 600; color: var(--dpl-muted); padding: 0 4px; }\n.dpl-search { padding: 8px; flex: none; }\n.dpl-search input { width: 100%; }\n\n/* ---- sources pane (droplets: title row, search+refresh row, collapsible groups) ---- */\n.dpl-source-tools { display: flex; gap: 6px; padding: 0 8px 8px; }\n.dpl-source-tools .dpl-search { flex: 1; padding: 0; }\n.dpl-source {\n  display: flex;\n  width: 100%;\n  align-items: center;\n  justify-content: space-between;\n  gap: 6px;\n  border: none;\n  background: transparent;\n  padding: 6px 10px;\n  cursor: pointer;\n  color: var(--dpl-fg);\n  text-align: left;\n  border-radius: var(--dpl-radius-sm);\n  margin: 0 4px;\n  width: calc(100% - 8px);\n}\n.dpl-source span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }\n.dpl-source em { font-style: normal; font-size: 12px; font-weight: 600; color: var(--dpl-accent); flex: none; }\n.dpl-source:hover { background: var(--dpl-bg-hover); }\n.dpl-source.is-active { background: var(--dpl-bg-active); font-weight: 600; }\n.dpl-source.has-error span { color: var(--dpl-danger); }\n.dpl-source-group-name {\n  padding: 10px 12px 2px;\n  font-size: 11px;\n  font-weight: 600;\n  letter-spacing: 0.02em;\n  text-transform: uppercase;\n  color: var(--dpl-faint);\n}\n.dpl-sources-list { overflow: auto; flex: 1; padding-bottom: 8px; }\n\n/* ---- entry list ---- */\n.dpl-entry-list { list-style: none; margin: 0; padding: 0; overflow: auto; flex: 1; }\n.dpl-entry-list li { display: flex; align-items: stretch; }\n.dpl-entry {\n  flex: 1;\n  min-width: 0;\n  border: none;\n  background: transparent;\n  text-align: left;\n  padding: 9px 10px 9px 14px;\n  cursor: pointer;\n  color: var(--dpl-fg);\n  display: flex;\n  flex-direction: column;\n  gap: 3px;\n}\n.dpl-entry:hover { background: var(--dpl-bg-hover); }\n.dpl-entry.is-active { background: var(--dpl-bg-active); }\n.dpl-entry-title { font-weight: 550; font-size: 13px; line-height: 1.45; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }\n.dpl-entry.is-unread .dpl-entry-title::before {\n  content: '';\n  display: inline-block;\n  width: 6px;\n  height: 6px;\n  border-radius: 50%;\n  background: var(--dpl-accent);\n  margin-right: 7px;\n  vertical-align: 2px;\n}\n.dpl-entry-meta { font-size: 12px; color: var(--dpl-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.dpl-warn { color: var(--dpl-danger); }\n.dpl-star {\n  border: none;\n  background: transparent;\n  cursor: pointer;\n  color: var(--dpl-faint);\n  padding: 0 8px 0 2px;\n  flex: none;\n  font-size: 14px;\n}\n.dpl-star:hover { color: var(--dpl-muted); }\n.dpl-star.is-on { color: #e6a700; }\n\n.dpl-empty { padding: 32px 20px; text-align: center; color: var(--dpl-faint); font-size: 13px; }\n.dpl-reader-empty { display: flex; align-items: center; justify-content: center; height: 100%; }\n.dpl-hint { font-size: 12px; color: var(--dpl-faint); }\n.dpl-error {\n  margin: 8px;\n  padding: 8px 10px;\n  border-radius: var(--dpl-radius-sm);\n  background: color-mix(in srgb, var(--dpl-danger) 10%, transparent);\n  color: var(--dpl-danger);\n  font-size: 12px;\n  word-break: break-all;\n}\n\n/* ---- reader ---- */\n.dpl-article, .dpl-note { max-width: var(--dpl-measure); margin: 0 auto; }\n.dpl-article h1, .dpl-note h1 { font-size: 22px; line-height: 1.35; margin: 0 0 8px; font-weight: 650; }\n.dpl-article-meta { display: flex; gap: 10px; font-size: 13px; color: var(--dpl-muted); margin-bottom: 18px; flex-wrap: wrap; }\n.dpl-article-meta a { color: var(--dpl-link); text-decoration: none; }\n.dpl-article-meta a:hover { text-decoration: underline; }\n.dpl-article-body { line-height: 1.75; font-size: 14.5px; }\n.dpl-article-body img { max-width: 100%; height: auto; border-radius: var(--dpl-radius-sm); }\n.dpl-article-body pre { overflow: auto; padding: 12px; border-radius: var(--dpl-radius-sm); background: var(--dpl-bg-2); font-size: 13px; }\n.dpl-article-body code { font-size: 0.92em; background: var(--dpl-bg-2); border-radius: 4px; padding: 1px 5px; }\n.dpl-article-body pre code { background: transparent; padding: 0; }\n.dpl-article-body blockquote { border-left: 3px solid var(--dpl-border); margin: 8px 0; padding: 2px 14px; color: var(--dpl-muted); }\n.dpl-reader-toolbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }\n.dpl-reader-toolbar h1 { font-size: 20px; margin: 0 0 4px; }\n.dpl-reader-actions { display: flex; gap: 4px; flex: none; }\n\n/* ---- inbox ---- */\n.dpl-inbox-add { display: flex; gap: 6px; padding: 8px; border-bottom: 1px solid var(--dpl-border); flex: none; }\n.dpl-inbox-add input { flex: 1; min-width: 0; }\n\n/* ---- pdf / epub ---- */\n.dpl-pdf { display: flex; flex-direction: column; align-items: center; gap: 12px; }\n.dpl-pdf-canvas { max-width: 100%; box-shadow: 0 2px 14px rgba(15, 23, 42, 0.18); border-radius: 6px; background: #fff; }\n.dpl-pager { display: flex; align-items: center; gap: 10px; color: var(--dpl-muted); font-size: 13px; }\n\n/* ---- vault ---- */\n.dpl-vault-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--dpl-muted); }\n.dpl-tree-stats { font-size: 12px; color: var(--dpl-faint); flex: 1; padding-left: 4px; }\n.dpl-tree details { margin-left: 4px; }\n.dpl-tree summary {\n  cursor: pointer;\n  padding: 4px 8px;\n  font-size: 12px;\n  font-weight: 600;\n  color: var(--dpl-muted);\n  border-radius: 6px;\n  list-style: none;\n  display: flex;\n  align-items: center;\n  gap: 4px;\n}\n.dpl-tree summary::before { content: '\u25B8'; font-size: 10px; transition: transform 0.12s; color: var(--dpl-faint); }\n.dpl-tree details[open] > summary::before { transform: rotate(90deg); }\n.dpl-tree summary:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-tree-file {\n  display: flex;\n  width: calc(100% - 8px);\n  margin: 0 4px;\n  border: none;\n  background: transparent;\n  text-align: left;\n  padding: 4px 10px;\n  cursor: pointer;\n  color: var(--dpl-fg);\n  border-radius: 6px;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  font-size: 13px;\n}\n.dpl-tree-file:hover { background: var(--dpl-bg-hover); }\n.dpl-tree-file.is-active { background: var(--dpl-bg-active); font-weight: 600; }\n.dpl-note-body { line-height: 1.75; font-size: 14.5px; }\n.dpl-note-body h1, .dpl-note-body h2 { border-bottom: 1px solid var(--dpl-border); padding-bottom: 6px; margin: 1.2em 0 0.6em; }\n.dpl-note-body pre { overflow: auto; padding: 12px; border-radius: var(--dpl-radius-sm); background: var(--dpl-bg-2); font-size: 13px; }\n.dpl-note-body code { background: var(--dpl-bg-2); border-radius: 4px; padding: 1px 5px; font-size: 0.92em; }\n.dpl-note-editor {\n  width: 100%;\n  min-height: 62vh;\n  font-family: var(--dsw-alias-font-mono, ui-monospace, 'SF Mono', monospace);\n  font-size: 13px;\n  line-height: 1.7;\n  border-radius: var(--dpl-radius);\n  border: 1px solid var(--dpl-border);\n  padding: 14px;\n  resize: vertical;\n  background: var(--dpl-bg);\n  color: var(--dpl-fg);\n}\n.dpl-note-editor:focus { border-color: var(--dpl-accent); }\n.dpl-wikilink { color: var(--dpl-link); text-decoration: none; border-bottom: 1px dashed currentColor; }\n.dpl-tag { color: var(--dpl-muted); background: var(--dpl-bg-2); border-radius: 4px; padding: 0 4px; font-size: 0.9em; }\n.dpl-backlinks h2, .dpl-search-results h2 { font-size: 14px; margin: 20px 0 8px; font-weight: 600; }\n.dpl-backlinks ul, .dpl-search-results ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }\n.dpl-backlinks button, .dpl-search-results button {\n  border: none;\n  background: transparent;\n  text-align: left;\n  cursor: pointer;\n  padding: 7px 9px;\n  border-radius: var(--dpl-radius-sm);\n  color: var(--dpl-fg);\n  display: block;\n  width: 100%;\n}\n.dpl-backlinks button:hover, .dpl-search-results button:hover { background: var(--dpl-bg-hover); }\n.dpl-search-results p { margin: 2px 0 0; font-size: 12px; color: var(--dpl-faint); }\n\n.dpl-graph { position: relative; height: 100%; }\n.dpl-graph svg { width: 100%; height: 100%; }\n.dpl-graph-edge { stroke: color-mix(in srgb, var(--dpl-fg) 20%, transparent); stroke-width: 1; }\n.dpl-graph-node { fill: var(--dpl-accent); cursor: pointer; }\n.dpl-graph-node.is-dangling { fill: color-mix(in srgb, var(--dpl-fg) 25%, transparent); }\n.dpl-graph-node.is-hover { stroke: var(--dpl-fg); stroke-width: 2; }\n.dpl-graph-label { position: absolute; top: 8px; left: 12px; font-size: 12px; color: var(--dpl-muted); }\n\n/* ---- companion (droplets: docked right panel) ---- */\n.dpl-companion {\n  width: 40%;\n  min-width: 360px;\n  flex: none;\n  display: flex;\n  flex-direction: column;\n  border-left: 1px solid var(--dpl-border);\n  min-height: 0;\n  background: var(--dpl-bg);\n}\n.dpl-companion-header { display: flex; align-items: center; gap: 4px; height: 40px; padding: 0 8px 0 12px; border-bottom: 1px solid var(--dpl-border); }\n.dpl-companion-header strong { flex: 1; font-size: 13px; font-weight: 600; }\n.dpl-companion-context { padding: 8px 12px; border-bottom: 1px solid var(--dpl-border); display: flex; flex-direction: column; gap: 2px; overflow: hidden; }\n.dpl-companion-context strong { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.dpl-companion-context small { font-size: 12px; color: var(--dpl-muted); }\n.dpl-native-chat { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }\n.dpl-companion-loading { padding: 24px; text-align: center; color: var(--dpl-faint); flex: 1; font-size: 13px; }\n.dpl-companion-error { margin: 10px; padding: 10px; border-radius: var(--dpl-radius-sm); background: color-mix(in srgb, var(--dpl-danger) 10%, transparent); color: var(--dpl-danger); font-size: 13px; }\n.dpl-companion-error p { margin: 6px 0 10px; font-size: 12px; word-break: break-all; }\n.dpl-companion-error button { margin-top: 2px; }\n.dpl-companion-notice { display: flex; align-items: center; gap: 6px; margin: 6px 10px; padding: 6px 10px; border-radius: var(--dpl-radius-sm); background: var(--dpl-bg-2); color: var(--dpl-muted); font-size: 12px; }\n.dpl-companion-notice span { flex: 1; }\n.dpl-companion-quote { margin: 8px 10px; border-left: 3px solid var(--dpl-accent); padding: 6px 10px; background: var(--dpl-bg-2); border-radius: 0 var(--dpl-radius-sm) var(--dpl-radius-sm) 0; }\n.dpl-companion-quote strong { font-size: 11px; color: var(--dpl-muted); display: block; margin-bottom: 4px; }\n.dpl-companion-quote blockquote { margin: 0; font-size: 12px; max-height: 90px; overflow: auto; white-space: pre-wrap; }\n.dpl-companion-prompt-strip { display: flex; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--dpl-border); flex: none; overflow-x: auto; }\n.dpl-prompt-ghost { border: 1px solid var(--dpl-border); background: transparent; border-radius: 999px; padding: 4px 12px; font-size: 12px; cursor: pointer; color: var(--dpl-fg); white-space: nowrap; }\n.dpl-prompt-ghost:hover { background: var(--dpl-bg-hover); }\n.dpl-prompt-ghost:disabled { opacity: 0.45; cursor: default; }\n\n/* ---- modal (DSH dialog feel) ---- */\n.dpl-modal-backdrop { position: fixed; inset: 0; background: color-mix(in srgb, var(--dpl-fg) 32%, transparent); display: flex; align-items: center; justify-content: center; z-index: 60; }\n.dpl-modal {\n  background: var(--dpl-bg);\n  border-radius: 14px;\n  width: min(480px, 92vw);\n  max-height: 80vh;\n  display: flex;\n  flex-direction: column;\n  box-shadow: 0 16px 48px rgba(15, 23, 42, 0.28);\n  border: 1px solid var(--dpl-border);\n}\n.dpl-modal.is-wide { width: min(680px, 94vw); }\n.dpl-modal header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--dpl-border); font-weight: 600; }\n.dpl-modal-body { padding: 14px 16px; overflow: auto; }\n.dpl-form-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }\n.dpl-form-row input { flex: 1; min-width: 120px; }\n.dpl-sub-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }\n.dpl-sub-list li { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: var(--dpl-radius-sm); }\n.dpl-sub-list li:hover { background: var(--dpl-bg-hover); }\n.dpl-sub-list label { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }\n.dpl-sub-list label.is-dim { opacity: 0.5; }\n.dpl-sub-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }\n.dpl-sub-meta { font-size: 12px; color: var(--dpl-faint); }\n.dpl-opml-input { width: 100%; }\n.dpl-settings-block h3 { font-size: 13px; margin: 14px 0 6px; font-weight: 600; }\n.dpl-settings-block h3:first-child { margin-top: 0; }\n.dpl-path { display: block; padding: 6px 9px; border-radius: 6px; background: var(--dpl-bg-2); font-size: 12px; font-family: var(--dsw-alias-font-mono, ui-monospace, monospace); word-break: break-all; margin: 6px 0; }\n.dpl-toggle { display: flex; align-items: center; gap: 8px; }\n.dpl-conflict-excerpt { margin: 8px 0; padding: 8px 10px; border-left: 3px solid var(--dpl-danger); font-size: 12px; color: var(--dpl-muted); max-height: 120px; overflow: auto; }\n\n/* ---- responsive: narrow windows stack companion below (qiaomu pattern) ---- */\n@container (max-width: 860px) {\n  .dpl-body { flex-direction: column; }\n  .dpl-companion { width: 100%; min-width: 0; min-height: 240px; border-left: none; border-top: 1px solid var(--dpl-border); }\n}\n\n/* ---- feed page (droplets 1:1 port) ---- */\n.dpl-flex-fill { flex: 1; min-width: 0; }\n.dpl-grow { flex: 1 1 auto; min-width: 0; }\n.dpl-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.dpl-spin { animation: dpl-spin 0.9s linear infinite; }\n@keyframes dpl-spin { to { transform: rotate(360deg); } }\n.dpl-relative { position: relative; }\n.dpl-center { display: flex; align-items: center; justify-content: center; }\n.dpl-min0 { min-width: 0; }\n\n/* panel group: columns + separators + rails */\n.dpl-panel-group { display: flex; flex: 1; min-width: 0; min-height: 0; }\n.dpl-panel { display: flex; min-width: 0; min-height: 0; }\n.dpl-panel-separator { flex: 0 0 1px; background: var(--dpl-border); cursor: col-resize; position: relative; }\n.dpl-panel-separator::before { content: ''; position: absolute; inset: 0 -3px; }\n.dpl-panel-separator:hover, .dpl-panel-separator.is-adjacent-collapsed { background: var(--dpl-accent); }\n.dpl-panel-rail {\n  flex: 1;\n  display: flex;\n  align-items: flex-start;\n  justify-content: center;\n  padding-top: 12px;\n  border: none;\n  background: transparent;\n  color: var(--dpl-faint);\n  cursor: pointer;\n}\n.dpl-panel-rail:hover { color: var(--dpl-fg); background: var(--dpl-bg-hover); }\n.dpl-panel-collapse { flex: none; }\n\n/* pane frame (droplets panel chrome: head 44px, no side borders between) */\n.dpl-pane { display: flex; flex-direction: column; height: 100%; min-width: 0; min-height: 0; width: 100%; background: var(--dpl-bg); }\n.dpl-pane-head {\n  display: flex;\n  align-items: center;\n  gap: 2px;\n  height: 44px;\n  padding: 0 10px;\n  flex: none;\n}\n.dpl-pane-title { font-size: 12px; font-weight: 500; color: var(--dpl-muted); }\n\n/* sources pane */\n.dpl-sources { border-right: 1px solid var(--dpl-border); }\n.dpl-sources-actions { display: flex; gap: 4px; padding: 0 10px 10px; }\n.dpl-sources-actions .dpl-btn { justify-content: center; }\n.dpl-sources-toolbar {\n  position: relative;\n  display: flex;\n  align-items: center;\n  height: 28px;\n  padding: 0 10px;\n  flex: none;\n}\n.dpl-toolbar-dots { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 16px; transition: opacity 0.12s; }\n.dpl-toolbar-dots span { width: 4px; height: 4px; border-radius: 50%; background: var(--dpl-faint); }\n.dpl-sources-toolbar:hover .dpl-toolbar-dots { opacity: 0; }\n.dpl-toolbar-actions {\n  display: flex;\n  width: 100%;\n  align-items: center;\n  justify-content: center;\n  gap: 2px;\n  opacity: 0;\n  pointer-events: none;\n  transition: opacity 0.12s;\n}\n.dpl-sources-toolbar:hover .dpl-toolbar-actions { opacity: 1; pointer-events: auto; }\n.dpl-icon-btn.dpl-tb { width: 24px; height: 24px; }\n.dpl-icon-btn.is-toggled { color: var(--dpl-accent); background: color-mix(in srgb, var(--dpl-accent) 12%, transparent); }\n.dpl-menu {\n  position: absolute;\n  top: 100%;\n  left: 0;\n  z-index: 40;\n  margin-top: 4px;\n  min-width: 148px;\n  background: var(--dpl-bg);\n  border: 1px solid var(--dpl-border);\n  border-radius: 8px;\n  padding: 4px;\n  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16);\n}\n.dpl-menu-item { display: block; width: 100%; text-align: left; border: none; background: transparent; padding: 5px 8px; border-radius: 6px; font-size: 12.5px; cursor: pointer; color: var(--dpl-fg); }\n.dpl-menu-item:hover { background: var(--dpl-bg-hover); }\n\n.dpl-sources-list { min-height: 0; flex: 1; overflow: auto; padding: 8px; }\n.dpl-source {\n  display: flex;\n  width: 100%;\n  align-items: center;\n  gap: 6px;\n  border: none;\n  background: transparent;\n  padding: 6px 10px;\n  border-radius: 7px;\n  cursor: pointer;\n  color: var(--dpl-fg);\n  text-align: left;\n  font-size: 13.5px;\n}\n.dpl-source em { font-style: normal; font-size: 12px; font-weight: 500; color: var(--dpl-accent); flex: none; }\n.dpl-source em:empty { display: none; }\n.dpl-source:hover { background: var(--dpl-bg-hover); }\n.dpl-source.is-selected { background: color-mix(in srgb, var(--dpl-accent) 12%, transparent); font-weight: 500; color: var(--dpl-accent); }\n.dpl-source.is-disabled { opacity: 0.5; }\n.dpl-source.dpl-in-group { padding-left: 22px; }\n.dpl-source-error { color: var(--dpl-danger); flex: none; }\n.dpl-source-group { }\n.dpl-group-row { margin-top: 6px; }\n.dpl-group-head {\n  display: flex;\n  width: 100%;\n  align-items: center;\n  gap: 4px;\n  border: none;\n  background: transparent;\n  padding: 4px 10px 4px 26px;\n  border-radius: 7px;\n  cursor: pointer;\n  color: var(--dpl-muted);\n  text-align: left;\n  font-size: 12px;\n  font-weight: 500;\n}\n.dpl-group-head em { font-style: normal; font-size: 12px; font-weight: 500; color: var(--dpl-accent); flex: none; }\n.dpl-group-head:hover { background: var(--dpl-bg-hover); }\n.dpl-group-head.is-selected { background: color-mix(in srgb, var(--dpl-accent) 12%, transparent); color: var(--dpl-accent); font-weight: 500; }\n.dpl-group-chevron {\n  position: absolute;\n  top: 50%;\n  left: 4px;\n  transform: translateY(-50%);\n  display: grid;\n  place-items: center;\n  width: 20px;\n  height: 20px;\n  border: none;\n  border-radius: 6px;\n  background: transparent;\n  color: var(--dpl-faint);\n  cursor: pointer;\n}\n.dpl-group-chevron:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-group-chevron .is-rotated { transform: rotate(-90deg); }\n\n.dpl-badge {\n  display: inline-grid;\n  place-items: center;\n  width: 16px;\n  height: 16px;\n  border-radius: 5px;\n  font-size: 10px;\n  font-weight: 600;\n  line-height: 1;\n  flex: none;\n}\n\n/* items pane */\n.dpl-items { border-right: 1px solid var(--dpl-border); }\n.dpl-entry-scroll { min-height: 0; flex: 1; overflow: auto; }\n.dpl-list-loading { display: grid; place-items: center; height: 64px; color: var(--dpl-faint); }\n.dpl-list-empty { display: grid; place-items: center; height: 128px; padding: 0 16px; text-align: center; font-size: 12px; color: var(--dpl-faint); }\n.dpl-entry-row {\n  cursor: pointer;\n  border-bottom: 1px solid var(--dpl-border);\n  padding: 10px 12px;\n  transition: background-color 0.1s;\n  content-visibility: auto;\n  contain-intrinsic-size: auto 76px;\n}\n.dpl-entry-row:hover { background: var(--dpl-bg-hover); }\n.dpl-entry-row.is-active { background: color-mix(in srgb, var(--dpl-accent) 9%, transparent); }\n.dpl-entry-src { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--dpl-faint); }\n.dpl-entry-main { display: flex; align-items: center; gap: 8px; margin-top: 4px; }\n.dpl-entry-main .dpl-truncate { font-size: 13.5px; color: var(--dpl-muted); }\n.dpl-entry-main .dpl-truncate.is-unread { color: var(--dpl-fg); font-weight: 500; }\n.dpl-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }\n.dpl-dot.is-unseen { background: var(--dpl-accent); }\n.dpl-dot.is-seen { background: var(--dpl-border); }\n.dpl-dot.is-skipped { background: var(--dpl-faint); }\n.dpl-entry-sum { margin: 3px 0 0 15px; font-size: 12px; color: var(--dpl-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n\n.dpl-icon-btn .dpl-fill { fill: currentColor; }\n.dpl-new-pill {\n  display: inline-flex;\n  align-items: center;\n  flex: none;\n  margin-right: 4px;\n  padding: 2px 8px;\n  border: none;\n  border-radius: 999px;\n  background: color-mix(in srgb, var(--dpl-accent) 12%, transparent);\n  color: var(--dpl-accent);\n  font-size: 11.5px;\n  font-weight: 500;\n  cursor: pointer;\n  transition: opacity 0.12s;\n}\n.dpl-new-pill:hover { opacity: 0.8; }\n\n/* preview pane */\n.dpl-preview { position: relative; }\n.dpl-preview-empty { display: grid; place-items: center; flex: 1; width: 100%; font-size: 13.5px; color: var(--dpl-faint); background: var(--dpl-bg); }\n.dpl-preview-scroll { display: flex; flex-direction: column; height: 100%; width: 100%; overflow: auto; }\n.dpl-reader-actions-float {\n  position: sticky;\n  top: 0;\n  z-index: 5;\n  display: flex;\n  align-items: center;\n  justify-content: flex-end;\n  gap: 2px;\n  padding: 8px 24px 16px 0;\n  background: linear-gradient(to bottom, var(--dpl-bg) 55%, transparent);\n}\n.dpl-round-btn {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 32px;\n  height: 32px;\n  border: none;\n  border-radius: 50%;\n  background: transparent;\n  color: var(--dpl-muted);\n  cursor: pointer;\n}\n.dpl-round-btn:hover:not(:disabled) { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-round-btn:disabled { opacity: 0.4; cursor: default; }\n.dpl-lang-mark { font-size: 12.5px; font-weight: 600; }\n.dpl-notice { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; padding: 6px 10px; border-radius: 8px; background: color-mix(in srgb, var(--dpl-accent) 10%, transparent); color: var(--dpl-accent); font-size: 12.5px; }\n.dpl-article-head { margin: 0 auto; width: 100%; max-width: var(--dpl-measure); padding: 0 32px 16px; }\n.dpl-article-head h1 { font-size: 20px; font-weight: 700; line-height: 1.4; color: var(--dpl-fg); margin: 0; }\n.dpl-article-meta { display: flex; align-items: center; gap: 6px; margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--dpl-border); font-size: 13px; color: var(--dpl-muted); }\n.dpl-meta-source { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.dpl-meta-state { color: var(--dpl-muted); }\n.dpl-short-notice {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 8px;\n  margin: 0 auto 8px;\n  width: 100%;\n  max-width: var(--dpl-measure);\n  padding: 6px 12px;\n  border-radius: 8px;\n  background: color-mix(in srgb, var(--dpl-accent) 7%, transparent);\n  color: var(--dpl-muted);\n  font-size: 12px;\n}\n.dpl-short-notice.is-empty { background: var(--dpl-bg-2); }\n.dpl-inline-link { font-weight: 500; text-decoration: underline; text-underline-offset: 2px; color: var(--dpl-accent); }\n.dpl-article-body-wrap { margin: 0 auto; width: 100%; max-width: var(--dpl-measure); padding: 0 32px 40px; }\n.dpl-article-plain { white-space: pre-wrap; color: var(--dpl-fg); font-size: 14.5px; line-height: 1.75; }\n.dpl-reader-notice { margin: 0 32px 10px; max-width: var(--dpl-measure); }\n\n/* aux rail (droplets T26) */\n\n/* manage table */\n.dpl-manage { display: flex; flex-direction: column; height: 100%; min-height: 0; width: 100%; background: var(--dpl-bg); }\n.dpl-manage-head { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 12px; border-bottom: 1px solid var(--dpl-border); flex: none; }\n.dpl-manage-title { font-size: 13.5px; font-weight: 600; }\n.dpl-manage-filters { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--dpl-border); flex: none; }\n.dpl-manage-search { width: 224px; height: 28px; border-radius: 999px; }\n.dpl-seg { display: flex; align-items: center; gap: 2px; font-size: 12px; }\n.dpl-seg-item { border: none; background: transparent; border-radius: 999px; padding: 4px 8px; color: var(--dpl-muted); cursor: pointer; font-size: 12px; }\n.dpl-seg-item:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-seg-item.is-active { background: color-mix(in srgb, var(--dpl-accent) 12%, transparent); color: var(--dpl-accent); }\n.dpl-manage-batch { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-bottom: 1px solid var(--dpl-border); background: color-mix(in srgb, var(--dpl-accent) 7%, transparent); font-size: 12px; flex: none; }\n.dpl-btn.dpl-sm { min-height: 24px; padding: 2px 8px; font-size: 12px; }\n.dpl-popover { position: absolute; left: 0; top: 100%; z-index: 30; margin-top: 4px; width: 208px; background: var(--dpl-bg); border: 1px solid var(--dpl-border); border-radius: 8px; padding: 6px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18); display: flex; flex-direction: column; gap: 6px; }\n.dpl-manage-grid { display: grid; grid-template-columns: 2rem 3rem minmax(0, 1fr) 4.5rem 6.5rem 2.5rem 2rem; align-items: center; gap: 8px; padding: 0 12px; }\n.dpl-manage-header { height: 30px; border-bottom: 1px solid var(--dpl-border); font-size: 12px; color: var(--dpl-muted); flex: none; }\n.dpl-manage-sort { border: none; background: transparent; padding: 0; font-size: 12px; color: inherit; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 2px; }\n.dpl-manage-sort.dpl-right { justify-content: flex-end; }\n.dpl-manage-sort.is-active { font-weight: 500; color: var(--dpl-accent); }\n.dpl-manage-rows { min-height: 0; flex: 1; overflow: auto; }\n.dpl-manage-row { height: 46px; border-bottom: 1px solid var(--dpl-border); cursor: pointer; transition: background-color 0.1s; }\n.dpl-manage-row:hover { background: var(--dpl-bg-hover); }\n.dpl-manage-name { display: flex; align-items: center; gap: 8px; min-width: 0; }\n.dpl-manage-title { font-size: 13.5px; font-weight: 500; }\n.dpl-manage-title.is-dim { color: var(--dpl-faint); font-weight: 400; }\n.dpl-manage-group { font-size: 12px; color: var(--dpl-faint); }\n.dpl-manage-count { font-size: 12px; color: var(--dpl-muted); }\n.dpl-manage-time { font-size: 12px; color: var(--dpl-faint); }\n.dpl-right { text-align: right; }\n.dpl-health { width: 8px; height: 8px; border-radius: 50%; justify-self: center; }\n.dpl-health.is-ok { background: #34c98e; }\n.dpl-health.is-error { background: var(--dpl-danger); }\n.dpl-health.is-off { background: var(--dpl-border); }\n.dpl-manage-empty { display: grid; place-items: center; height: 96px; font-size: 12px; color: var(--dpl-faint); }\n.dpl-manage-stats { display: flex; align-items: center; gap: 12px; padding: 6px 12px; border-top: 1px solid var(--dpl-border); font-size: 12px; color: var(--dpl-faint); flex: none; }\n\n/* dialogs */\n.dpl-form-col { display: flex; flex-direction: column; gap: 10px; padding: 4px 0 10px; }\n.dpl-field { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--dpl-muted); }\n.dpl-field.dpl-row { flex-direction: row; align-items: center; gap: 8px; }\n.dpl-warn-text { margin: 0; font-size: 12.5px; color: var(--dpl-danger); }\n.dpl-dim-text { margin: 0; font-size: 12px; color: var(--dpl-faint); word-break: break-all; }\n.dpl-form-row.dpl-end { justify-content: flex-end; }\n.dpl-form-row.dpl-between { justify-content: space-between; }\n.dpl-root .dpl-btn.dpl-primary-solid { background: var(--dpl-accent-solid); color: #fff; }\n.dpl-root .dpl-btn.dpl-primary-solid:hover { background: var(--dpl-accent-solid-hover); }\n.dpl-root .dpl-btn.dpl-danger-solid { background: var(--dpl-danger); color: #fff; }\n.dpl-modal-title { font-size: 13.5px; font-weight: 600; }\n.dpl-modal-text { margin: 8px 0 0; font-size: 12.5px; color: var(--dpl-muted); line-height: 1.6; }\n.dpl-switch { width: 28px; height: 16px; appearance: none; background: var(--dpl-border); border-radius: 999px; position: relative; cursor: pointer; transition: background 0.15s; min-height: 0; padding: 0; }\n.dpl-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; transition: left 0.15s; }\n.dpl-switch:checked { background: var(--dpl-accent); }\n.dpl-switch:checked::after { left: 14px; }\n\n/* ---- inbox ---- */\n.dpl-inbox-add { display: flex; gap: 6px; padding: 8px; border-bottom: 1px solid var(--dpl-border); flex: none; }\n.dpl-inbox-add input { flex: 1; min-width: 0; }\n\n/* ---- pdf / epub ---- */\n.dpl-pdf { display: flex; flex-direction: column; align-items: center; gap: 12px; }\n.dpl-pdf-canvas { max-width: 100%; box-shadow: 0 2px 14px rgba(15, 23, 42, 0.18); border-radius: 6px; background: #fff; }\n.dpl-pager { display: flex; align-items: center; gap: 10px; color: var(--dpl-muted); font-size: 13px; }\n\n/* ---- vault ---- */\n.dpl-vault-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--dpl-muted); }\n.dpl-tree-stats { font-size: 12px; color: var(--dpl-faint); flex: 1; padding-left: 4px; }\n.dpl-tree details { margin-left: 4px; }\n.dpl-tree summary {\n  cursor: pointer;\n  padding: 4px 8px;\n  font-size: 12px;\n  font-weight: 600;\n  color: var(--dpl-muted);\n  border-radius: 6px;\n  list-style: none;\n  display: flex;\n  align-items: center;\n  gap: 4px;\n}\n.dpl-tree summary::before { content: '\u25B8'; font-size: 10px; transition: transform 0.12s; color: var(--dpl-faint); }\n.dpl-tree details[open] > summary::before { transform: rotate(90deg); }\n.dpl-tree summary:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-tree-file {\n  display: flex;\n  width: calc(100% - 8px);\n  margin: 0 4px;\n  border: none;\n  background: transparent;\n  text-align: left;\n  padding: 4px 10px;\n  cursor: pointer;\n  color: var(--dpl-fg);\n  border-radius: 6px;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  font-size: 13px;\n}\n.dpl-tree-file:hover { background: var(--dpl-bg-hover); }\n.dpl-tree-file.is-active { background: var(--dpl-bg-active); font-weight: 600; }\n.dpl-note-body { line-height: 1.75; font-size: 14.5px; }\n.dpl-note-body h1, .dpl-note-body h2 { border-bottom: 1px solid var(--dpl-border); padding-bottom: 6px; margin: 1.2em 0 0.6em; }\n.dpl-note-body pre { overflow: auto; padding: 12px; border-radius: var(--dpl-radius-sm); background: var(--dpl-bg-2); font-size: 13px; }\n.dpl-note-body code { background: var(--dpl-bg-2); border-radius: 4px; padding: 1px 5px; font-size: 0.92em; }\n.dpl-note-editor {\n  width: 100%;\n  min-height: 62vh;\n  font-family: var(--dsw-alias-font-mono, ui-monospace, 'SF Mono', monospace);\n  font-size: 13px;\n  line-height: 1.7;\n  border-radius: var(--dpl-radius);\n  border: 1px solid var(--dpl-border);\n  padding: 14px;\n  resize: vertical;\n  background: var(--dpl-bg);\n  color: var(--dpl-fg);\n}\n.dpl-note-editor:focus { border-color: var(--dpl-accent); }\n.dpl-wikilink { color: var(--dpl-link); text-decoration: none; border-bottom: 1px dashed currentColor; }\n.dpl-tag { color: var(--dpl-muted); background: var(--dpl-bg-2); border-radius: 4px; padding: 0 4px; font-size: 0.9em; }\n.dpl-backlinks h2, .dpl-search-results h2 { font-size: 14px; margin: 20px 0 8px; font-weight: 600; }\n.dpl-backlinks ul, .dpl-search-results ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }\n.dpl-backlinks button, .dpl-search-results button {\n  border: none;\n  background: transparent;\n  text-align: left;\n  cursor: pointer;\n  padding: 7px 9px;\n  border-radius: var(--dpl-radius-sm);\n  color: var(--dpl-fg);\n  display: block;\n  width: 100%;\n}\n.dpl-backlinks button:hover, .dpl-search-results button:hover { background: var(--dpl-bg-hover); }\n.dpl-search-results p { margin: 2px 0 0; font-size: 12px; color: var(--dpl-faint); }\n\n.dpl-graph { position: relative; height: 100%; }\n.dpl-graph svg { width: 100%; height: 100%; }\n.dpl-graph-edge { stroke: color-mix(in srgb, var(--dpl-fg) 20%, transparent); stroke-width: 1; }\n.dpl-graph-node { fill: var(--dpl-accent); cursor: pointer; }\n.dpl-graph-node.is-dangling { fill: color-mix(in srgb, var(--dpl-fg) 25%, transparent); }\n.dpl-graph-node.is-hover { stroke: var(--dpl-fg); stroke-width: 2; }\n.dpl-graph-label { position: absolute; top: 8px; left: 12px; font-size: 12px; color: var(--dpl-muted); }\n\n/* ---- companion (droplets: docked right panel) ---- */\n.dpl-companion {\n  width: 40%;\n  min-width: 360px;\n  flex: none;\n  display: flex;\n  flex-direction: column;\n  border-left: 1px solid var(--dpl-border);\n  min-height: 0;\n  background: var(--dpl-bg);\n}\n.dpl-companion-header { display: flex; align-items: center; gap: 4px; height: 40px; padding: 0 8px 0 12px; border-bottom: 1px solid var(--dpl-border); }\n.dpl-companion-header strong { flex: 1; font-size: 13px; font-weight: 600; }\n.dpl-companion-context { padding: 8px 12px; border-bottom: 1px solid var(--dpl-border); display: flex; flex-direction: column; gap: 2px; overflow: hidden; }\n.dpl-companion-context strong { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.dpl-companion-context small { font-size: 12px; color: var(--dpl-muted); }\n.dpl-native-chat { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }\n.dpl-companion-loading { padding: 24px; text-align: center; color: var(--dpl-faint); flex: 1; font-size: 13px; }\n.dpl-companion-error { margin: 10px; padding: 10px; border-radius: var(--dpl-radius-sm); background: color-mix(in srgb, var(--dpl-danger) 10%, transparent); color: var(--dpl-danger); font-size: 13px; }\n.dpl-companion-error p { margin: 6px 0 10px; font-size: 12px; word-break: break-all; }\n.dpl-companion-error button { margin-top: 2px; }\n.dpl-companion-notice { display: flex; align-items: center; gap: 6px; margin: 6px 10px; padding: 6px 10px; border-radius: var(--dpl-radius-sm); background: var(--dpl-bg-2); color: var(--dpl-muted); font-size: 12px; }\n.dpl-companion-notice span { flex: 1; }\n.dpl-companion-quote { margin: 8px 10px; border-left: 3px solid var(--dpl-accent); padding: 6px 10px; background: var(--dpl-bg-2); border-radius: 0 var(--dpl-radius-sm) var(--dpl-radius-sm) 0; }\n.dpl-companion-quote strong { font-size: 11px; color: var(--dpl-muted); display: block; margin-bottom: 4px; }\n.dpl-companion-quote blockquote { margin: 0; font-size: 12px; max-height: 90px; overflow: auto; white-space: pre-wrap; }\n.dpl-companion-prompt-strip { display: flex; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--dpl-border); flex: none; overflow-x: auto; }\n.dpl-prompt-ghost { border: 1px solid var(--dpl-border); background: transparent; border-radius: 999px; padding: 4px 12px; font-size: 12px; cursor: pointer; color: var(--dpl-fg); white-space: nowrap; }\n.dpl-prompt-ghost:hover { background: var(--dpl-bg-hover); }\n.dpl-prompt-ghost:disabled { opacity: 0.45; cursor: default; }\n\n/* ---- modal (DSH dialog feel) ---- */\n.dpl-modal-backdrop { position: fixed; inset: 0; background: color-mix(in srgb, var(--dpl-fg) 32%, transparent); display: flex; align-items: center; justify-content: center; z-index: 60; }\n.dpl-modal {\n  background: var(--dpl-bg);\n  border-radius: 14px;\n  width: min(480px, 92vw);\n  max-height: 80vh;\n  display: flex;\n  flex-direction: column;\n  box-shadow: 0 16px 48px rgba(15, 23, 42, 0.28);\n  border: 1px solid var(--dpl-border);\n}\n.dpl-modal.is-wide { width: min(680px, 94vw); }\n.dpl-modal header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--dpl-border); font-weight: 600; }\n.dpl-modal-body { padding: 14px 16px; overflow: auto; }\n.dpl-form-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }\n.dpl-form-row input { flex: 1; min-width: 120px; }\n.dpl-sub-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }\n.dpl-sub-list li { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: var(--dpl-radius-sm); }\n.dpl-sub-list li:hover { background: var(--dpl-bg-hover); }\n.dpl-sub-list label { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }\n.dpl-sub-list label.is-dim { opacity: 0.5; }\n.dpl-sub-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }\n.dpl-sub-meta { font-size: 12px; color: var(--dpl-faint); }\n.dpl-opml-input { width: 100%; }\n.dpl-settings-block h3 { font-size: 13px; margin: 14px 0 6px; font-weight: 600; }\n.dpl-settings-block h3:first-child { margin-top: 0; }\n.dpl-path { display: block; padding: 6px 9px; border-radius: 6px; background: var(--dpl-bg-2); font-size: 12px; font-family: var(--dsw-alias-font-mono, ui-monospace, monospace); word-break: break-all; margin: 6px 0; }\n.dpl-toggle { display: flex; align-items: center; gap: 8px; }\n.dpl-conflict-excerpt { margin: 8px 0; padding: 8px 10px; border-left: 3px solid var(--dpl-danger); font-size: 12px; color: var(--dpl-muted); max-height: 120px; overflow: auto; }\n\n/* ---- responsive: narrow windows stack companion below (qiaomu pattern) ---- */\n\n/* ---- feed page v2 (droplets interaction port) ---- */\n.dpl-flex-fill { flex: 1; min-width: 0; }\n.dpl-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.dpl-spin { animation: dpl-spin 0.9s linear infinite; }\n@keyframes dpl-spin { to { transform: rotate(360deg); } }\n\n.dpl-source { gap: 7px; }\n.dpl-source .dpl-badge { flex: none; }\n.dpl-source-error { color: var(--dpl-danger); flex: none; }\n.dpl-source em { margin-left: auto; }\n.dpl-source em:empty { display: none; }\n\n.dpl-icon-btn.is-on { color: var(--dpl-accent); }\n.dpl-icon-btn .dpl-fill { fill: currentColor; }\n\n.dpl-entry-scroll { min-height: 0; flex: 1; overflow: auto; }\n.dpl-entry-row {\n  cursor: pointer;\n  border-bottom: 1px solid var(--dpl-border);\n  padding: 9px 10px 9px 12px;\n  transition: background-color 0.1s;\n  content-visibility: auto;\n  contain-intrinsic-size: auto 74px;\n}\n.dpl-entry-row:hover { background: var(--dpl-bg-hover); }\n.dpl-entry-row.is-active { background: color-mix(in srgb, var(--dpl-accent) 9%, transparent); }\n.dpl-entry-src { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--dpl-faint); }\n.dpl-entry-src .dpl-star { padding: 0; font-size: 13px; opacity: 0; }\n.dpl-entry-row:hover .dpl-entry-src .dpl-star { opacity: 0.5; }\n.dpl-entry-src .dpl-star.is-on { opacity: 1; }\n.dpl-entry-main { display: flex; align-items: center; gap: 8px; margin-top: 4px; }\n.dpl-entry-main span:last-child { font-size: 13.5px; color: var(--dpl-muted); min-width: 0; flex: 1; }\n.dpl-entry-main span.is-unread { color: var(--dpl-fg); font-weight: 550; }\n.dpl-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--dpl-accent); flex: none; }\n.dpl-dot.is-read { background: var(--dpl-border); }\n.dpl-entry-sum { margin: 3px 0 0 15px; font-size: 12px; color: var(--dpl-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n\n.dpl-badge {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 16px;\n  border-radius: 5px;\n  font-size: 10px;\n  font-weight: 700;\n  flex: none;\n}\n\n.dpl-new-pill {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  gap: 4px;\n  margin: 6px 10px 0;\n  padding: 4px 10px;\n  border: none;\n  border-radius: 999px;\n  background: color-mix(in srgb, var(--dpl-accent) 14%, transparent);\n  color: var(--dpl-accent);\n  font-size: 12px;\n  font-weight: 600;\n  cursor: pointer;\n  flex: none;\n}\n.dpl-new-pill:hover { background: color-mix(in srgb, var(--dpl-accent) 22%, transparent); }\n\n.dpl-reader-actions-float {\n  position: sticky;\n  top: 0;\n  z-index: 5;\n  display: flex;\n  align-items: center;\n  justify-content: flex-end;\n  gap: 2px;\n  padding: 6px 0 14px;\n  background: linear-gradient(to bottom, var(--dpl-bg) 55%, transparent);\n}\n.dpl-round-btn {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 32px;\n  height: 32px;\n  border: none;\n  border-radius: 50%;\n  background: transparent;\n  color: var(--dpl-muted);\n  cursor: pointer;\n}\n.dpl-round-btn:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n\n.dpl-notice {\n  margin: 0 0 10px;\n  padding: 6px 10px;\n  border-radius: var(--dpl-radius-sm);\n  background: color-mix(in srgb, var(--dpl-accent) 10%, transparent);\n  color: var(--dpl-accent);\n  font-size: 12.5px;\n}\n\n/* ---- companion: floating window / docked pane (droplets AiPanel) ---- */\n.dpl-companion.is-floating {\n  position: fixed;\n  z-index: 40;\n  width: min(480px, calc(100vw - 2rem));\n  height: min(70vh, 640px);\n  min-width: 0;\n  border: 1px solid var(--dpl-border);\n  border-radius: 14px;\n  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.3);\n}\n.dpl-companion.is-docked {\n  position: relative;\n  flex: 0 0 auto;\n  min-width: 320px;\n  border-left: 1px solid var(--dpl-border);\n}\n/* Left-edge resize handle (droplets ai-panel-resize): always-visible thin\n   line on a wide invisible hit area; accent while hovering/dragging. */\n.dpl-companion-resize {\n  position: absolute;\n  top: 0;\n  bottom: 0;\n  left: -3px;\n  z-index: 10;\n  width: 8px;\n  cursor: col-resize;\n}\n.dpl-companion-resize::after {\n  content: '';\n  position: absolute;\n  top: 8px;\n  bottom: 8px;\n  left: 50%;\n  width: 1px;\n  transform: translateX(-50%);\n  background: var(--dpl-border);\n}\n.dpl-companion-resize:hover::after,\n.dpl-companion-resize:active::after { background: var(--dpl-accent); }\n.dpl-companion-header.is-draggable { cursor: move; user-select: none; touch-action: none; }\n.dpl-companion-spark { color: var(--dpl-accent); flex: none; }\n.dpl-companion-header .dpl-icon-btn { width: 24px; height: 24px; }\n\n/* AuxRail ask-AI button: droplets shape \u2014 round accent chip, white spark. */\n\n/* ---- global tooltip layer (body-level, JS-positioned) ---- */\n.dpl-gtip {\n  position: fixed;\n  z-index: 300;\n  background: var(--dsw-alias-label-primary, #0f1115);\n  color: var(--dsw-alias-bg-base, #fff);\n  font-size: 12px;\n  line-height: 1;\n  padding: 5px 8px;\n  border-radius: 6px;\n  white-space: nowrap;\n  max-width: 320px;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  opacity: 0;\n  pointer-events: none;\n  transition: opacity 0.12s ease 0.25s;\n  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.24);\n}\n.dpl-gtip[data-empty] { display: none; }\n\n/* Edit-dialog error panel (droplets feed-edit-error shape) */\n.dpl-dialog-errorpanel { margin: 0 20px 10px; display: flex; flex-direction: column; gap: 3px; }\n.dpl-dialog-errortitle { font-weight: 600; }\n.dpl-dialog-errortext { word-break: break-all; }\n.dpl-dialog-errormeta { color: var(--dpl-faint); }\n.dpl-list-empty p { margin: 0 0 10px; }\n.dpl-entry-row:focus-visible { outline: 2px solid var(--dpl-accent); outline-offset: -2px; }\n\n/* Wide article content (tables, long URLs) must scroll inside the reader,\n   never push the panel layout sideways (flex children default to\n   min-width:auto \u2014 the classic blowout). */\n.dpl-preview { min-width: 0; }\n.dpl-article-body-wrap { min-width: 0; }\n.dpl-article-body { min-width: 0; overflow-x: auto; }\n.dpl-article-body table { display: block; max-width: 100%; overflow-x: auto; }\n.dpl-article-body pre { max-width: 100%; }\n.dpl-note-body { min-width: 0; overflow-x: auto; }\n\n/* aux rail (droplets T26: ticks are 2px bars; back-to-top & ask-AI are 22px circles) */\n.dpl-aux-rail {\n  position: absolute;\n  top: 50%;\n  right: 10px;\n  transform: translateY(-50%);\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  gap: 8px;\n  z-index: 6;\n}\n.dpl-aux-tick { display: flex; height: 14px; align-items: center; justify-content: center; padding: 0 4px; border: none; background: transparent; cursor: pointer; }\n.dpl-aux-bar { display: block; height: 2px; border-radius: 1px; background: var(--dpl-border); transition: background-color 0.12s; }\n.dpl-aux-tick:hover .dpl-aux-bar { background: var(--dpl-muted); }\n.dpl-aux-tick.is-active .dpl-aux-bar { background: var(--dpl-accent); }\n.dpl-aux-round, .dpl-aux-ask {\n  display: grid;\n  place-items: center;\n  width: 22px;\n  height: 22px;\n  padding: 0;\n  border: none;\n  border-radius: 9999px;\n  cursor: pointer;\n}\n.dpl-aux-round {\n  background: var(--dpl-bg-2);\n  color: var(--dpl-muted);\n  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.14);\n}\n.dpl-aux-round:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-root .dpl-aux-ask { background: var(--dpl-accent-solid); color: #fff; }\n.dpl-root .dpl-aux-ask:hover { background: var(--dpl-accent-solid-hover); }\n.dpl-aux-popover {\n  position: absolute;\n  top: 50%;\n  right: 34px;\n  transform: translateY(-50%);\n  min-width: 180px;\n  max-width: 280px;\n  max-height: 60vh;\n  overflow: auto;\n  background: var(--dpl-bg);\n  border: 1px solid var(--dpl-border);\n  border-radius: 10px;\n  padding: 6px;\n  box-shadow: 0 10px 32px rgba(15, 23, 42, 0.2);\n  z-index: 7;\n}\n.dpl-aux-pop { display: block; width: 100%; text-align: left; border: none; background: transparent; padding: 5px 8px; border-radius: 6px; font-size: 12.5px; color: var(--dpl-muted); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.dpl-aux-pop:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-aux-pop.is-active { color: var(--dpl-accent); }\n\n.dpl-search-results h2 { display: flex; align-items: center; gap: 10px; }\n.dpl-search-results h2 .dpl-btn { margin-left: auto; }\n.dpl-dialog-field textarea { width: 100%; resize: vertical; font-size: 12px; line-height: 1.5; }\n.dpl-import-summary { font-size: 12px; color: var(--dpl-muted); }\n\n/* ---- OPML import dialog: entry choices + preview list ---- */\n.dpl-import-dialog { width: 560px; }\n.dpl-import-choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 6px 20px 18px; }\n.dpl-import-choice {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  gap: 6px;\n  padding: 22px 12px 16px;\n  border: 1px solid var(--dpl-border);\n  border-radius: 12px;\n  background: transparent;\n  cursor: pointer;\n  color: var(--dpl-fg);\n  transition: border-color 0.12s, background-color 0.12s;\n}\n.dpl-import-choice:hover { border-color: var(--dpl-accent); background: var(--dpl-accent-soft); }\n.dpl-import-choice svg { color: var(--dpl-accent); }\n.dpl-import-choice strong { font-size: 13px; }\n.dpl-import-choice span { font-size: 11.5px; color: var(--dpl-faint); text-align: center; }\n.dpl-import-preview { display: flex; flex-direction: column; min-height: 0; max-height: 56vh; }\n.dpl-import-summary {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 10px;\n  margin: 0 20px;\n  padding: 8px 0;\n  border-top: 1px solid var(--dpl-border);\n  font-size: 12.5px;\n  color: var(--dpl-muted);\n}\n.dpl-import-list { overflow: auto; padding: 4px 12px 8px; display: flex; flex-direction: column; }\n.dpl-import-row {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  padding: 6px 8px;\n  border-radius: 8px;\n  cursor: pointer;\n}\n.dpl-import-row:hover { background: var(--dpl-bg-hover); }\n.dpl-import-row.is-dim { opacity: 0.5; cursor: default; }\n.dpl-import-name { flex: 1; min-width: 0; font-size: 13px; }\n.dpl-import-group { font-size: 11.5px; color: var(--dpl-faint); flex: none; }\n.dpl-import-dup { font-size: 11.5px; color: var(--dpl-faint); flex: none; }\n\n/* ---- dialogs: authoritative set (fixed centered modal, .dpl-root prefix) ---- */\n.dpl-root .dpl-dialog-backdrop, .dpl-companion .dpl-dialog-backdrop {\n  position: fixed;\n  inset: 0;\n  z-index: 200;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  background: rgba(15, 23, 42, 0.32);\n  padding: 24px;\n}\n.dpl-root .dpl-dialog, .dpl-companion .dpl-dialog {\n  display: flex;\n  flex-direction: column;\n  max-width: 100%;\n  max-height: min(80vh, 720px);\n  border-radius: 14px;\n  background: var(--dpl-bg);\n  border: 1px solid var(--dpl-border);\n  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.32);\n}\n.dpl-root .dpl-add-dialog { width: 440px; }\n.dpl-root .dpl-edit-dialog { width: 520px; }\n.dpl-root .dpl-import-dialog { width: 560px; }\n.dpl-root .dpl-dialog-headline { display: flex; align-items: center; gap: 10px; padding: 16px 20px 10px; flex: none; }\n.dpl-root .dpl-icon-btn.dpl-round { width: 28px; height: 28px; border-radius: 50%; }\n.dpl-root .dpl-dialog-rows { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--dpl-border); padding: 12px 20px; font-size: 12px; }\n.dpl-root .dpl-dialog-row { display: flex; align-items: center; gap: 8px; }\n.dpl-root .dpl-dialog-label { width: 64px; flex: none; color: var(--dpl-faint); }\n.dpl-root .dpl-row-flex { display: flex; align-items: center; gap: 4px; }\n.dpl-root .dpl-group-menu { top: calc(100% + 4px); left: 64px; min-width: 180px; max-height: 176px; overflow: auto; }\n.dpl-root .dpl-dialog-url { flex: 1; min-width: 0; color: var(--dpl-muted); word-break: break-all; font-size: 12px; }\n.dpl-root .dpl-dialog-switch-hint { color: var(--dpl-muted); font-size: 12px; }\n.dpl-root .dpl-dialog-pad { margin: 0 20px 8px; }\n.dpl-root .dpl-dialog-footer { display: flex; align-items: center; gap: 8px; border-top: 1px solid var(--dpl-border); padding: 12px 20px; flex: none; }\n.dpl-root .dpl-import-preview { display: flex; flex-direction: column; min-height: 0; flex: 1; }\n.dpl-root .dpl-import-summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 20px; padding: 8px 0; border-top: 1px solid var(--dpl-border); font-size: 12.5px; color: var(--dpl-muted); flex: none; }\n.dpl-root .dpl-import-list { overflow: auto; padding: 4px 12px 8px; display: flex; flex-direction: column; min-height: 0; }\n.dpl-root .dpl-import-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; cursor: pointer; }\n.dpl-root .dpl-import-row:hover { background: var(--dpl-bg-hover); }\n.dpl-root .dpl-import-row.is-dim { opacity: 0.5; cursor: default; }\n.dpl-root .dpl-import-name { flex: 1; min-width: 0; font-size: 13px; }\n.dpl-root .dpl-import-group { font-size: 11.5px; color: var(--dpl-faint); flex: none; }\n.dpl-root .dpl-import-dup { font-size: 11.5px; color: var(--dpl-faint); flex: none; }\n.dpl-root .dpl-import-choice { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 22px 12px 16px; border: 1px solid var(--dpl-border); border-radius: 12px; background: transparent; cursor: pointer; color: var(--dpl-fg); transition: border-color 0.12s, background-color 0.12s; }\n.dpl-root .dpl-import-choice:hover { border-color: var(--dpl-accent); background: var(--dpl-accent-soft); }\n.dpl-root .dpl-import-choice svg { color: var(--dpl-accent); }\n.dpl-root .dpl-import-filestatus { padding: 0 20px; }\n.dpl-root .dpl-import-parsing { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--dpl-muted); padding: 6px 0; }\n.dpl-root .dpl-import-filestatus .dpl-dialog-error { display: flex; align-items: center; gap: 8px; }\n.dpl-root .dpl-import-successbar {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  margin: 8px 12px 0;\n  padding: 7px 10px;\n  border-radius: 8px;\n  background: color-mix(in srgb, #34c98e 12%, transparent);\n  color: #1e9e6a;\n  font-size: 12.5px;\n}\n.dpl-root .dpl-import-successbar span { flex: 1; }\n\n.dpl-root .dpl-refresh-progress { padding: 0 10px 8px; flex: none; }\n.dpl-root .dpl-refresh-progress-head {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  border: none;\n  background: transparent;\n  padding: 0;\n  font-size: 11.5px;\n  color: var(--dpl-muted);\n  cursor: pointer;\n  width: 100%;\n  text-align: left;\n}\n.dpl-root .dpl-refresh-progress-head:hover { color: var(--dpl-fg); }\n.dpl-root .dpl-refresh-bar { height: 2px; border-radius: 1px; background: var(--dpl-border); margin-top: 5px; overflow: hidden; }\n.dpl-root .dpl-refresh-bar-fill { height: 100%; background: var(--dpl-accent); transition: width 0.4s ease; }\n.dpl-root .dpl-refresh-errors {\n  max-height: 200px;\n  overflow: auto;\n  margin-top: 6px;\n  border: 1px solid var(--dpl-border);\n  border-radius: 8px;\n  padding: 4px;\n  background: var(--dpl-bg-2);\n}\n.dpl-root .dpl-refresh-error { display: flex; flex-direction: column; gap: 1px; padding: 4px 6px; font-size: 11px; }\n.dpl-root .dpl-refresh-error span { color: var(--dpl-fg); }\n.dpl-root .dpl-refresh-error em { font-style: normal; color: var(--dpl-danger); word-break: break-all; }\n";
+var styles_default = "/* droplets \xB7 panel styles.\n * Skin: DSH design tokens (--dsw-alias-*) so the panel follows the host\n * theme (light/dark) automatically. Layout & interaction: droplets'\n * three-pane shapes (sources 240 / entries 320 / reader, docked companion).\n * Details (measure, ghost buttons, list rhythm): qiaomu-rss refinements. */\n.dpl-root {\n  --dpl-bg: var(--dsw-alias-bg-base, #fff);\n  --dpl-bg-2: var(--dsw-alias-bg-layer-1, rgba(15, 23, 42, 0.03));\n  --dpl-bg-active: var(--dsw-alias-interactive-bg-active, rgba(15, 23, 42, 0.08));\n  --dpl-bg-hover: var(--dsw-alias-interactive-bg-hover, rgba(15, 23, 42, 0.05));\n  --dpl-border: var(--dsw-alias-border-l1, rgba(15, 23, 42, 0.08));\n  --dpl-fg: var(--dsw-alias-label-primary, #0f1115);\n  --dpl-muted: var(--dsw-alias-label-secondary, rgba(15, 23, 42, 0.6));\n  --dpl-faint: var(--dsw-alias-label-tertiary, rgba(15, 23, 42, 0.4));\n  /* Accent follows the DSH system exactly: interactive/link blue for\n     selection & unread, the host's black primary fill for solid actions. */\n  --dpl-accent: var(--dsw-alias-link, #4176e6);\n  --dpl-accent-solid: var(--dsw-alias-button-primary-fill, #0f1115);\n  --dpl-accent-solid-hover: var(--dsw-alias-button-primary-hover, #43454a);\n  --dpl-accent-soft: var(--dsw-alias-interactive-bg-hover-accent, rgba(38, 49, 72, 0.14));\n  --dpl-link: var(--dsw-alias-link, #4176e6);\n  --dpl-danger: var(--dsw-alias-state-error-primary, #d5484f);\n  --dpl-radius: 10px;\n  --dpl-radius-sm: 8px;\n  --dpl-sources-width: 240px;\n  --dpl-list-width: 320px;\n  --dpl-measure: 720px;\n  display: flex;\n  flex-direction: column;\n  height: 100%;\n  min-height: 0;\n  background: var(--dpl-bg);\n  color: var(--dpl-fg);\n  font-size: 14px;\n  container-type: inline-size;\n}\n.dpl-root *, .dpl-root *::before, .dpl-root *::after { box-sizing: border-box; }\n.dpl-root button { font: inherit; color: inherit; }\n\n/* ---- header (droplets Topbar shape) ---- */\n.dpl-header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  height: 44px;\n  padding: 0 12px;\n  border-bottom: 1px solid var(--dpl-border);\n  flex: none;\n}\n.dpl-brand { display: flex; align-items: center; gap: 8px; min-width: 0; }\n.dpl-brand strong { font-size: 14px; font-weight: 600; }\n.dpl-spaces { display: flex; gap: 2px; margin-left: 10px; background: var(--dpl-bg-2); border-radius: var(--dpl-radius); padding: 2px; }\n.dpl-space-tab {\n  border: none;\n  background: transparent;\n  padding: 4px 12px;\n  border-radius: calc(var(--dpl-radius) - 2px);\n  cursor: pointer;\n  color: var(--dpl-muted);\n  font-size: 13px;\n}\n.dpl-space-tab:hover { color: var(--dpl-fg); background: var(--dpl-bg-hover); }\n.dpl-space-tab.is-active { background: var(--dpl-bg); color: var(--dpl-fg); font-weight: 600; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.1); }\n.dpl-header-actions { display: flex; gap: 6px; align-items: center; }\n\n.dpl-body { display: flex; flex: 1; min-height: 0; }\n.dpl-space { flex: 1; min-width: 0; display: flex; }\n.dpl-space > * { flex: 1; min-width: 0; }\n\n/* ---- shared controls (DSH ghost-button feel) ---- */\n.dpl-btn {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  border: none;\n  background: transparent;\n  border-radius: var(--dpl-radius-sm);\n  padding: 5px 10px;\n  min-height: 28px;\n  cursor: pointer;\n  font-size: 13px;\n  color: var(--dpl-fg);\n  white-space: nowrap;\n}\n.dpl-btn:hover { background: var(--dpl-bg-hover); }\n.dpl-btn.is-danger { color: var(--dpl-danger); }\n.dpl-btn.is-danger:hover { background: color-mix(in srgb, var(--dpl-danger) 12%, transparent); }\n.dpl-btn.is-on { background: var(--dpl-bg-active); }\n.dpl-root .dpl-btn.is-primary { background: var(--dpl-accent-solid); color: #fff; }\n.dpl-root .dpl-btn.is-primary:hover { background: var(--dpl-accent-solid-hover); }\n.dpl-btn:disabled { opacity: 0.45; cursor: default; background: transparent; }\n.dpl-icon-btn {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 28px;\n  height: 28px;\n  border: none;\n  background: transparent;\n  border-radius: var(--dpl-radius-sm);\n  cursor: pointer;\n  color: var(--dpl-muted);\n  font-size: 14px;\n  line-height: 1;\n}\n.dpl-icon-btn:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-chip {\n  border: none;\n  background: transparent;\n  border-radius: 999px;\n  padding: 3px 10px;\n  min-height: 24px;\n  cursor: pointer;\n  color: var(--dpl-muted);\n  font-size: 12px;\n}\n.dpl-chip:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-chip.is-active { background: var(--dpl-bg-active); color: var(--dpl-fg); font-weight: 600; }\n.dpl-root input, .dpl-root textarea {\n  font: inherit;\n  color: var(--dpl-fg);\n  background: var(--dpl-bg-2);\n  border: 1px solid transparent;\n  border-radius: var(--dpl-radius-sm);\n  padding: 5px 10px;\n  min-height: 30px;\n  outline: none;\n}\n.dpl-root input:focus, .dpl-root textarea:focus { border-color: var(--dpl-accent); background: var(--dpl-bg); }\n.dpl-root input::placeholder, .dpl-root textarea::placeholder { color: var(--dpl-faint); }\n\n/* ---- panes ---- */\n.dpl-feed, .dpl-inbox, .dpl-vault { display: flex; flex: 1; min-width: 0; }\n.dpl-col { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--dpl-border); background: var(--dpl-bg); }\n.dpl-vault-tree { width: var(--dpl-sources-width); flex: none; }\n.dpl-inbox-list { width: var(--dpl-list-width); flex: none; }\n.dpl-reader { flex: 1; min-width: 0; overflow: auto; padding: 20px clamp(16px, 3%, 36px); }\n.dpl-col-head {\n  display: flex;\n  align-items: center;\n  gap: 4px;\n  height: 40px;\n  padding: 0 8px;\n  border-bottom: 1px solid var(--dpl-border);\n  flex: none;\n}\n.dpl-pane-title { font-size: 12px; font-weight: 600; color: var(--dpl-muted); padding: 0 4px; }\n.dpl-search { padding: 8px; flex: none; }\n.dpl-search input { width: 100%; }\n\n/* ---- sources pane (droplets: title row, search+refresh row, collapsible groups) ---- */\n.dpl-source-tools { display: flex; gap: 6px; padding: 0 8px 8px; }\n.dpl-source-tools .dpl-search { flex: 1; padding: 0; }\n.dpl-source {\n  display: flex;\n  width: 100%;\n  align-items: center;\n  justify-content: space-between;\n  gap: 6px;\n  border: none;\n  background: transparent;\n  padding: 6px 10px;\n  cursor: pointer;\n  color: var(--dpl-fg);\n  text-align: left;\n  border-radius: var(--dpl-radius-sm);\n  margin: 0 4px;\n  width: calc(100% - 8px);\n}\n.dpl-source span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }\n.dpl-source em { font-style: normal; font-size: 12px; font-weight: 600; color: var(--dpl-accent); flex: none; }\n.dpl-source:hover { background: var(--dpl-bg-hover); }\n.dpl-source.is-active { background: var(--dpl-bg-active); font-weight: 600; }\n.dpl-source.has-error span { color: var(--dpl-danger); }\n.dpl-source-group-name {\n  padding: 10px 12px 2px;\n  font-size: 11px;\n  font-weight: 600;\n  letter-spacing: 0.02em;\n  text-transform: uppercase;\n  color: var(--dpl-faint);\n}\n.dpl-sources-list { overflow: auto; flex: 1; padding-bottom: 8px; }\n\n/* ---- entry list ---- */\n.dpl-entry-list { list-style: none; margin: 0; padding: 0; overflow: auto; flex: 1; }\n.dpl-entry-list li { display: flex; align-items: stretch; }\n.dpl-entry {\n  flex: 1;\n  min-width: 0;\n  border: none;\n  background: transparent;\n  text-align: left;\n  padding: 9px 10px 9px 14px;\n  cursor: pointer;\n  color: var(--dpl-fg);\n  display: flex;\n  flex-direction: column;\n  gap: 3px;\n}\n.dpl-entry:hover { background: var(--dpl-bg-hover); }\n.dpl-entry.is-active { background: var(--dpl-bg-active); }\n.dpl-entry-title { font-weight: 550; font-size: 13px; line-height: 1.45; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }\n.dpl-entry.is-unread .dpl-entry-title::before {\n  content: '';\n  display: inline-block;\n  width: 6px;\n  height: 6px;\n  border-radius: 50%;\n  background: var(--dpl-accent);\n  margin-right: 7px;\n  vertical-align: 2px;\n}\n.dpl-entry-meta { font-size: 12px; color: var(--dpl-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.dpl-warn { color: var(--dpl-danger); }\n.dpl-star {\n  border: none;\n  background: transparent;\n  cursor: pointer;\n  color: var(--dpl-faint);\n  padding: 0 8px 0 2px;\n  flex: none;\n  font-size: 14px;\n}\n.dpl-star:hover { color: var(--dpl-muted); }\n.dpl-star.is-on { color: #e6a700; }\n\n.dpl-empty { padding: 32px 20px; text-align: center; color: var(--dpl-faint); font-size: 13px; }\n.dpl-reader-empty { display: flex; align-items: center; justify-content: center; height: 100%; }\n.dpl-hint { font-size: 12px; color: var(--dpl-faint); }\n.dpl-error {\n  margin: 8px;\n  padding: 8px 10px;\n  border-radius: var(--dpl-radius-sm);\n  background: color-mix(in srgb, var(--dpl-danger) 10%, transparent);\n  color: var(--dpl-danger);\n  font-size: 12px;\n  word-break: break-all;\n}\n\n/* ---- reader ---- */\n.dpl-article, .dpl-note { max-width: var(--dpl-measure); margin: 0 auto; }\n.dpl-article h1, .dpl-note h1 { font-size: 22px; line-height: 1.35; margin: 0 0 8px; font-weight: 650; }\n.dpl-article-meta { display: flex; gap: 10px; font-size: 13px; color: var(--dpl-muted); margin-bottom: 18px; flex-wrap: wrap; }\n.dpl-article-meta a { color: var(--dpl-link); text-decoration: none; }\n.dpl-article-meta a:hover { text-decoration: underline; }\n.dpl-article-body { line-height: 1.75; font-size: 14.5px; }\n.dpl-article-body img { max-width: 100%; height: auto; border-radius: var(--dpl-radius-sm); }\n.dpl-article-body pre { overflow: auto; padding: 12px; border-radius: var(--dpl-radius-sm); background: var(--dpl-bg-2); font-size: 13px; }\n.dpl-article-body code { font-size: 0.92em; background: var(--dpl-bg-2); border-radius: 4px; padding: 1px 5px; }\n.dpl-article-body pre code { background: transparent; padding: 0; }\n.dpl-article-body blockquote { border-left: 3px solid var(--dpl-border); margin: 8px 0; padding: 2px 14px; color: var(--dpl-muted); }\n.dpl-reader-toolbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }\n.dpl-reader-toolbar h1 { font-size: 20px; margin: 0 0 4px; }\n.dpl-reader-actions { display: flex; gap: 4px; flex: none; }\n\n/* ---- inbox ---- */\n.dpl-inbox-add { display: flex; gap: 6px; padding: 8px; border-bottom: 1px solid var(--dpl-border); flex: none; }\n.dpl-inbox-add input { flex: 1; min-width: 0; }\n\n/* ---- pdf / epub ---- */\n.dpl-pdf { display: flex; flex-direction: column; align-items: center; gap: 12px; }\n.dpl-pdf-canvas { max-width: 100%; box-shadow: 0 2px 14px rgba(15, 23, 42, 0.18); border-radius: 6px; background: #fff; }\n.dpl-pager { display: flex; align-items: center; gap: 10px; color: var(--dpl-muted); font-size: 13px; }\n\n/* ---- vault ---- */\n.dpl-vault-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--dpl-muted); }\n.dpl-tree-stats { font-size: 12px; color: var(--dpl-faint); flex: 1; padding-left: 4px; }\n.dpl-tree details { margin-left: 4px; }\n.dpl-tree summary {\n  cursor: pointer;\n  padding: 4px 8px;\n  font-size: 12px;\n  font-weight: 600;\n  color: var(--dpl-muted);\n  border-radius: 6px;\n  list-style: none;\n  display: flex;\n  align-items: center;\n  gap: 4px;\n}\n.dpl-tree summary::before { content: '\u25B8'; font-size: 10px; transition: transform 0.12s; color: var(--dpl-faint); }\n.dpl-tree details[open] > summary::before { transform: rotate(90deg); }\n.dpl-tree summary:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-tree-file {\n  display: flex;\n  width: calc(100% - 8px);\n  margin: 0 4px;\n  border: none;\n  background: transparent;\n  text-align: left;\n  padding: 4px 10px;\n  cursor: pointer;\n  color: var(--dpl-fg);\n  border-radius: 6px;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  font-size: 13px;\n}\n.dpl-tree-file:hover { background: var(--dpl-bg-hover); }\n.dpl-tree-file.is-active { background: var(--dpl-bg-active); font-weight: 600; }\n.dpl-note-body { line-height: 1.75; font-size: 14.5px; }\n.dpl-note-body h1, .dpl-note-body h2 { border-bottom: 1px solid var(--dpl-border); padding-bottom: 6px; margin: 1.2em 0 0.6em; }\n.dpl-note-body pre { overflow: auto; padding: 12px; border-radius: var(--dpl-radius-sm); background: var(--dpl-bg-2); font-size: 13px; }\n.dpl-note-body code { background: var(--dpl-bg-2); border-radius: 4px; padding: 1px 5px; font-size: 0.92em; }\n.dpl-note-editor {\n  width: 100%;\n  min-height: 62vh;\n  font-family: var(--dsw-alias-font-mono, ui-monospace, 'SF Mono', monospace);\n  font-size: 13px;\n  line-height: 1.7;\n  border-radius: var(--dpl-radius);\n  border: 1px solid var(--dpl-border);\n  padding: 14px;\n  resize: vertical;\n  background: var(--dpl-bg);\n  color: var(--dpl-fg);\n}\n.dpl-note-editor:focus { border-color: var(--dpl-accent); }\n.dpl-wikilink { color: var(--dpl-link); text-decoration: none; border-bottom: 1px dashed currentColor; }\n.dpl-tag { color: var(--dpl-muted); background: var(--dpl-bg-2); border-radius: 4px; padding: 0 4px; font-size: 0.9em; }\n.dpl-backlinks h2, .dpl-search-results h2 { font-size: 14px; margin: 20px 0 8px; font-weight: 600; }\n.dpl-backlinks ul, .dpl-search-results ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }\n.dpl-backlinks button, .dpl-search-results button {\n  border: none;\n  background: transparent;\n  text-align: left;\n  cursor: pointer;\n  padding: 7px 9px;\n  border-radius: var(--dpl-radius-sm);\n  color: var(--dpl-fg);\n  display: block;\n  width: 100%;\n}\n.dpl-backlinks button:hover, .dpl-search-results button:hover { background: var(--dpl-bg-hover); }\n.dpl-search-results p { margin: 2px 0 0; font-size: 12px; color: var(--dpl-faint); }\n\n.dpl-graph { position: relative; height: 100%; }\n.dpl-graph svg { width: 100%; height: 100%; }\n.dpl-graph-edge { stroke: color-mix(in srgb, var(--dpl-fg) 20%, transparent); stroke-width: 1; }\n.dpl-graph-node { fill: var(--dpl-accent); cursor: pointer; }\n.dpl-graph-node.is-dangling { fill: color-mix(in srgb, var(--dpl-fg) 25%, transparent); }\n.dpl-graph-node.is-hover { stroke: var(--dpl-fg); stroke-width: 2; }\n.dpl-graph-label { position: absolute; top: 8px; left: 12px; font-size: 12px; color: var(--dpl-muted); }\n\n/* ---- companion (droplets: docked right panel) ---- */\n.dpl-companion {\n  width: 40%;\n  min-width: 360px;\n  flex: none;\n  display: flex;\n  flex-direction: column;\n  border-left: 1px solid var(--dpl-border);\n  min-height: 0;\n  background: var(--dpl-bg);\n}\n.dpl-companion-header { display: flex; align-items: center; gap: 4px; height: 40px; padding: 0 8px 0 12px; border-bottom: 1px solid var(--dpl-border); }\n.dpl-companion-header strong { flex: 1; font-size: 13px; font-weight: 600; }\n.dpl-companion-context { padding: 8px 12px; border-bottom: 1px solid var(--dpl-border); display: flex; flex-direction: column; gap: 2px; overflow: hidden; }\n.dpl-companion-context strong { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.dpl-companion-context small { font-size: 12px; color: var(--dpl-muted); }\n.dpl-native-chat { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }\n.dpl-companion-loading { padding: 24px; text-align: center; color: var(--dpl-faint); flex: 1; font-size: 13px; }\n.dpl-companion-error { margin: 10px; padding: 10px; border-radius: var(--dpl-radius-sm); background: color-mix(in srgb, var(--dpl-danger) 10%, transparent); color: var(--dpl-danger); font-size: 13px; }\n.dpl-companion-error p { margin: 6px 0 10px; font-size: 12px; word-break: break-all; }\n.dpl-companion-error button { margin-top: 2px; }\n.dpl-companion-notice { display: flex; align-items: center; gap: 6px; margin: 6px 10px; padding: 6px 10px; border-radius: var(--dpl-radius-sm); background: var(--dpl-bg-2); color: var(--dpl-muted); font-size: 12px; }\n.dpl-companion-notice span { flex: 1; }\n.dpl-companion-quote { margin: 8px 10px; border-left: 3px solid var(--dpl-accent); padding: 6px 10px; background: var(--dpl-bg-2); border-radius: 0 var(--dpl-radius-sm) var(--dpl-radius-sm) 0; }\n.dpl-companion-quote strong { font-size: 11px; color: var(--dpl-muted); display: block; margin-bottom: 4px; }\n.dpl-companion-quote blockquote { margin: 0; font-size: 12px; max-height: 90px; overflow: auto; white-space: pre-wrap; }\n.dpl-companion-prompt-strip { display: flex; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--dpl-border); flex: none; overflow-x: auto; }\n.dpl-prompt-ghost { border: 1px solid var(--dpl-border); background: transparent; border-radius: 999px; padding: 4px 12px; font-size: 12px; cursor: pointer; color: var(--dpl-fg); white-space: nowrap; }\n.dpl-prompt-ghost:hover { background: var(--dpl-bg-hover); }\n.dpl-prompt-ghost:disabled { opacity: 0.45; cursor: default; }\n\n/* ---- modal (DSH dialog feel) ---- */\n.dpl-modal-backdrop { position: fixed; inset: 0; background: color-mix(in srgb, var(--dpl-fg) 32%, transparent); display: flex; align-items: center; justify-content: center; z-index: 60; }\n.dpl-modal {\n  background: var(--dpl-bg);\n  border-radius: 14px;\n  width: min(480px, 92vw);\n  max-height: 80vh;\n  display: flex;\n  flex-direction: column;\n  box-shadow: 0 16px 48px rgba(15, 23, 42, 0.28);\n  border: 1px solid var(--dpl-border);\n}\n.dpl-modal.is-wide { width: min(680px, 94vw); }\n.dpl-modal header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--dpl-border); font-weight: 600; }\n.dpl-modal-body { padding: 14px 16px; overflow: auto; }\n.dpl-form-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }\n.dpl-form-row input { flex: 1; min-width: 120px; }\n.dpl-sub-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }\n.dpl-sub-list li { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: var(--dpl-radius-sm); }\n.dpl-sub-list li:hover { background: var(--dpl-bg-hover); }\n.dpl-sub-list label { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }\n.dpl-sub-list label.is-dim { opacity: 0.5; }\n.dpl-sub-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }\n.dpl-sub-meta { font-size: 12px; color: var(--dpl-faint); }\n.dpl-opml-input { width: 100%; }\n.dpl-settings-block h3 { font-size: 13px; margin: 14px 0 6px; font-weight: 600; }\n.dpl-settings-block h3:first-child { margin-top: 0; }\n.dpl-path { display: block; padding: 6px 9px; border-radius: 6px; background: var(--dpl-bg-2); font-size: 12px; font-family: var(--dsw-alias-font-mono, ui-monospace, monospace); word-break: break-all; margin: 6px 0; }\n.dpl-toggle { display: flex; align-items: center; gap: 8px; }\n.dpl-conflict-excerpt { margin: 8px 0; padding: 8px 10px; border-left: 3px solid var(--dpl-danger); font-size: 12px; color: var(--dpl-muted); max-height: 120px; overflow: auto; }\n\n/* ---- responsive: narrow windows stack companion below (qiaomu pattern) ---- */\n@container (max-width: 860px) {\n  .dpl-body { flex-direction: column; }\n  .dpl-companion { width: 100%; min-width: 0; min-height: 240px; border-left: none; border-top: 1px solid var(--dpl-border); }\n}\n\n/* ---- feed page (droplets 1:1 port) ---- */\n.dpl-flex-fill { flex: 1; min-width: 0; }\n.dpl-grow { flex: 1 1 auto; min-width: 0; }\n.dpl-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.dpl-spin { animation: dpl-spin 0.9s linear infinite; }\n@keyframes dpl-spin { to { transform: rotate(360deg); } }\n.dpl-relative { position: relative; }\n.dpl-center { display: flex; align-items: center; justify-content: center; }\n.dpl-min0 { min-width: 0; }\n\n/* panel group: columns + separators + rails */\n.dpl-panel-group { display: flex; flex: 1; min-width: 0; min-height: 0; }\n.dpl-panel { display: flex; min-width: 0; min-height: 0; }\n.dpl-panel-separator { flex: 0 0 1px; background: var(--dpl-border); cursor: col-resize; position: relative; }\n.dpl-panel-separator::before { content: ''; position: absolute; inset: 0 -3px; }\n.dpl-panel-separator:hover, .dpl-panel-separator.is-adjacent-collapsed { background: var(--dpl-accent); }\n.dpl-panel-rail {\n  flex: 1;\n  display: flex;\n  align-items: flex-start;\n  justify-content: center;\n  padding-top: 12px;\n  border: none;\n  background: transparent;\n  color: var(--dpl-faint);\n  cursor: pointer;\n}\n.dpl-panel-rail:hover { color: var(--dpl-fg); background: var(--dpl-bg-hover); }\n.dpl-panel-collapse { flex: none; }\n\n/* pane frame (droplets panel chrome: head 44px, no side borders between) */\n.dpl-pane { display: flex; flex-direction: column; height: 100%; min-width: 0; min-height: 0; width: 100%; background: var(--dpl-bg); }\n.dpl-pane-head {\n  display: flex;\n  align-items: center;\n  gap: 2px;\n  height: 44px;\n  padding: 0 10px;\n  flex: none;\n}\n.dpl-pane-title { font-size: 12px; font-weight: 500; color: var(--dpl-muted); }\n\n/* sources pane */\n.dpl-sources { border-right: 1px solid var(--dpl-border); }\n.dpl-sources-actions { display: flex; gap: 4px; padding: 0 10px 10px; }\n.dpl-sources-actions .dpl-btn { justify-content: center; }\n.dpl-sources-toolbar {\n  position: relative;\n  display: flex;\n  align-items: center;\n  height: 28px;\n  padding: 0 10px;\n  flex: none;\n}\n.dpl-toolbar-dots { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 16px; transition: opacity 0.12s; }\n.dpl-toolbar-dots span { width: 4px; height: 4px; border-radius: 50%; background: var(--dpl-faint); }\n.dpl-sources-toolbar:hover .dpl-toolbar-dots { opacity: 0; }\n.dpl-toolbar-actions {\n  display: flex;\n  width: 100%;\n  align-items: center;\n  justify-content: center;\n  gap: 2px;\n  opacity: 0;\n  pointer-events: none;\n  transition: opacity 0.12s;\n}\n.dpl-sources-toolbar:hover .dpl-toolbar-actions { opacity: 1; pointer-events: auto; }\n.dpl-icon-btn.dpl-tb { width: 24px; height: 24px; }\n.dpl-icon-btn.is-toggled { color: var(--dpl-accent); background: color-mix(in srgb, var(--dpl-accent) 12%, transparent); }\n.dpl-menu {\n  position: absolute;\n  top: 100%;\n  left: 0;\n  z-index: 40;\n  margin-top: 4px;\n  min-width: 148px;\n  background: var(--dpl-bg);\n  border: 1px solid var(--dpl-border);\n  border-radius: 8px;\n  padding: 4px;\n  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16);\n}\n.dpl-menu-item { display: block; width: 100%; text-align: left; border: none; background: transparent; padding: 5px 8px; border-radius: 6px; font-size: 12.5px; cursor: pointer; color: var(--dpl-fg); }\n.dpl-menu-item:hover { background: var(--dpl-bg-hover); }\n\n.dpl-sources-list { min-height: 0; flex: 1; overflow: auto; padding: 8px; }\n.dpl-source {\n  display: flex;\n  width: 100%;\n  align-items: center;\n  gap: 6px;\n  border: none;\n  background: transparent;\n  padding: 6px 10px;\n  border-radius: 7px;\n  cursor: pointer;\n  color: var(--dpl-fg);\n  text-align: left;\n  font-size: 13.5px;\n}\n.dpl-source em { font-style: normal; font-size: 12px; font-weight: 500; color: var(--dpl-accent); flex: none; }\n.dpl-source em:empty { display: none; }\n.dpl-source:hover { background: var(--dpl-bg-hover); }\n.dpl-source.is-selected { background: color-mix(in srgb, var(--dpl-accent) 12%, transparent); font-weight: 500; color: var(--dpl-accent); }\n.dpl-source.is-disabled { opacity: 0.5; }\n.dpl-source.dpl-in-group { padding-left: 22px; }\n.dpl-source-error { color: var(--dpl-danger); flex: none; }\n.dpl-source-group { }\n.dpl-group-row { margin-top: 6px; }\n.dpl-group-head {\n  display: flex;\n  width: 100%;\n  align-items: center;\n  gap: 4px;\n  border: none;\n  background: transparent;\n  padding: 4px 10px 4px 26px;\n  border-radius: 7px;\n  cursor: pointer;\n  color: var(--dpl-muted);\n  text-align: left;\n  font-size: 12px;\n  font-weight: 500;\n}\n.dpl-group-head em { font-style: normal; font-size: 12px; font-weight: 500; color: var(--dpl-accent); flex: none; }\n.dpl-group-head:hover { background: var(--dpl-bg-hover); }\n.dpl-group-head.is-selected { background: color-mix(in srgb, var(--dpl-accent) 12%, transparent); color: var(--dpl-accent); font-weight: 500; }\n.dpl-group-chevron {\n  position: absolute;\n  top: 50%;\n  left: 4px;\n  transform: translateY(-50%);\n  display: grid;\n  place-items: center;\n  width: 20px;\n  height: 20px;\n  border: none;\n  border-radius: 6px;\n  background: transparent;\n  color: var(--dpl-faint);\n  cursor: pointer;\n}\n.dpl-group-chevron:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-group-chevron .is-rotated { transform: rotate(-90deg); }\n\n.dpl-badge {\n  display: inline-grid;\n  place-items: center;\n  width: 16px;\n  height: 16px;\n  border-radius: 5px;\n  font-size: 10px;\n  font-weight: 600;\n  line-height: 1;\n  flex: none;\n}\n\n/* items pane */\n.dpl-items { border-right: 1px solid var(--dpl-border); }\n.dpl-entry-scroll { min-height: 0; flex: 1; overflow: auto; }\n.dpl-list-loading { display: grid; place-items: center; height: 64px; color: var(--dpl-faint); }\n.dpl-list-empty { display: grid; place-items: center; height: 128px; padding: 0 16px; text-align: center; font-size: 12px; color: var(--dpl-faint); }\n.dpl-entry-row {\n  cursor: pointer;\n  border-bottom: 1px solid var(--dpl-border);\n  padding: 10px 12px;\n  transition: background-color 0.1s;\n  content-visibility: auto;\n  contain-intrinsic-size: auto 76px;\n}\n.dpl-entry-row:hover { background: var(--dpl-bg-hover); }\n.dpl-entry-row.is-active { background: color-mix(in srgb, var(--dpl-accent) 9%, transparent); }\n.dpl-entry-src { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--dpl-faint); }\n.dpl-entry-main { display: flex; align-items: center; gap: 8px; margin-top: 4px; }\n.dpl-entry-main .dpl-truncate { font-size: 13.5px; color: var(--dpl-muted); }\n.dpl-entry-main .dpl-truncate.is-unread { color: var(--dpl-fg); font-weight: 500; }\n.dpl-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }\n.dpl-dot.is-unseen { background: var(--dpl-accent); }\n.dpl-dot.is-seen { background: var(--dpl-border); }\n.dpl-dot.is-skipped { background: var(--dpl-faint); }\n.dpl-entry-sum { margin: 3px 0 0 15px; font-size: 12px; color: var(--dpl-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n\n.dpl-icon-btn .dpl-fill { fill: currentColor; }\n.dpl-new-pill {\n  display: inline-flex;\n  align-items: center;\n  flex: none;\n  margin-right: 4px;\n  padding: 2px 8px;\n  border: none;\n  border-radius: 999px;\n  background: color-mix(in srgb, var(--dpl-accent) 12%, transparent);\n  color: var(--dpl-accent);\n  font-size: 11.5px;\n  font-weight: 500;\n  cursor: pointer;\n  transition: opacity 0.12s;\n}\n.dpl-new-pill:hover { opacity: 0.8; }\n\n/* preview pane */\n.dpl-preview { position: relative; }\n.dpl-preview-empty { display: grid; place-items: center; flex: 1; width: 100%; font-size: 13.5px; color: var(--dpl-faint); background: var(--dpl-bg); }\n.dpl-preview-scroll { display: flex; flex-direction: column; height: 100%; width: 100%; overflow: auto; }\n.dpl-reader-actions-float {\n  position: sticky;\n  top: 0;\n  z-index: 5;\n  display: flex;\n  align-items: center;\n  justify-content: flex-end;\n  gap: 2px;\n  padding: 8px 24px 16px 0;\n  background: linear-gradient(to bottom, var(--dpl-bg) 55%, transparent);\n}\n.dpl-round-btn {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 32px;\n  height: 32px;\n  border: none;\n  border-radius: 50%;\n  background: transparent;\n  color: var(--dpl-muted);\n  cursor: pointer;\n}\n.dpl-round-btn:hover:not(:disabled) { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-round-btn:disabled { opacity: 0.4; cursor: default; }\n.dpl-lang-mark { font-size: 12.5px; font-weight: 600; }\n.dpl-notice { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; padding: 6px 10px; border-radius: 8px; background: color-mix(in srgb, var(--dpl-accent) 10%, transparent); color: var(--dpl-accent); font-size: 12.5px; }\n.dpl-article-head { margin: 0 auto; width: 100%; max-width: var(--dpl-measure); padding: 0 32px 16px; }\n.dpl-article-head h1 { font-size: 20px; font-weight: 700; line-height: 1.4; color: var(--dpl-fg); margin: 0; }\n.dpl-article-meta { display: flex; align-items: center; gap: 6px; margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--dpl-border); font-size: 13px; color: var(--dpl-muted); }\n.dpl-meta-source { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.dpl-meta-state { color: var(--dpl-muted); }\n.dpl-short-notice {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 8px;\n  margin: 0 auto 8px;\n  width: 100%;\n  max-width: var(--dpl-measure);\n  padding: 6px 12px;\n  border-radius: 8px;\n  background: color-mix(in srgb, var(--dpl-accent) 7%, transparent);\n  color: var(--dpl-muted);\n  font-size: 12px;\n}\n.dpl-short-notice.is-empty { background: var(--dpl-bg-2); }\n.dpl-inline-link { font-weight: 500; text-decoration: underline; text-underline-offset: 2px; color: var(--dpl-accent); }\n.dpl-article-body-wrap { margin: 0 auto; width: 100%; max-width: var(--dpl-measure); padding: 0 32px 40px; }\n.dpl-article-plain { white-space: pre-wrap; color: var(--dpl-fg); font-size: 14.5px; line-height: 1.75; }\n.dpl-reader-notice { margin: 0 32px 10px; max-width: var(--dpl-measure); }\n\n/* aux rail (droplets T26) */\n\n/* manage table */\n.dpl-manage { display: flex; flex-direction: column; height: 100%; min-height: 0; width: 100%; background: var(--dpl-bg); }\n.dpl-manage-head { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 12px; border-bottom: 1px solid var(--dpl-border); flex: none; }\n.dpl-manage-title { font-size: 13.5px; font-weight: 600; }\n.dpl-manage-filters { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--dpl-border); flex: none; }\n.dpl-manage-search { width: 224px; height: 28px; border-radius: 999px; }\n.dpl-seg { display: flex; align-items: center; gap: 2px; font-size: 12px; }\n.dpl-seg-item { border: none; background: transparent; border-radius: 999px; padding: 4px 8px; color: var(--dpl-muted); cursor: pointer; font-size: 12px; }\n.dpl-seg-item:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-seg-item.is-active { background: color-mix(in srgb, var(--dpl-accent) 12%, transparent); color: var(--dpl-accent); }\n.dpl-manage-batch { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-bottom: 1px solid var(--dpl-border); background: color-mix(in srgb, var(--dpl-accent) 7%, transparent); font-size: 12px; flex: none; }\n.dpl-btn.dpl-sm { min-height: 24px; padding: 2px 8px; font-size: 12px; }\n.dpl-popover { position: absolute; left: 0; top: 100%; z-index: 30; margin-top: 4px; width: 208px; background: var(--dpl-bg); border: 1px solid var(--dpl-border); border-radius: 8px; padding: 6px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18); display: flex; flex-direction: column; gap: 6px; }\n.dpl-manage-grid { display: grid; grid-template-columns: 2rem 3rem minmax(0, 1fr) 4.5rem 6.5rem 2.5rem 2rem; align-items: center; gap: 8px; padding: 0 12px; }\n.dpl-manage-header { height: 30px; border-bottom: 1px solid var(--dpl-border); font-size: 12px; color: var(--dpl-muted); flex: none; }\n.dpl-manage-sort { border: none; background: transparent; padding: 0; font-size: 12px; color: inherit; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 2px; }\n.dpl-manage-sort.dpl-right { justify-content: flex-end; }\n.dpl-manage-sort.is-active { font-weight: 500; color: var(--dpl-accent); }\n.dpl-manage-rows { min-height: 0; flex: 1; overflow: auto; }\n.dpl-manage-row { height: 46px; border-bottom: 1px solid var(--dpl-border); cursor: pointer; transition: background-color 0.1s; }\n.dpl-manage-row:hover { background: var(--dpl-bg-hover); }\n.dpl-manage-name { display: flex; align-items: center; gap: 8px; min-width: 0; }\n.dpl-manage-title { font-size: 13.5px; font-weight: 500; }\n.dpl-manage-title.is-dim { color: var(--dpl-faint); font-weight: 400; }\n.dpl-manage-group { font-size: 12px; color: var(--dpl-faint); }\n.dpl-manage-count { font-size: 12px; color: var(--dpl-muted); }\n.dpl-manage-time { font-size: 12px; color: var(--dpl-faint); }\n.dpl-right { text-align: right; }\n.dpl-health { width: 8px; height: 8px; border-radius: 50%; justify-self: center; }\n.dpl-health.is-ok { background: #34c98e; }\n.dpl-health.is-error { background: var(--dpl-danger); }\n.dpl-health.is-off { background: var(--dpl-border); }\n.dpl-manage-empty { display: grid; place-items: center; height: 96px; font-size: 12px; color: var(--dpl-faint); }\n.dpl-manage-stats { display: flex; align-items: center; gap: 12px; padding: 6px 12px; border-top: 1px solid var(--dpl-border); font-size: 12px; color: var(--dpl-faint); flex: none; }\n\n/* dialogs */\n.dpl-form-col { display: flex; flex-direction: column; gap: 10px; padding: 4px 0 10px; }\n.dpl-field { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--dpl-muted); }\n.dpl-field.dpl-row { flex-direction: row; align-items: center; gap: 8px; }\n.dpl-warn-text { margin: 0; font-size: 12.5px; color: var(--dpl-danger); }\n.dpl-dim-text { margin: 0; font-size: 12px; color: var(--dpl-faint); word-break: break-all; }\n.dpl-form-row.dpl-end { justify-content: flex-end; }\n.dpl-form-row.dpl-between { justify-content: space-between; }\n.dpl-root .dpl-btn.dpl-primary-solid { background: var(--dpl-accent-solid); color: #fff; }\n.dpl-root .dpl-btn.dpl-primary-solid:hover { background: var(--dpl-accent-solid-hover); }\n.dpl-root .dpl-btn.dpl-danger-solid { background: var(--dpl-danger); color: #fff; }\n.dpl-modal-title { font-size: 13.5px; font-weight: 600; }\n.dpl-modal-text { margin: 8px 0 0; font-size: 12.5px; color: var(--dpl-muted); line-height: 1.6; }\n.dpl-switch { width: 28px; height: 16px; appearance: none; background: var(--dpl-border); border-radius: 999px; position: relative; cursor: pointer; transition: background 0.15s; min-height: 0; padding: 0; }\n.dpl-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; transition: left 0.15s; }\n.dpl-switch:checked { background: var(--dpl-accent); }\n.dpl-switch:checked::after { left: 14px; }\n\n/* ---- inbox ---- */\n.dpl-inbox-add { display: flex; gap: 6px; padding: 8px; border-bottom: 1px solid var(--dpl-border); flex: none; }\n.dpl-inbox-add input { flex: 1; min-width: 0; }\n\n/* ---- pdf / epub ---- */\n.dpl-pdf { display: flex; flex-direction: column; align-items: center; gap: 12px; }\n.dpl-pdf-canvas { max-width: 100%; box-shadow: 0 2px 14px rgba(15, 23, 42, 0.18); border-radius: 6px; background: #fff; }\n.dpl-pager { display: flex; align-items: center; gap: 10px; color: var(--dpl-muted); font-size: 13px; }\n\n/* ---- vault ---- */\n.dpl-vault-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--dpl-muted); }\n.dpl-tree-stats { font-size: 12px; color: var(--dpl-faint); flex: 1; padding-left: 4px; }\n.dpl-tree details { margin-left: 4px; }\n.dpl-tree summary {\n  cursor: pointer;\n  padding: 4px 8px;\n  font-size: 12px;\n  font-weight: 600;\n  color: var(--dpl-muted);\n  border-radius: 6px;\n  list-style: none;\n  display: flex;\n  align-items: center;\n  gap: 4px;\n}\n.dpl-tree summary::before { content: '\u25B8'; font-size: 10px; transition: transform 0.12s; color: var(--dpl-faint); }\n.dpl-tree details[open] > summary::before { transform: rotate(90deg); }\n.dpl-tree summary:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-tree-file {\n  display: flex;\n  width: calc(100% - 8px);\n  margin: 0 4px;\n  border: none;\n  background: transparent;\n  text-align: left;\n  padding: 4px 10px;\n  cursor: pointer;\n  color: var(--dpl-fg);\n  border-radius: 6px;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  font-size: 13px;\n}\n.dpl-tree-file:hover { background: var(--dpl-bg-hover); }\n.dpl-tree-file.is-active { background: var(--dpl-bg-active); font-weight: 600; }\n.dpl-note-body { line-height: 1.75; font-size: 14.5px; }\n.dpl-note-body h1, .dpl-note-body h2 { border-bottom: 1px solid var(--dpl-border); padding-bottom: 6px; margin: 1.2em 0 0.6em; }\n.dpl-note-body pre { overflow: auto; padding: 12px; border-radius: var(--dpl-radius-sm); background: var(--dpl-bg-2); font-size: 13px; }\n.dpl-note-body code { background: var(--dpl-bg-2); border-radius: 4px; padding: 1px 5px; font-size: 0.92em; }\n.dpl-note-editor {\n  width: 100%;\n  min-height: 62vh;\n  font-family: var(--dsw-alias-font-mono, ui-monospace, 'SF Mono', monospace);\n  font-size: 13px;\n  line-height: 1.7;\n  border-radius: var(--dpl-radius);\n  border: 1px solid var(--dpl-border);\n  padding: 14px;\n  resize: vertical;\n  background: var(--dpl-bg);\n  color: var(--dpl-fg);\n}\n.dpl-note-editor:focus { border-color: var(--dpl-accent); }\n.dpl-wikilink { color: var(--dpl-link); text-decoration: none; border-bottom: 1px dashed currentColor; }\n.dpl-tag { color: var(--dpl-muted); background: var(--dpl-bg-2); border-radius: 4px; padding: 0 4px; font-size: 0.9em; }\n.dpl-backlinks h2, .dpl-search-results h2 { font-size: 14px; margin: 20px 0 8px; font-weight: 600; }\n.dpl-backlinks ul, .dpl-search-results ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }\n.dpl-backlinks button, .dpl-search-results button {\n  border: none;\n  background: transparent;\n  text-align: left;\n  cursor: pointer;\n  padding: 7px 9px;\n  border-radius: var(--dpl-radius-sm);\n  color: var(--dpl-fg);\n  display: block;\n  width: 100%;\n}\n.dpl-backlinks button:hover, .dpl-search-results button:hover { background: var(--dpl-bg-hover); }\n.dpl-search-results p { margin: 2px 0 0; font-size: 12px; color: var(--dpl-faint); }\n\n.dpl-graph { position: relative; height: 100%; }\n.dpl-graph svg { width: 100%; height: 100%; }\n.dpl-graph-edge { stroke: color-mix(in srgb, var(--dpl-fg) 20%, transparent); stroke-width: 1; }\n.dpl-graph-node { fill: var(--dpl-accent); cursor: pointer; }\n.dpl-graph-node.is-dangling { fill: color-mix(in srgb, var(--dpl-fg) 25%, transparent); }\n.dpl-graph-node.is-hover { stroke: var(--dpl-fg); stroke-width: 2; }\n.dpl-graph-label { position: absolute; top: 8px; left: 12px; font-size: 12px; color: var(--dpl-muted); }\n\n/* ---- companion (droplets: docked right panel) ---- */\n.dpl-companion {\n  width: 40%;\n  min-width: 360px;\n  flex: none;\n  display: flex;\n  flex-direction: column;\n  border-left: 1px solid var(--dpl-border);\n  min-height: 0;\n  background: var(--dpl-bg);\n}\n.dpl-companion-header { display: flex; align-items: center; gap: 4px; height: 40px; padding: 0 8px 0 12px; border-bottom: 1px solid var(--dpl-border); }\n.dpl-companion-header strong { flex: 1; font-size: 13px; font-weight: 600; }\n.dpl-companion-context { padding: 8px 12px; border-bottom: 1px solid var(--dpl-border); display: flex; flex-direction: column; gap: 2px; overflow: hidden; }\n.dpl-companion-context strong { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.dpl-companion-context small { font-size: 12px; color: var(--dpl-muted); }\n.dpl-native-chat { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }\n.dpl-companion-loading { padding: 24px; text-align: center; color: var(--dpl-faint); flex: 1; font-size: 13px; }\n.dpl-companion-error { margin: 10px; padding: 10px; border-radius: var(--dpl-radius-sm); background: color-mix(in srgb, var(--dpl-danger) 10%, transparent); color: var(--dpl-danger); font-size: 13px; }\n.dpl-companion-error p { margin: 6px 0 10px; font-size: 12px; word-break: break-all; }\n.dpl-companion-error button { margin-top: 2px; }\n.dpl-companion-notice { display: flex; align-items: center; gap: 6px; margin: 6px 10px; padding: 6px 10px; border-radius: var(--dpl-radius-sm); background: var(--dpl-bg-2); color: var(--dpl-muted); font-size: 12px; }\n.dpl-companion-notice span { flex: 1; }\n.dpl-companion-quote { margin: 8px 10px; border-left: 3px solid var(--dpl-accent); padding: 6px 10px; background: var(--dpl-bg-2); border-radius: 0 var(--dpl-radius-sm) var(--dpl-radius-sm) 0; }\n.dpl-companion-quote strong { font-size: 11px; color: var(--dpl-muted); display: block; margin-bottom: 4px; }\n.dpl-companion-quote blockquote { margin: 0; font-size: 12px; max-height: 90px; overflow: auto; white-space: pre-wrap; }\n.dpl-companion-prompt-strip { display: flex; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--dpl-border); flex: none; overflow-x: auto; }\n.dpl-prompt-ghost { border: 1px solid var(--dpl-border); background: transparent; border-radius: 999px; padding: 4px 12px; font-size: 12px; cursor: pointer; color: var(--dpl-fg); white-space: nowrap; }\n.dpl-prompt-ghost:hover { background: var(--dpl-bg-hover); }\n.dpl-prompt-ghost:disabled { opacity: 0.45; cursor: default; }\n\n/* ---- modal (DSH dialog feel) ---- */\n.dpl-modal-backdrop { position: fixed; inset: 0; background: color-mix(in srgb, var(--dpl-fg) 32%, transparent); display: flex; align-items: center; justify-content: center; z-index: 60; }\n.dpl-modal {\n  background: var(--dpl-bg);\n  border-radius: 14px;\n  width: min(480px, 92vw);\n  max-height: 80vh;\n  display: flex;\n  flex-direction: column;\n  box-shadow: 0 16px 48px rgba(15, 23, 42, 0.28);\n  border: 1px solid var(--dpl-border);\n}\n.dpl-modal.is-wide { width: min(680px, 94vw); }\n.dpl-modal header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--dpl-border); font-weight: 600; }\n.dpl-modal-body { padding: 14px 16px; overflow: auto; }\n.dpl-form-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }\n.dpl-form-row input { flex: 1; min-width: 120px; }\n.dpl-sub-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }\n.dpl-sub-list li { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: var(--dpl-radius-sm); }\n.dpl-sub-list li:hover { background: var(--dpl-bg-hover); }\n.dpl-sub-list label { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }\n.dpl-sub-list label.is-dim { opacity: 0.5; }\n.dpl-sub-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }\n.dpl-sub-meta { font-size: 12px; color: var(--dpl-faint); }\n.dpl-opml-input { width: 100%; }\n.dpl-settings-block h3 { font-size: 13px; margin: 14px 0 6px; font-weight: 600; }\n.dpl-settings-block h3:first-child { margin-top: 0; }\n.dpl-path { display: block; padding: 6px 9px; border-radius: 6px; background: var(--dpl-bg-2); font-size: 12px; font-family: var(--dsw-alias-font-mono, ui-monospace, monospace); word-break: break-all; margin: 6px 0; }\n.dpl-toggle { display: flex; align-items: center; gap: 8px; }\n.dpl-conflict-excerpt { margin: 8px 0; padding: 8px 10px; border-left: 3px solid var(--dpl-danger); font-size: 12px; color: var(--dpl-muted); max-height: 120px; overflow: auto; }\n\n/* ---- responsive: narrow windows stack companion below (qiaomu pattern) ---- */\n\n/* ---- feed page v2 (droplets interaction port) ---- */\n.dpl-flex-fill { flex: 1; min-width: 0; }\n.dpl-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.dpl-spin { animation: dpl-spin 0.9s linear infinite; }\n@keyframes dpl-spin { to { transform: rotate(360deg); } }\n\n.dpl-source { gap: 7px; }\n.dpl-source .dpl-badge { flex: none; }\n.dpl-source-error { color: var(--dpl-danger); flex: none; }\n.dpl-source em { margin-left: auto; }\n.dpl-source em:empty { display: none; }\n\n.dpl-icon-btn.is-on { color: var(--dpl-accent); }\n.dpl-icon-btn .dpl-fill { fill: currentColor; }\n\n.dpl-entry-scroll { min-height: 0; flex: 1; overflow: auto; }\n.dpl-entry-row {\n  cursor: pointer;\n  border-bottom: 1px solid var(--dpl-border);\n  padding: 9px 10px 9px 12px;\n  transition: background-color 0.1s;\n  content-visibility: auto;\n  contain-intrinsic-size: auto 74px;\n}\n.dpl-entry-row:hover { background: var(--dpl-bg-hover); }\n.dpl-entry-row.is-active { background: color-mix(in srgb, var(--dpl-accent) 9%, transparent); }\n.dpl-entry-src { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--dpl-faint); }\n.dpl-entry-src .dpl-star { padding: 0; font-size: 13px; opacity: 0; }\n.dpl-entry-row:hover .dpl-entry-src .dpl-star { opacity: 0.5; }\n.dpl-entry-src .dpl-star.is-on { opacity: 1; }\n.dpl-entry-main { display: flex; align-items: center; gap: 8px; margin-top: 4px; }\n.dpl-entry-main span:last-child { font-size: 13.5px; color: var(--dpl-muted); min-width: 0; flex: 1; }\n.dpl-entry-main span.is-unread { color: var(--dpl-fg); font-weight: 550; }\n.dpl-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--dpl-accent); flex: none; }\n.dpl-dot.is-read { background: var(--dpl-border); }\n.dpl-entry-sum { margin: 3px 0 0 15px; font-size: 12px; color: var(--dpl-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n\n.dpl-badge {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 16px;\n  border-radius: 5px;\n  font-size: 10px;\n  font-weight: 700;\n  flex: none;\n}\n\n.dpl-new-pill {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  gap: 4px;\n  margin: 6px 10px 0;\n  padding: 4px 10px;\n  border: none;\n  border-radius: 999px;\n  background: color-mix(in srgb, var(--dpl-accent) 14%, transparent);\n  color: var(--dpl-accent);\n  font-size: 12px;\n  font-weight: 600;\n  cursor: pointer;\n  flex: none;\n}\n.dpl-new-pill:hover { background: color-mix(in srgb, var(--dpl-accent) 22%, transparent); }\n\n.dpl-reader-actions-float {\n  position: sticky;\n  top: 0;\n  z-index: 5;\n  display: flex;\n  align-items: center;\n  justify-content: flex-end;\n  gap: 2px;\n  padding: 6px 0 14px;\n  background: linear-gradient(to bottom, var(--dpl-bg) 55%, transparent);\n}\n.dpl-round-btn {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 32px;\n  height: 32px;\n  border: none;\n  border-radius: 50%;\n  background: transparent;\n  color: var(--dpl-muted);\n  cursor: pointer;\n}\n.dpl-round-btn:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n\n.dpl-notice {\n  margin: 0 0 10px;\n  padding: 6px 10px;\n  border-radius: var(--dpl-radius-sm);\n  background: color-mix(in srgb, var(--dpl-accent) 10%, transparent);\n  color: var(--dpl-accent);\n  font-size: 12.5px;\n}\n\n/* ---- companion: floating window / docked pane (droplets AiPanel) ---- */\n.dpl-companion.is-floating {\n  position: fixed;\n  z-index: 40;\n  width: min(480px, calc(100vw - 2rem));\n  height: min(70vh, 640px);\n  min-width: 0;\n  border: 1px solid var(--dpl-border);\n  border-radius: 14px;\n  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.3);\n}\n.dpl-companion.is-docked {\n  position: relative;\n  flex: 0 0 auto;\n  min-width: 320px;\n  border-left: 1px solid var(--dpl-border);\n}\n/* Left-edge resize handle (droplets ai-panel-resize): always-visible thin\n   line on a wide invisible hit area; accent while hovering/dragging. */\n.dpl-companion-resize {\n  position: absolute;\n  top: 0;\n  bottom: 0;\n  left: -3px;\n  z-index: 10;\n  width: 8px;\n  cursor: col-resize;\n}\n.dpl-companion-resize::after {\n  content: '';\n  position: absolute;\n  top: 8px;\n  bottom: 8px;\n  left: 50%;\n  width: 1px;\n  transform: translateX(-50%);\n  background: var(--dpl-border);\n}\n.dpl-companion-resize:hover::after,\n.dpl-companion-resize:active::after { background: var(--dpl-accent); }\n.dpl-companion-header.is-draggable { cursor: move; user-select: none; touch-action: none; }\n.dpl-companion-spark { color: var(--dpl-accent); flex: none; }\n.dpl-companion-header .dpl-icon-btn { width: 24px; height: 24px; }\n\n/* AuxRail ask-AI button: droplets shape \u2014 round accent chip, white spark. */\n\n/* ---- global tooltip layer (body-level, JS-positioned) ---- */\n.dpl-gtip {\n  position: fixed;\n  z-index: 300;\n  background: var(--dsw-alias-label-primary, #0f1115);\n  color: var(--dsw-alias-bg-base, #fff);\n  font-size: 12px;\n  line-height: 1;\n  padding: 5px 8px;\n  border-radius: 6px;\n  white-space: nowrap;\n  max-width: 320px;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  opacity: 0;\n  pointer-events: none;\n  transition: opacity 0.12s ease 0.25s;\n  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.24);\n}\n.dpl-gtip[data-empty] { display: none; }\n\n/* Edit-dialog error panel (droplets feed-edit-error shape) */\n.dpl-dialog-errorpanel { margin: 0 20px 10px; display: flex; flex-direction: column; gap: 3px; }\n.dpl-dialog-errortitle { font-weight: 600; }\n.dpl-dialog-errortext { word-break: break-all; }\n.dpl-dialog-errormeta { color: var(--dpl-faint); }\n.dpl-list-empty p { margin: 0 0 10px; }\n.dpl-entry-row:focus-visible { outline: 2px solid var(--dpl-accent); outline-offset: -2px; }\n\n/* Wide article content (tables, long URLs) must scroll inside the reader,\n   never push the panel layout sideways (flex children default to\n   min-width:auto \u2014 the classic blowout). */\n.dpl-preview { min-width: 0; }\n.dpl-article-body-wrap { min-width: 0; }\n.dpl-article-body { min-width: 0; overflow-x: auto; }\n.dpl-article-body table { display: block; max-width: 100%; overflow-x: auto; }\n.dpl-article-body pre { max-width: 100%; }\n.dpl-note-body { min-width: 0; overflow-x: auto; }\n\n/* aux rail (droplets T26: ticks are 2px bars; back-to-top & ask-AI are 22px circles) */\n.dpl-aux-rail {\n  position: absolute;\n  top: 50%;\n  right: 10px;\n  transform: translateY(-50%);\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  gap: 8px;\n  z-index: 6;\n}\n.dpl-aux-tick { display: flex; height: 14px; align-items: center; justify-content: center; padding: 0 4px; border: none; background: transparent; cursor: pointer; }\n.dpl-aux-bar { display: block; height: 2px; border-radius: 1px; background: var(--dpl-border); transition: background-color 0.12s; }\n.dpl-aux-tick:hover .dpl-aux-bar { background: var(--dpl-muted); }\n.dpl-aux-tick.is-active .dpl-aux-bar { background: var(--dpl-accent); }\n.dpl-aux-round, .dpl-aux-ask {\n  display: grid;\n  place-items: center;\n  width: 22px;\n  height: 22px;\n  padding: 0;\n  border: none;\n  border-radius: 9999px;\n  cursor: pointer;\n}\n.dpl-aux-round {\n  background: var(--dpl-bg-2);\n  color: var(--dpl-muted);\n  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.14);\n}\n.dpl-aux-round:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-root .dpl-aux-ask { background: var(--dpl-accent-solid); color: #fff; }\n.dpl-root .dpl-aux-ask:hover { background: var(--dpl-accent-solid-hover); }\n.dpl-aux-popover {\n  position: absolute;\n  top: 50%;\n  right: 34px;\n  transform: translateY(-50%);\n  min-width: 180px;\n  max-width: 280px;\n  max-height: 60vh;\n  overflow: auto;\n  background: var(--dpl-bg);\n  border: 1px solid var(--dpl-border);\n  border-radius: 10px;\n  padding: 6px;\n  box-shadow: 0 10px 32px rgba(15, 23, 42, 0.2);\n  z-index: 7;\n}\n.dpl-aux-pop { display: block; width: 100%; text-align: left; border: none; background: transparent; padding: 5px 8px; border-radius: 6px; font-size: 12.5px; color: var(--dpl-muted); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.dpl-aux-pop:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-aux-pop.is-active { color: var(--dpl-accent); }\n\n.dpl-search-results h2 { display: flex; align-items: center; gap: 10px; }\n.dpl-search-results h2 .dpl-btn { margin-left: auto; }\n.dpl-dialog-field textarea { width: 100%; resize: vertical; font-size: 12px; line-height: 1.5; }\n.dpl-import-summary { font-size: 12px; color: var(--dpl-muted); }\n\n/* ---- OPML import dialog: entry choices + preview list ---- */\n.dpl-import-dialog { width: 560px; }\n.dpl-import-choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 6px 20px 18px; }\n.dpl-import-choice {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  gap: 6px;\n  padding: 22px 12px 16px;\n  border: 1px solid var(--dpl-border);\n  border-radius: 12px;\n  background: transparent;\n  cursor: pointer;\n  color: var(--dpl-fg);\n  transition: border-color 0.12s, background-color 0.12s;\n}\n.dpl-import-choice:hover { border-color: var(--dpl-accent); background: var(--dpl-accent-soft); }\n.dpl-import-choice svg { color: var(--dpl-accent); }\n.dpl-import-choice strong { font-size: 13px; }\n.dpl-import-choice span { font-size: 11.5px; color: var(--dpl-faint); text-align: center; }\n.dpl-import-preview { display: flex; flex-direction: column; min-height: 0; max-height: 56vh; }\n.dpl-import-summary {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 10px;\n  margin: 0 20px;\n  padding: 8px 0;\n  border-top: 1px solid var(--dpl-border);\n  font-size: 12.5px;\n  color: var(--dpl-muted);\n}\n.dpl-import-list { overflow: auto; padding: 4px 12px 8px; display: flex; flex-direction: column; }\n.dpl-import-row {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  padding: 6px 8px;\n  border-radius: 8px;\n  cursor: pointer;\n}\n.dpl-import-row:hover { background: var(--dpl-bg-hover); }\n.dpl-import-row.is-dim { opacity: 0.5; cursor: default; }\n.dpl-import-name { flex: 1; min-width: 0; font-size: 13px; }\n.dpl-import-group { font-size: 11.5px; color: var(--dpl-faint); flex: none; }\n.dpl-import-dup { font-size: 11.5px; color: var(--dpl-faint); flex: none; }\n\n/* ---- dialogs: authoritative set (fixed centered modal, .dpl-root prefix) ---- */\n.dpl-root .dpl-dialog-backdrop, .dpl-companion .dpl-dialog-backdrop {\n  position: fixed;\n  inset: 0;\n  z-index: 200;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  background: rgba(15, 23, 42, 0.32);\n  padding: 24px;\n}\n.dpl-root .dpl-dialog, .dpl-companion .dpl-dialog {\n  display: flex;\n  flex-direction: column;\n  max-width: 100%;\n  max-height: min(80vh, 720px);\n  border-radius: 14px;\n  background: var(--dpl-bg);\n  border: 1px solid var(--dpl-border);\n  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.32);\n}\n.dpl-root .dpl-add-dialog { width: 440px; }\n.dpl-root .dpl-edit-dialog { width: 520px; }\n.dpl-root .dpl-import-dialog { width: 560px; }\n.dpl-root .dpl-dialog-headline { display: flex; align-items: center; gap: 10px; padding: 16px 20px 10px; flex: none; }\n.dpl-root .dpl-icon-btn.dpl-round { width: 28px; height: 28px; border-radius: 50%; }\n.dpl-root .dpl-dialog-rows { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--dpl-border); padding: 12px 20px; font-size: 12px; }\n.dpl-root .dpl-dialog-row { display: flex; align-items: center; gap: 8px; }\n.dpl-root .dpl-dialog-label { width: 64px; flex: none; color: var(--dpl-faint); }\n.dpl-root .dpl-row-flex { display: flex; align-items: center; gap: 4px; }\n.dpl-root .dpl-group-menu { top: calc(100% + 4px); left: 64px; min-width: 180px; max-height: 176px; overflow: auto; }\n.dpl-root .dpl-dialog-url { flex: 1; min-width: 0; color: var(--dpl-muted); word-break: break-all; font-size: 12px; }\n.dpl-root .dpl-dialog-switch-hint { color: var(--dpl-muted); font-size: 12px; }\n.dpl-root .dpl-dialog-pad { margin: 0 20px 8px; }\n.dpl-root .dpl-dialog-footer { display: flex; align-items: center; gap: 8px; border-top: 1px solid var(--dpl-border); padding: 12px 20px; flex: none; }\n.dpl-root .dpl-import-preview { display: flex; flex-direction: column; min-height: 0; flex: 1; }\n.dpl-root .dpl-import-summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 20px; padding: 8px 0; border-top: 1px solid var(--dpl-border); font-size: 12.5px; color: var(--dpl-muted); flex: none; }\n.dpl-root .dpl-import-list { overflow: auto; padding: 4px 12px 8px; display: flex; flex-direction: column; min-height: 0; }\n.dpl-root .dpl-import-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; cursor: pointer; }\n.dpl-root .dpl-import-row:hover { background: var(--dpl-bg-hover); }\n.dpl-root .dpl-import-row.is-dim { opacity: 0.5; cursor: default; }\n.dpl-root .dpl-import-name { flex: 1; min-width: 0; font-size: 13px; }\n.dpl-root .dpl-import-group { font-size: 11.5px; color: var(--dpl-faint); flex: none; }\n.dpl-root .dpl-import-dup { font-size: 11.5px; color: var(--dpl-faint); flex: none; }\n.dpl-root .dpl-import-choice { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 22px 12px 16px; border: 1px solid var(--dpl-border); border-radius: 12px; background: transparent; cursor: pointer; color: var(--dpl-fg); transition: border-color 0.12s, background-color 0.12s; }\n.dpl-root .dpl-import-choice:hover { border-color: var(--dpl-accent); background: var(--dpl-accent-soft); }\n.dpl-root .dpl-import-choice svg { color: var(--dpl-accent); }\n.dpl-root .dpl-import-filestatus { padding: 0 20px; }\n.dpl-root .dpl-import-parsing { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--dpl-muted); padding: 6px 0; }\n.dpl-root .dpl-import-filestatus .dpl-dialog-error { display: flex; align-items: center; gap: 8px; }\n.dpl-root .dpl-import-successbar {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  margin: 8px 12px 0;\n  padding: 7px 10px;\n  border-radius: 8px;\n  background: color-mix(in srgb, #34c98e 12%, transparent);\n  color: #1e9e6a;\n  font-size: 12.5px;\n}\n.dpl-root .dpl-import-successbar span { flex: 1; }\n\n.dpl-root .dpl-refresh-progress { padding: 0 10px 8px; flex: none; }\n.dpl-root .dpl-refresh-progress-head {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  border: none;\n  background: transparent;\n  padding: 0;\n  font-size: 11.5px;\n  color: var(--dpl-muted);\n  cursor: pointer;\n  width: 100%;\n  text-align: left;\n}\n.dpl-root .dpl-refresh-progress-head:hover { color: var(--dpl-fg); }\n.dpl-root .dpl-refresh-bar { height: 2px; border-radius: 1px; background: var(--dpl-border); margin-top: 5px; overflow: hidden; }\n.dpl-root .dpl-refresh-bar-fill { height: 100%; background: var(--dpl-accent); transition: width 0.4s ease; }\n.dpl-root .dpl-refresh-errors {\n  max-height: 200px;\n  overflow: auto;\n  margin-top: 6px;\n  border: 1px solid var(--dpl-border);\n  border-radius: 8px;\n  padding: 4px;\n  background: var(--dpl-bg-2);\n}\n.dpl-root .dpl-refresh-error { display: flex; flex-direction: column; gap: 1px; padding: 4px 6px; font-size: 11px; }\n.dpl-root .dpl-refresh-error span { color: var(--dpl-fg); }\n.dpl-root .dpl-refresh-error em { font-style: normal; color: var(--dpl-danger); word-break: break-all; }\n\n/* ---- settings screen (droplets two-pane settings) ---- */\n.dpl-root .dpl-header-gear {\n  display: grid;\n  place-items: center;\n  width: 26px;\n  height: 26px;\n  flex: none;\n  margin-left: auto;\n  border: none;\n  border-radius: 7px;\n  background: transparent;\n  color: var(--dpl-muted);\n  cursor: pointer;\n}\n.dpl-root .dpl-header-gear:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-root .dpl-header-gear.is-active { background: var(--dpl-accent-soft); color: var(--dpl-accent); }\n.dpl-root .dpl-settings { display: flex; flex: 1; min-height: 0; height: 100%; }\n.dpl-root .dpl-settings-nav {\n  width: 176px;\n  flex: none;\n  border-right: 1px solid var(--dpl-border);\n  padding: 10px 8px;\n  display: flex;\n  flex-direction: column;\n  gap: 2px;\n  overflow: auto;\n}\n.dpl-root .dpl-settings-navhead { display: flex; align-items: center; gap: 6px; padding: 2px 4px 10px; font-size: 13px; }\n.dpl-root .dpl-settings-navitem {\n  display: block;\n  width: 100%;\n  text-align: left;\n  border: none;\n  background: transparent;\n  padding: 7px 10px;\n  border-radius: 8px;\n  font-size: 13px;\n  color: var(--dpl-muted);\n  cursor: pointer;\n}\n.dpl-root .dpl-settings-navitem:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-root .dpl-settings-navitem.is-active { background: var(--dpl-accent-soft); color: var(--dpl-accent); font-weight: 500; }\n.dpl-root .dpl-settings-body { flex: 1; min-width: 0; overflow: auto; padding: 18px 22px 40px; }\n.dpl-root .dpl-settings-section { max-width: 720px; display: flex; flex-direction: column; gap: 14px; }\n.dpl-root .dpl-settings-section h2 { margin: 0 0 2px; font-size: 15px; font-weight: 600; }\n.dpl-root .dpl-settings-card {\n  border: 1px solid var(--dpl-border);\n  border-radius: 12px;\n  padding: 14px 16px;\n  display: flex;\n  flex-direction: column;\n  gap: 10px;\n  background: var(--dpl-bg);\n}\n.dpl-root .dpl-settings-rowname { font-size: 12.5px; color: var(--dpl-muted); }\n.dpl-root .dpl-settings-pathrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }\n.dpl-root .dpl-settings-pathrow code { flex: 1; min-width: 220px; font-size: 12.5px; word-break: break-all; }\n.dpl-root .dpl-settings-hint { margin: 0; font-size: 12px; color: var(--dpl-faint); line-height: 1.6; }\n.dpl-root .dpl-settings-dirs { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }\n.dpl-root .dpl-settings-dir {\n  display: grid;\n  grid-template-columns: auto 1fr;\n  grid-template-areas: 'icon name' 'label label';\n  gap: 2px 6px;\n  align-items: center;\n  text-align: left;\n  border: 1px solid var(--dpl-border);\n  border-radius: 10px;\n  background: transparent;\n  padding: 9px 10px;\n  cursor: pointer;\n  color: var(--dpl-fg);\n}\n.dpl-root .dpl-settings-dir:hover { border-color: var(--dpl-accent); background: var(--dpl-accent-soft); }\n.dpl-root .dpl-settings-dir.is-missing { opacity: 0.55; }\n.dpl-root .dpl-settings-dir svg { grid-area: icon; color: var(--dpl-accent); }\n.dpl-root .dpl-settings-dirname { grid-area: name; font-size: 12.5px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }\n.dpl-root .dpl-settings-dir em { display: none; }\n.dpl-root .dpl-settings-dirlabel { grid-area: label; font-size: 11.5px; color: var(--dpl-faint); }\n.dpl-root .dpl-settings-metrics { display: flex; flex-direction: column; gap: 8px; }\n.dpl-root .dpl-settings-metrics > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 12.5px; }\n.dpl-root .dpl-settings-metrics span { color: var(--dpl-faint); }\n.dpl-root .dpl-settings-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; word-break: break-all; text-align: right; }\n.dpl-root .dpl-settings-segmented { display: flex; gap: 8px; flex-wrap: wrap; }\n.dpl-root .dpl-settings-seg {\n  border: 1px solid var(--dpl-border);\n  background: transparent;\n  border-radius: 8px;\n  padding: 6px 12px;\n  font-size: 12.5px;\n  color: var(--dpl-muted);\n  cursor: pointer;\n}\n.dpl-root .dpl-settings-seg:hover { border-color: var(--dpl-accent); color: var(--dpl-fg); }\n.dpl-root .dpl-settings-seg.is-active { background: var(--dpl-accent-solid); border-color: var(--dpl-accent-solid); color: #fff; }\n.dpl-root .dpl-settings-toggle { display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--dpl-fg); cursor: pointer; }\n.dpl-root .dpl-settings-toggle input { width: 14px; height: 14px; flex: none; }\n.dpl-root .dpl-settings-field { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12.5px; color: var(--dpl-fg); }\n.dpl-root .dpl-settings-field input { width: 96px; flex: none; text-align: right; }\n.dpl-root .dpl-settings-busy, .dpl-root .dpl-settings-saved {\n  position: sticky;\n  bottom: 0;\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  margin-top: 12px;\n  padding: 6px 10px;\n  border-radius: 8px;\n  font-size: 12px;\n  background: var(--dpl-bg-2);\n  color: var(--dpl-muted);\n}\n.dpl-root .dpl-settings-saved { color: #1e9e6a; background: color-mix(in srgb, #34c98e 12%, transparent); }\n";
 
 // src/client/index.jsx
 var PLUGIN_ID = "droplets-dsh";
@@ -108299,6 +108686,7 @@ var NO_PARAM_METHODS = /* @__PURE__ */ new Set([
   "vaultTree",
   "vaultGraph",
   "getSettings",
+  "getWorkspace",
   "getStorageInfo",
   "clearData"
 ]);
@@ -108339,6 +108727,8 @@ var TYPERT_REMOTE = {
     "vaultWrite",
     "getSettings",
     "saveSettings",
+    "getWorkspace",
+    "openPath",
     "getStorageInfo",
     "clearData",
     "setReadingContext",
@@ -108407,7 +108797,11 @@ function registerPanel(ctx) {
     vaultBacklinks: (path) => call("vaultBacklinks", { path }),
     vaultWrite: (params) => call("vaultWrite", params),
     getSettings: () => call("getSettings"),
-    saveSettings: (patch) => call("saveSettings", { patch }),
+    getWorkspace: () => call("getWorkspace"),
+    openPath: (params) => call("openPath", params),
+    // The remote layer takes the argument object flat (a wrapped { patch }
+    // object is silently ignored), so send the patch as the request itself.
+    saveSettings: (patch) => call("saveSettings", patch),
     getStorageInfo: () => call("getStorageInfo"),
     clearData: () => call("clearData")
   };
