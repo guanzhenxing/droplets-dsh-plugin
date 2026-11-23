@@ -2920,7 +2920,7 @@ var __iconData4 = {
   ]
 };
 __iconData4.node;
-var CheckCheck2 = createLucideIcon(__iconData4);
+var CheckCheck = createLucideIcon(__iconData4);
 
 // node_modules/lucide-react/dist/esm/icons/chevron-down.mjs
 var __iconData5 = {
@@ -4611,7 +4611,7 @@ function ItemList(props) {
       /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("button", { type: "button", className: "dpl-icon-btn" + (viewFilter === "unseen" ? " is-toggled" : ""), "data-tip": "\u53EA\u663E\u793A\u672A\u8BFB", "aria-label": "\u53EA\u663E\u793A\u672A\u8BFB", "aria-pressed": viewFilter === "unseen", onClick: () => setViewFilter(viewFilter === "unseen" ? "all" : "unseen"), children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Circle, { size: 14, className: viewFilter === "unseen" ? "dpl-fill" : void 0 }) }),
       /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("button", { type: "button", className: "dpl-icon-btn" + (viewFilter === "seen" ? " is-toggled" : ""), "data-tip": "\u53EA\u663E\u793A\u5DF2\u8BFB", "aria-label": "\u53EA\u663E\u793A\u5DF2\u8BFB", "aria-pressed": viewFilter === "seen", onClick: () => setViewFilter(viewFilter === "seen" ? "all" : "seen"), children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(CircleCheck, { size: 15 }) }),
       /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("button", { type: "button", className: "dpl-icon-btn" + (viewFilter === "skipped" ? " is-toggled" : ""), "data-tip": "\u53EA\u663E\u793A\u7565\u8FC7", "aria-label": "\u53EA\u663E\u793A\u7565\u8FC7", "aria-pressed": viewFilter === "skipped", onClick: () => setViewFilter(viewFilter === "skipped" ? "all" : "skipped"), children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Archive, { size: 15 }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("button", { type: "button", className: "dpl-icon-btn", "data-tip": "\u6807\u8BB0\u5168\u90E8\u4E3A\u5DF2\u8BFB", "aria-label": "\u6807\u8BB0\u5168\u90E8\u4E3A\u5DF2\u8BFB", disabled: unseenCount === 0, onClick: () => setConfirmMarkAllRead(true), children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(CheckCheck2, { size: 15 }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("button", { type: "button", className: "dpl-icon-btn", "data-tip": "\u6807\u8BB0\u5168\u90E8\u4E3A\u5DF2\u8BFB", "aria-label": "\u6807\u8BB0\u5168\u90E8\u4E3A\u5DF2\u8BFB", disabled: unseenCount === 0, onClick: () => setConfirmMarkAllRead(true), children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(CheckCheck, { size: 15 }) }),
       /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: "dpl-flex-fill" }),
       /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(PanelCollapseButton, { onClick: onCollapse })
     ] }),

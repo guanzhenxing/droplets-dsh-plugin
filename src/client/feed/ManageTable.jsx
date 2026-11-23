@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { ChevronDown, ClipboardPaste, FileUp, Link, Loader2, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { CheckCheck, ChevronDown, ClipboardPaste, FileUp, Link, Loader2, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { sortManageFeeds } from './feed-sorting.js';
 import { FeedBadge } from './SourcesPane.jsx';
 import { formatWhenFull } from './format.js';
