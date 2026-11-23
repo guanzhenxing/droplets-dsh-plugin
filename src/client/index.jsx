@@ -37,7 +37,7 @@ function method(name, params = true) {
 
 const NO_PARAM_METHODS = new Set([
   'listChannels', 'listFeeds', 'refreshStatus', 'listSubscriptions', 'opmlExport', 'vaultStatus', 'vaultReindex',
-  'vaultTree', 'vaultGraph', 'getSettings', 'getWorkspace', 'getStorageInfo', 'clearData',
+  'vaultTree', 'vaultGraph', 'getSettings', 'getWorkspace', 'getStorageInfo', 'clearData', 'inboxRetryAllFailed',
 ]);
 
 const TYPERT_REMOTE = {
@@ -47,7 +47,9 @@ const TYPERT_REMOTE = {
     'listFeeds', 'refreshStatus', 'listItems', 'setItemState', 'markAllRead', 'setFeed',
     'listSubscriptions', 'addSubscription', 'removeSubscription', 'updateSubscription',
     'opmlPreview', 'opmlImport', 'opmlExport', 'refresh',
-    'inboxAddUrl', 'inboxList', 'inboxRead', 'inboxMarkDone',
+    'inboxAddUrl', 'inboxList', 'inboxGet', 'inboxRead', 'inboxReadOriginal',
+    'inboxUpdate', 'inboxRetry', 'inboxRetryAllFailed', 'inboxImportMarkdown',
+    'inboxMoveToLibrary', 'inboxMoveToTrash', 'inboxMarkDone',
     'vaultStatus', 'vaultReindex', 'vaultTree', 'vaultRead', 'vaultSearch', 'vaultGraph', 'vaultBacklinks', 'vaultWrite',
     'getSettings', 'saveSettings', 'getWorkspace', 'setWorkspace', 'openPath', 'getStorageInfo', 'clearData', 'setReadingContext', 'prepareChat',
   ].map((name) => method(name, !NO_PARAM_METHODS.has(name))),
@@ -111,7 +113,14 @@ function registerPanel(ctx) {
     refresh: (channel) => call('refresh', { channel }),
     inboxAddUrl: (params) => call('inboxAddUrl', params),
     inboxList: (params) => call('inboxList', params),
-    inboxRead: (key) => call('inboxRead', { key }),
+    inboxGet: (id) => call('inboxGet', { id }),
+    inboxReadOriginal: (id) => call('inboxReadOriginal', { id }),
+    inboxUpdate: (params) => call('inboxUpdate', params),
+    inboxRetry: (id) => call('inboxRetry', { id }),
+    inboxRetryAllFailed: () => call('inboxRetryAllFailed'),
+    inboxImportMarkdown: (params) => call('inboxImportMarkdown', params),
+    inboxMoveToLibrary: (id) => call('inboxMoveToLibrary', { id }),
+    inboxMoveToTrash: (id) => call('inboxMoveToTrash', { id }),
     inboxMarkDone: (key) => call('inboxMarkDone', { key }),
     vaultStatus: () => call('vaultStatus'),
     vaultReindex: () => call('vaultReindex'),

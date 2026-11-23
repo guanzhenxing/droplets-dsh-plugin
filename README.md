@@ -3,7 +3,7 @@
 信息流 + 收件箱 + 知识库三空间,以 DeepSeek Harness 插件形态实现:一个侧栏入口,main 面板内三空间切换,配原生 AI 伴读与 Agent 工具。
 
 - **信息流**:RSS 2.x / RSS 1.0 (RDF) / Atom 1.0 / JSON Feed 订阅,OPML 导入导出,源分组,未读在前 + 会话内冻结排序,收藏,搜索,远程图片 lazy + no-referrer,可关闭图片。
-- **收件箱**:粘贴网页 / PDF / EPUB 链接存进来稍后处理;guardedFetch 抓取(首字节 20s / 总 60s / 50MB 上限);PDF/EPUB 原件保存并就地阅读(pdfjs / fflate);处理完即走——AI 整理进知识库(来源写进 frontmatter)或读完即删。
+- **收件箱**:droplets 桌面端收件箱的 1:1 移植(筛选/条目/阅读三栏 + 右缘辅助轨道);数据直接落在 Droplets 工作区 `inbox/<uuid>/{content.md, meta.json}`(与桌面端完全同一份);添加 URL 建未读占位后后台抓取(首字节 20s / 总 60s / 50MB 上限),正文转 Markdown 存档;PDF/EPUB 原件存 `source/original.*` 并就地阅读(pdfjs / fflate);抓取失败占位可重试(单条/全部);标签编辑;处理完成 = 保留到资料库(inbox→library 迁移事务,与原生同构)或移入回收站(`.trash/` 暂存提交,可在 Droplets 回收站恢复)。
 - **知识库**:指向任意 Markdown 目录(默认位置自带 PARA 骨架);标题/标签倒排 + 正文子串搜索;mtime+size 索引失效;wikilink 可点、未解析可创建;反链;图谱(d3-force 确定性布局);源码级轻编辑,`expected_sha` 乐观锁 + 冲突三选(重载/覆盖/另存)。
 - **AI 集成**:宿主原生伴读(会话创建/retain/SessionProvider 嵌入,材料上下文经 systemPrompt 注入,选段为默认对象);三个多 action 工具 `droplets_feed` / `droplets_inbox` / `droplets_vault` 与面板共用同一实现。
 
@@ -35,7 +35,7 @@ npm pack            # 产出 droplets-dsh-x.y.z.tgz(内含构建产物)
 
 ## 数据与所有权
 
-- 全文件化:`$DSH_HOME/storages/droplets-dsh/` 下 `data.json`(订阅/未读/收藏/收件箱元数据/倒排缓存)、`bodies.json`(正文缓存,懒加载 + 上限淘汰)、`inbox-files/`(收件箱原件)、`vault/`(默认知识库)。
+- 全文件化:`$DSH_HOME/storages/droplets-dsh/` 下 `data.json`(订阅/未读/收藏/倒排缓存)、`bodies.json`(正文缓存,懒加载 + 上限淘汰)、`vault/`(默认知识库);收件箱为 Droplets 原生格式,独立于存储后端(共用工作区时在 `<workspace>/inbox/`,私有模式在 `storages/droplets-dsh/inbox-workspace/`)。
 - 原子写(tmp+rename)+ 500ms 防抖;卸载不删 storages;设置里有"清空插件数据"。
 - 导出 = 拷目录 + OPML。
 
@@ -50,7 +50,7 @@ npm pack            # 产出 droplets-dsh-x.y.z.tgz(内含构建产物)
 ## Agent 工具
 
 - `droplets_feed`:`list_channels | list_articles | read | search | add_subscription | refresh`
-- `droplets_inbox`:`add_url | list | read | mark_done`
+- `droplets_inbox`:`add_url | list | read | mark_done`(与面板共用工作区收件箱;`mark_done` = 移入 Droplets 回收站,可恢复)
 - `droplets_vault`:`search | read | write | backlinks | list`(`write` 必带 `expected_sha`,新文件传 null)
 
 ## 开发

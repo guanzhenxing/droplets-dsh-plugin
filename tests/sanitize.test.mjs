@@ -39,3 +39,15 @@ test('firstImageUrl extracts a safe image', () => {
   assert.equal(firstImageUrl('<img src="https://x.example/i.png">', undefined), 'https://x.example/i.png');
   assert.equal(firstImageUrl('<img src="javascript:alert(1)">', undefined), undefined);
 });
+
+test('drop-content closers unwind the drop depth (regression: <head><title>)', () => {
+  const clean = sanitizeHtml('<html><head><title>页题</title><style>p{}</style></head><body><main><p>正文还在</p></main></body></html>');
+  assert.ok(clean.includes('正文还在'), `text survived: ${clean}`);
+  assert.ok(!clean.includes('页题'));
+  assert.ok(!clean.includes('p{}'));
+});
+
+test('unclosed drop tags close over via an outer closer', () => {
+  const clean = sanitizeHtml('<head><title>no close</head><body><p>after</p></body>');
+  assert.ok(clean.includes('after'), `text survived: ${clean}`);
+});

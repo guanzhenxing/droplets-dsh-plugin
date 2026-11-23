@@ -97,6 +97,10 @@ export function sanitizeHtml(html, options = {}) {
   const { baseUrl, maxLength = 400_000 } = options;
   let out = '';
   const stack = [];
+  // Open drop-content subtrees (<title>, <script>, …): their closers must
+  // unwind droppedDepth, otherwise a single <head><title>…</title></head>
+  // silences every text node after it (tags still rendered, text gone).
+  const dropStack = [];
   let i = 0;
   const n = html.length;
   let droppedDepth = 0;
@@ -123,17 +127,17 @@ export function sanitizeHtml(html, options = {}) {
     i = gt + 1;
     if (source.startsWith('/')) {
       const name = source.slice(1).trim().toLowerCase();
+      const dropIdx = dropStack.lastIndexOf(name);
+      if (dropIdx !== -1) {
+        // Close a dropped subtree (possibly over unclosed inner drop tags).
+        droppedDepth -= dropStack.length - dropIdx;
+        dropStack.length = dropIdx;
+        continue;
+      }
       const openIdx = stack.lastIndexOf(name);
       if (openIdx !== -1) {
         while (stack.length > openIdx) {
-          const closing = stack.pop();
-          if (droppedDepth > 0) {
-            // Leaving a dropped subtree.
-            if (closing === '__drop__') droppedDepth -= 1;
-            else out += `</${closing}>`;
-          } else {
-            out += `</${closing}>`;
-          }
+          out += `</${stack.pop()}>`;
         }
       }
       continue;
@@ -144,7 +148,10 @@ export function sanitizeHtml(html, options = {}) {
     if (!nameMatch) continue;
     const tag = nameMatch[0].toLowerCase();
     if (DROP_CONTENT_TAGS.has(tag)) {
-      if (!selfClosing && !VOID_TAGS.has(tag)) droppedDepth += 1;
+      if (!selfClosing && !VOID_TAGS.has(tag)) {
+        droppedDepth += 1;
+        dropStack.push(tag);
+      }
       continue;
     }
     if (!ALLOWED_TAGS.has(tag)) continue;

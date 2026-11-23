@@ -93,7 +93,7 @@ test('feed flow: subscribe, list, read, favorite, refresh keeps dedup state', as
   }
 });
 
-test('inbox flow: add url, read marks read, mark done removes everything', async () => {
+test('inbox flow: add url, background fetch lands markdown, mark done trashes', async () => {
   const home = tempHome();
   const site = await startServer((req, res) => {
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
@@ -106,19 +106,26 @@ test('inbox flow: add url, read marks read, mark done removes everything', async
   try {
     const { item, duplicate } = await service.inboxAddUrl({ url: 'http://loopback.test:' + site.port + '/page' });
     assert.equal(duplicate, false);
-    assert.equal(item.kind, 'web');
-    assert.equal(item.title, 'Doc');
+    assert.equal(item.status, 'unread');
+    // Wait out the background fetch chain, then the outcome is on disk.
+    await service.inbox.runExclusive(item.id, () => Promise.resolve());
+    const detail = await service.inboxGet({ id: item.id });
+    assert.equal(detail.item.title, 'Doc');
+    assert.equal(detail.item.objectType, 'article');
+    assert.ok(detail.content.includes('Real content'));
 
-    const read = await service.inboxRead({ key: item.key });
-    assert.ok(read.html.includes('Real content'));
-    assert.equal(read.item.readAt !== null, true);
+    const read = await service.inboxRead({ key: item.id });
+    assert.ok(read.content.includes('Real content'));
     assert.ok(read.text.includes('Real content'));
 
     const again = await service.inboxAddUrl({ url: 'http://loopback.test:' + site.port + '/page' });
     assert.equal(again.duplicate, true);
 
-    const removed = await service.inboxMarkDone({ key: item.key });
-    assert.equal(removed.removed, true);
+    const marked = await service.inboxUpdate({ id: item.id, patch: { status: 'finished' } });
+    assert.equal(marked.item.status, 'finished');
+
+    const removed = await service.inboxMarkDone({ key: item.id });
+    assert.deepEqual(removed, { removed: true, trashed: true });
     const { items } = await service.inboxList({});
     assert.equal(items.length, 0);
   } finally {

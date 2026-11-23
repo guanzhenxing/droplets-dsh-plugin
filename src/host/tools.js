@@ -102,17 +102,18 @@ export function createToolDefinitions(service) {
     // --------------------------------------------------------------- droplets_inbox
     defineTool({
       name: 'droplets_inbox',
-      description: 'Droplets 收件箱:把网页/PDF/EPUB 链接存进来稍后处理、列出、阅读、处理完删除。' + INBOX_ADD_TIMEOUT_NOTE,
+      description: 'Droplets 收件箱:把网页/PDF/EPUB 链接存进来稍后处理、列出、阅读、处理完成移入回收站。与 Droplets 桌面端共用同一份数据(inbox/<id>/)。' + INBOX_ADD_TIMEOUT_NOTE,
       parameters: {
         action: {
           type: 'string',
           enum: ['add_url', 'list', 'read', 'mark_done'],
-          description: 'add_url 抓取并存入;list 列出;read 读内容;mark_done 处理完成并删除。',
+          description: 'add_url 抓取并存入;list 列出;read 读内容;mark_done 处理完成并移入回收站(可在 Droplets 回收站恢复)。',
           required: true,
         },
         url: { type: 'string', description: 'add_url 的目标链接 (http/https)。' },
-        key: { type: 'string', description: 'read / mark_done 的条目 key(list 返回)。' },
-        filter: { type: 'string', description: 'list 的过滤:all | unread。' },
+        key: { type: 'string', description: 'read / mark_done 的条目 key(list 返回的 id)。' },
+        filter: { type: 'string', description: 'list 的过滤:all | unread | finished | fetch_failed。' },
+        tag: { type: 'string', description: 'list 的标签过滤(filter=all 时可组合)。' },
       },
       output: { schema: { type: 'object', additionalProperties: true }, render: renderJson },
       execute: async (args) => {
@@ -123,8 +124,9 @@ export function createToolDefinitions(service) {
             return { duplicate, item };
           }
           case 'list': {
-            const { items } = await service.inboxList({ filter: args.filter });
-            return { count: items.length, items };
+            const status = args?.filter && args.filter !== 'all' ? args.filter : undefined;
+            const { items, counts } = await service.inboxList({ status, tag: args?.tag });
+            return { count: items.length, counts, items };
           }
           case 'read': {
             if (typeof args?.key !== 'string' || args.key === '') throw new Error('read 需要 key');
@@ -137,8 +139,8 @@ export function createToolDefinitions(service) {
           }
           case 'mark_done': {
             if (typeof args?.key !== 'string' || args.key === '') throw new Error('mark_done 需要 key');
-            const { removed } = await service.inboxMarkDone({ key: args.key });
-            return { removed };
+            const { removed, trashed } = await service.inboxMarkDone({ key: args.key });
+            return { removed, trashed };
           }
           default:
             throw new Error(`未知 action：${String(args?.action)}`);

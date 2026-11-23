@@ -16,7 +16,7 @@ import { TypertRemoteService, Remote } from '@deepseek-ai/dsh-typert-protocol';
 import { defineTool } from '@deepseek-ai/dsh-tools';
 import { DropletsStore, defaultVaultPath, entriesDir, storageDir } from './store.js';
 import { WorkspaceStore } from './workspace-store.js';
-import { Inbox } from './inbox.js';
+import { WorkspaceInbox } from './workspace-inbox.js';
 import { Vault, ensureDefaultVault } from './vault.js';
 import { buildAskPrompt, buildReadingContext, storeContext } from './context.js';
 import { createToolDefinitions } from './tools.js';
@@ -102,7 +102,7 @@ export class DropletsService extends TypertRemoteService {
     // The strict shared instance by default; tests (and only tests) may swap
     // this for a permissive factory to exercise the full flow on loopback.
     this.fetcher = guardedFetch;
-    this.inbox = new Inbox(this.store, ctx.logger, () => this.fetcher);
+    this.inbox = this.createInbox();
     this.refreshing = false;
     this.tickTimer = undefined;
     this.stopped = false;
@@ -116,7 +116,7 @@ export class DropletsService extends TypertRemoteService {
             this.workspacePath = null;
             this.sharedWorkspace = false;
             this.store = new DropletsStore(this.ctx.logger, this.config.maxBodies ?? 300);
-            this.inbox = new Inbox(this.store, this.ctx.logger, () => this.fetcher);
+            this.inbox = this.createInbox();
           }
         } else if (pointer !== this.workspacePath) {
           const probe = await stat(join(pointer, 'state', 'app.sqlite')).catch(() => null);
@@ -124,7 +124,7 @@ export class DropletsService extends TypertRemoteService {
             this.workspacePath = pointer;
             this.sharedWorkspace = true;
             this.store = new WorkspaceStore(this.ctx.logger, pointer, this.config.maxBodies ?? 300);
-            this.inbox = new Inbox(this.store, this.ctx.logger, () => this.fetcher);
+            this.inbox = this.createInbox();
           }
         }
       }
@@ -187,6 +187,17 @@ export class DropletsService extends TypertRemoteService {
     // Sharing the Droplets workspace means sharing its markdown vault too.
     if (this.sharedWorkspace) return join(this.store.root, 'vault');
     return defaultVaultPath();
+  }
+
+  /**
+   * The inbox always uses the native Droplets on-disk format
+   * (inbox/<uuid>/{content.md, meta.json}). Shared mode points at the
+   * workspace root so both apps process the same items; private mode keeps
+   * the same layout inside the plugin's own storage dir.
+   */
+  createInbox() {
+    const root = this.sharedWorkspace && this.store?.root ? this.store.root : join(storageDir(), 'inbox-workspace');
+    return new WorkspaceInbox(root, this.ctx?.logger, () => this.fetcher);
   }
 
   vaultService() {
@@ -811,15 +822,14 @@ export class DropletsService extends TypertRemoteService {
         if (this.store.data.favorites[entry.key] !== undefined) pinned.add(entry.key);
       }
     }
-    for (const item of this.store.data.inbox) {
-      if (item.key) metadata.add(item.key);
-    }
+    // The inbox now lives on the workspace (meta/content on disk), so it no
+    // longer registers bodies with the sidecar body store.
     this.store.bodies.prune(metadata, pinned);
     this.store.bodies.touch();
   }
 
   // ------------------------------------------------------------------
-  // Inbox space (thin Remote forwarding with request validation)
+  // Inbox space (workspace-native: same files as the Droplets desktop app)
   // ------------------------------------------------------------------
 
   async inboxAddUrl(request) {
@@ -831,22 +841,113 @@ export class DropletsService extends TypertRemoteService {
 
   async inboxList(request) {
     await this.ready;
-    return { items: this.inbox.list({ filter: request?.filter }) };
+    const filter = typeof request === 'string' ? { status: request } : {
+      status: request?.status,
+      tag: request?.tag,
+      query: request?.query,
+    };
+    const result = await this.inbox.list(filter);
+    return { items: result.items, counts: result.counts, pendingIds: result.pendingIds };
   }
 
+  /** Full read model for one item (native inbox:get shape). */
+  async inboxGet(request) {
+    await this.ready;
+    const id = typeof request === 'string' ? request : request?.id;
+    if (typeof id !== 'string' || id === '') throw new Error('无效条目');
+    const existing = await this.inbox.get(id);
+    if (!existing) return { item: null, content: null };
+    return { item: existing.meta, content: existing.content };
+  }
+
+  /** PDF/EPUB original bytes for the client-side readers. */
+  async inboxReadOriginal(request) {
+    await this.ready;
+    const id = typeof request === 'string' ? request : request?.id;
+    if (typeof id !== 'string' || id === '') throw new Error('无效条目');
+    return this.inbox.readOriginal(id);
+  }
+
+  /** Agent-tool read: item + plain text (markdown body or extracted layer). */
   async inboxRead(request) {
     await this.ready;
     const key = typeof request === 'string' ? request : request?.key;
     if (typeof key !== 'string' || key === '') throw new Error('无效条目');
-    return this.inbox.read(key);
+    const existing = await this.inbox.get(key);
+    if (!existing) throw new Error(`收件箱里没有这一条：${key}`);
+    const text = await this.inbox.plainText(key).catch(() => '');
+    return { item: existing.meta, content: existing.content, text };
   }
 
+  /** Update status/tags/title (native inbox:update). */
+  async inboxUpdate(request) {
+    await this.ready;
+    const id = typeof request === 'string' ? request : request?.id;
+    const patch = request?.patch ?? {};
+    if (typeof id !== 'string' || id === '') throw new Error('无效条目');
+    if (patch.status !== undefined && !['unread', 'finished', 'fetch_failed'].includes(patch.status)) {
+      throw new Error('无效状态');
+    }
+    if (patch.tags !== undefined && (!Array.isArray(patch.tags) || patch.tags.some((tag) => typeof tag !== 'string'))) {
+      throw new Error('标签必须是字符串数组');
+    }
+    const item = await this.inbox.updateMeta(id, patch);
+    return { item };
+  }
+
+  async inboxRetry(request) {
+    await this.ready;
+    const id = typeof request === 'string' ? request : request?.id;
+    if (typeof id !== 'string' || id === '') throw new Error('无效条目');
+    const item = await this.inbox.retry(id);
+    return { item };
+  }
+
+  async inboxRetryAllFailed() {
+    await this.ready;
+    return this.inbox.retryAllFailed();
+  }
+
+  /** Markdown import (file content picked client-side). */
+  async inboxImportMarkdown(request) {
+    await this.ready;
+    const content = request?.content;
+    if (typeof content !== 'string' || content.trim() === '') throw new Error('导入内容为空');
+    if (content.length > 2_000_000) throw new Error('文件过大（>2 MB）');
+    const item = await this.inbox.importMarkdown({
+      filename: request?.filename,
+      content,
+      title: typeof request?.title === 'string' ? request.title : undefined,
+      tags: Array.isArray(request?.tags) ? request.tags : undefined,
+    });
+    return { item };
+  }
+
+  /** 处理完成 → 保留到资料库 (native library:move-from-inbox). */
+  async inboxMoveToLibrary(request) {
+    await this.ready;
+    const id = typeof request === 'string' ? request : request?.id;
+    if (typeof id !== 'string' || id === '') throw new Error('无效条目');
+    const item = await this.inbox.moveToLibrary(id);
+    return { item };
+  }
+
+  /** 处理完成 → 移入回收站 (native trash:add). */
+  async inboxMoveToTrash(request) {
+    await this.ready;
+    const id = typeof request === 'string' ? request : request?.id;
+    if (typeof id !== 'string' || id === '') throw new Error('无效条目');
+    const entry = await this.inbox.moveToTrash(id);
+    return { entry };
+  }
+
+  /** Legacy agent-tool name: 处理完成并删除 — now a recoverable trash move. */
   async inboxMarkDone(request) {
     await this.ready;
     const key = typeof request === 'string' ? request : request?.key;
     if (typeof key !== 'string' || key === '') throw new Error('无效条目');
-    const removed = await this.inbox.markDone(key);
-    return { removed };
+    await this.inbox.moveToTrash(key);
+    return { removed: true, trashed: true };
   }
 
   // ------------------------------------------------------------------
@@ -1009,7 +1110,7 @@ export class DropletsService extends TypertRemoteService {
       ? new WorkspaceStore(this.ctx.logger, target, this.config.maxBodies ?? 300)
       : new DropletsStore(this.ctx.logger, this.config.maxBodies ?? 300);
     this.vaultInstance = undefined;
-    this.inbox = new Inbox(this.store, this.ctx.logger, () => this.fetcher);
+    this.inbox = this.createInbox();
     this.ready = this.store.load().then(async () => {
       this.store.setMaxBodies(this.config.maxBodies ?? 300);
       await ensureDefaultVault(this.vaultRoot());
@@ -1157,12 +1258,13 @@ export class DropletsService extends TypertRemoteService {
 
   async getStorageInfo() {
     await this.ready;
+    const inboxItems = await this.inbox.items().catch(() => []);
     return {
       storageDir: this.sharedWorkspace ? this.store.root : storageDir(),
       sharedWorkspace: this.sharedWorkspace,
       vaultRoot: this.vaultRoot(),
       subscriptions: this.store.data.subscriptions.length,
-      inbox: this.inbox.items().filter((item) => item.doneAt === undefined).length,
+      inbox: inboxItems.length,
       vaultFiles: this.vaultService().stats().files,
     };
   }
@@ -1215,7 +1317,9 @@ export class DropletsService extends TypertRemoteService {
     'listSubscriptions', 'addSubscription', 'removeSubscription', 'updateSubscription',
     'opmlPreview', 'opmlImport', 'opmlExport', 'refresh',
     // inbox
-    'inboxAddUrl', 'inboxList', 'inboxRead', 'inboxMarkDone',
+    'inboxAddUrl', 'inboxList', 'inboxGet', 'inboxRead', 'inboxReadOriginal',
+    'inboxUpdate', 'inboxRetry', 'inboxRetryAllFailed', 'inboxImportMarkdown',
+    'inboxMoveToLibrary', 'inboxMoveToTrash', 'inboxMarkDone',
     // vault
     'vaultStatus', 'vaultReindex', 'vaultTree', 'vaultRead', 'vaultSearch', 'vaultGraph', 'vaultBacklinks', 'vaultWrite',
     // settings / companion

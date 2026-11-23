@@ -21,18 +21,7 @@ async function seededService() {
       { key: feedId + '|e2', title: 'Beta article', url: 'https://x.example/2', publishedAt: '2025-09-02T00:00:00Z', html: '<p>Beta body</p>', summary: 'Beta body' },
     ],
   });
-  service.store.data.inbox.push({
-    key: 'inbox:' + 'b'.repeat(32),
-    url: 'https://inbox.example/doc',
-    title: 'Saved doc',
-    kind: 'web',
-    addedAt: Date.now(),
-    readAt: null,
-    bytes: 100,
-    file: null,
-    status: 'ready',
-    excerpt: 'Saved excerpt',
-  });
+  await service.inboxImportMarkdown({ filename: 'doc.md', content: '---\ntitle: Saved doc\n---\nSaved excerpt body.' });
   await service.vaultWrite({ path: '0-Inbox/note.md', content: '---\ntitle: KB Note\ntags: [kb]\n---\nBody about droplets.', expectedSha: null });
   await service.vaultReindex();
   return { service, ctx, home };
@@ -100,11 +89,11 @@ test('droplets_inbox paths and mark_done removes the item', async () => {
   try {
     const listed = await inbox.execute({ action: 'list' });
     assert.equal(listed.count, 1);
-    const key = listed.items[0].key;
+    const key = listed.items[0].id;
     const read = await inbox.execute({ action: 'read', key });
     assert.ok(read.text.includes('body') || read.text === '' || typeof read.text === 'string');
     const done = await inbox.execute({ action: 'mark_done', key });
-    assert.deepEqual(done, { removed: true });
+    assert.deepEqual(done, { removed: true, trashed: true });
     const after = await inbox.execute({ action: 'list' });
     assert.equal(after.count, 0);
     await assert.rejects(inbox.execute({ action: 'read', key }), /没有这一条/);
