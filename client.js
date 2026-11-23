@@ -106528,10 +106528,6 @@ function InboxView({ api, onMaterial }) {
       await load();
     }
   };
-  const tags2 = (0, import_react10.useMemo)(
-    () => Object.entries(data.counts?.byTag ?? {}).sort((a2, b) => b[1] - a2[1]),
-    [data.counts]
-  );
   return /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
     PanelGroup,
     {
@@ -106591,6 +106587,10 @@ function FilterPane({ api, filter, setFilter, counts, onChanged, onCollapse }) {
   const [addError, setAddError] = (0, import_react10.useState)(null);
   const [importing, setImporting] = (0, import_react10.useState)(false);
   const fileRef = (0, import_react10.useRef)(null);
+  const tags = (0, import_react10.useMemo)(
+    () => Object.entries(counts?.byTag ?? {}).sort((a2, b) => b[1] - a2[1]),
+    [counts]
+  );
   const submitUrl = async () => {
     const url = String(urlInput ?? "").trim();
     if (url === "") return;
@@ -106724,8 +106724,8 @@ function FilterPane({ api, filter, setFilter, counts, onChanged, onCollapse }) {
 function TagEditor({ item, onClose, onCommit }) {
   const [value, setValue] = (0, import_react10.useState)(item.tags.join(", "));
   const commit = () => {
-    const tags2 = value.split(/[,，]/).map((tag) => tag.trim()).filter(Boolean);
-    onCommit(tags2);
+    const tags = value.split(/[,，]/).map((tag) => tag.trim()).filter(Boolean);
+    onCommit(tags);
     onClose();
   };
   return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "dpl-ib-tageditor", onClick: (event) => event.stopPropagation(), "data-testid": "tag-editor", children: [
@@ -106760,9 +106760,9 @@ function ItemList2({ api, items, loading, selectedId, onSelect, retryingAll, onR
     el.scrollTop = scrollTopRef.current ?? 0;
   }, [loading, items, scrollTopRef]);
   const hasFailed = (items ?? []).some((item) => item.status === "fetch_failed");
-  const commitTags = async (id, tags2) => {
+  const commitTags = async (id, tags) => {
     try {
-      await api.inboxUpdate({ id, patch: { tags: tags2 } });
+      await api.inboxUpdate({ id, patch: { tags } });
     } catch {
     }
     await onChanged();
@@ -106845,7 +106845,7 @@ function ItemList2({ api, items, loading, selectedId, onSelect, retryingAll, onR
                   {
                     item,
                     onClose: () => setTagEditorFor(null),
-                    onCommit: (tags2) => void commitTags(item.id, tags2)
+                    onCommit: (tags) => void commitTags(item.id, tags)
                   }
                 ) : null
               ]
@@ -106860,8 +106860,8 @@ function ItemList2({ api, items, loading, selectedId, onSelect, retryingAll, onR
 function TagEditPopup({ item, onCommit, onClose }) {
   const boxRef = (0, import_react10.useRef)(null);
   const commit = (raw) => {
-    const tags2 = raw.split(/[,，]/).map((tag) => tag.trim()).filter(Boolean);
-    onCommit(tags2);
+    const tags = raw.split(/[,，]/).map((tag) => tag.trim()).filter(Boolean);
+    onCommit(tags);
     onClose();
   };
   (0, import_react10.useEffect)(() => {
@@ -107154,7 +107154,7 @@ function Reader({ api, selectedId, onMaterial, onChanged }) {
           TagEditPopup,
           {
             item,
-            onCommit: (tags2) => void update({ tags: tags2 }),
+            onCommit: (tags) => void update({ tags }),
             onClose: () => setTagEdit(false)
           }
         ) : null

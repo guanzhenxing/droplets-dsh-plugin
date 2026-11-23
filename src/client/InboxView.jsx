@@ -126,11 +126,6 @@ export function InboxView({ api, onMaterial }) {
     }
   };
 
-  const tags = useMemo(
-    () => Object.entries(data.counts?.byTag ?? {}).sort((a, b) => b[1] - a[1]),
-    [data.counts],
-  );
-
   return (
     <PanelGroup
       page="inbox"
@@ -184,6 +179,10 @@ function FilterPane({ api, filter, setFilter, counts, onChanged, onCollapse }) {
   const [addError, setAddError] = useState(null);
   const [importing, setImporting] = useState(false);
   const fileRef = useRef(null);
+  const tags = useMemo(
+    () => Object.entries(counts?.byTag ?? {}).sort((a, b) => b[1] - a[1]),
+    [counts],
+  );
 
   const submitUrl = async () => {
     const url = String(urlInput ?? '').trim();
