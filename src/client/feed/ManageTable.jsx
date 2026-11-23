@@ -70,16 +70,11 @@ export function ManageTable({ api, feeds, onBack, onChanged }) {
     } finally { setBusy(false); }
   }
 
+  // OPML import dialog (window.prompt is not supported in the sandboxed
+  // renderer): paste XML or a URL, preview, then import everything.
+  const [importOpen, setImportOpen] = useState(false);
   async function importOpml() {
-    setOpmlBusy('import');
-    try {
-      const text = window.prompt('粘贴 OPML 内容或 OPML 地址');
-      if (!text || text.trim() === '') return;
-      const previewResult = await api.opmlPreview(text.trim().startsWith('http') ? { url: text.trim() } : { xml: text });
-      await api.opmlImport(previewResult.xml);
-      await onChanged();
-    } catch (cause) { window.alert(String(cause?.message ?? cause)); }
-    finally { setOpmlBusy(''); }
+    setImportOpen(true);
   }
 
   async function exportOpml() {
@@ -230,6 +225,13 @@ export function ManageTable({ api, feeds, onBack, onChanged }) {
           availableGroups={availableGroups}
           onClose={() => setEditingId(null)}
           onChanged={onChanged}
+        />
+      ) : null}
+      {importOpen ? (
+        <ImportDialog
+          api={api}
+          onClose={() => setImportOpen(false)}
+          onImported={onChanged}
         />
       ) : null}
       {confirmBatchDelete ? (
@@ -422,4 +424,77 @@ function EditDialog({ api, feed, availableGroups, onClose, onChanged }) {
 
 function isLanUrl(u) {
   return /^https?:\/\/(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|\[::1\]|localhost)/i.test(String(u ?? ''));
+}
+
+function ImportDialog({ api, onClose, onImported }) {
+  const [text, setText] = useState('');
+  const [entries, setEntries] = useState(null);
+  const [picked, setPicked] = useState(new Set());
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function preview() {
+    setBusy(true);
+    setError('');
+    try {
+      const trimmed = text.trim();
+      const result = await api.opmlPreview(trimmed.startsWith('http') ? { url: trimmed } : { xml: trimmed });
+      setEntries(result.entries);
+      setPicked(new Set(result.entries.filter((entry) => !entry.duplicate).map((entry) => entry.url)));
+    } catch (cause) { setError(String(cause?.message ?? cause)); }
+    finally { setBusy(false); }
+  }
+
+  async function importAll() {
+    setBusy(true);
+    setError('');
+    try {
+      // Previewed: import only the picked (non-duplicate) urls; otherwise
+      // import everything the xml contains.
+      await api.opmlImport(text, entries ? [...picked] : undefined);
+      await onImported();
+      onClose();
+    } catch (cause) { setError(String(cause?.message ?? cause)); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <div className="dpl-dialog-backdrop" onClick={onClose}>
+      <div className="dpl-dialog dpl-add-dialog" onClick={(e) => e.stopPropagation()}>
+        <div className="dpl-dialog-headline">
+          <span className="dpl-dialog-title">导入 OPML</span>
+          <span className="dpl-grow" />
+          <button type="button" className="dpl-icon-btn dpl-round" onClick={onClose} aria-label="关闭"><X size={15} /></button>
+        </div>
+        <div className="dpl-dialog-body">
+          <label className="dpl-dialog-field">
+            <span>OPML 内容或地址</span>
+            <textarea
+              autoFocus
+              rows={6}
+              placeholder="粘贴 OPML XML,或填 http(s) 地址"
+              value={text}
+              onChange={(event) => setText(event.target.value)}
+              spellCheck={false}
+            />
+          </label>
+          {error ? <div className="dpl-dialog-error">{error}</div> : null}
+          {entries ? (
+            <div className="dpl-import-summary">
+              共 {entries.length} 个源,已存在 {entries.filter((e) => e.duplicate).length} 个,将导入 <strong>{picked.size}</strong> 个
+            </div>
+          ) : null}
+        </div>
+        <div className="dpl-dialog-footer">
+          <span className="dpl-grow" />
+          <button type="button" className="dpl-btn dpl-sm" disabled={busy || text.trim() === ''} onClick={() => void preview()}>
+            {busy && !entries ? <Loader2 size={13} className="dpl-spin" /> : null} 预览
+          </button>
+          <button type="button" className="dpl-btn dpl-sm dpl-primary-solid" disabled={busy || (entries ? picked.size === 0 : text.trim() === '')} onClick={() => void importAll()}>
+            {busy ? <Loader2 size={13} className="dpl-spin" /> : null} 导入 {entries ? picked.size : ''}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
