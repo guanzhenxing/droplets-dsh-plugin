@@ -4,3 +4,4 @@
 node_modules/
 .t1-home/
 .t*-home/
+.npm-cache/
