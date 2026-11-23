@@ -16305,8 +16305,8 @@ var require_snapshot_utils = __commonJS({
 var require_snapshot_recorder = __commonJS({
   "node_modules/undici/lib/mock/snapshot-recorder.js"(exports2, module) {
     "use strict";
-    var { writeFile: writeFile5, readFile: readFile5, mkdir: mkdir5 } = __require("node:fs/promises");
-    var { dirname: dirname3, resolve: resolve2 } = __require("node:path");
+    var { writeFile: writeFile6, readFile: readFile6, mkdir: mkdir6 } = __require("node:fs/promises");
+    var { dirname: dirname4, resolve: resolve2 } = __require("node:path");
     var { setTimeout: setTimeout2, clearTimeout: clearTimeout2 } = __require("node:timers");
     var { InvalidArgumentError, UndiciError } = require_errors();
     var { hashId, isUrlExcludedFactory, normalizeHeaders, createHeaderFilters } = require_snapshot_utils();
@@ -16507,7 +16507,7 @@ var require_snapshot_recorder = __commonJS({
           throw new InvalidArgumentError("Snapshot path is required");
         }
         try {
-          const data = await readFile5(resolve2(path4), "utf8");
+          const data = await readFile6(resolve2(path4), "utf8");
           const parsed = JSON.parse(data);
           if (Array.isArray(parsed)) {
             this.#snapshots.clear();
@@ -16537,12 +16537,12 @@ var require_snapshot_recorder = __commonJS({
           throw new InvalidArgumentError("Snapshot path is required");
         }
         const resolvedPath = resolve2(path4);
-        await mkdir5(dirname3(resolvedPath), { recursive: true });
+        await mkdir6(dirname4(resolvedPath), { recursive: true });
         const data = Array.from(this.#snapshots.entries()).map(([hash, snapshot]) => ({
           hash,
           snapshot
         }));
-        await writeFile5(resolvedPath, JSON.stringify(data, null, 2), { flush: true });
+        await writeFile6(resolvedPath, JSON.stringify(data, null, 2), { flush: true });
       }
       /**
        * Clears all recorded snapshots
@@ -32696,7 +32696,7 @@ var init_pdf = __esm({
       var defineProperty = Object.defineProperty;
       var stringSlice = uncurryThis("".slice);
       var replace = uncurryThis("".replace);
-      var join3 = uncurryThis([].join);
+      var join4 = uncurryThis([].join);
       var CONFIGURABLE_LENGTH = DESCRIPTORS && !fails(function() {
         return defineProperty(function() {
         }, "length", { value: 8 }).length !== 8;
@@ -32723,7 +32723,7 @@ var init_pdf = __esm({
         }
         var state = enforceInternalState(value);
         if (!hasOwn(state, "source")) {
-          state.source = join3(TEMPLATE, typeof name2 == "string" ? name2 : "");
+          state.source = join4(TEMPLATE, typeof name2 == "string" ? name2 : "");
         }
         return value;
       };
@@ -35104,7 +35104,7 @@ var init_pdf = __esm({
       var charAt = uncurryThis("".charAt);
       var Uint8Array2 = globalThis2.Uint8Array;
       var $Array = globalThis2.Array;
-      var join3 = uncurryThis([].join);
+      var join4 = uncurryThis([].join);
       var INCORRECT_BEHAVIOR_OR_DOESNT_EXISTS = !Uint8Array2 || !Uint8Array2.prototype.toBase64 || !(function() {
         try {
           var target = new Uint8Array2();
@@ -35150,7 +35150,7 @@ var init_pdf = __esm({
               result[written++] = "=";
             }
           }
-          return join3(result, "");
+          return join4(result, "");
         }
       });
     });
@@ -35161,7 +35161,7 @@ var init_pdf = __esm({
       var anUint8Array = an_uint8_array_namespaceFn();
       var notDetached = array_buffer_not_detached_namespaceFn();
       var numberToString = uncurryThis(1.1.toString);
-      var join3 = uncurryThis([].join);
+      var join4 = uncurryThis([].join);
       var $Array = Array;
       var Uint8Array2 = globalThis2.Uint8Array;
       var INCORRECT_BEHAVIOR_OR_DOESNT_EXISTS = !Uint8Array2 || !Uint8Array2.prototype.toHex || !(function() {
@@ -35181,7 +35181,7 @@ var init_pdf = __esm({
             var hex = numberToString(this[i2], 16);
             result[i2] = hex.length === 1 ? "0" + hex : hex;
           }
-          return join3(result, "");
+          return join4(result, "");
         }
       });
     });
@@ -47755,12 +47755,12 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
         } = stream._source;
         this._isStreamingSupported = !disableStream;
         const fs = process.getBuiltinModule("fs/promises");
-        fs.lstat(url).then((stat4) => {
+        fs.lstat(url).then((stat5) => {
           const readableStream = getReadableStream(url);
           this._reader = readableStream.getReader();
           const {
             size
-          } = stat4;
+          } = stat5;
           this._contentLength = size;
           this._isRangeSupported = !disableRange && size > 2 * rangeChunkSize;
           if (!this._isStreamingSupported && this._isRangeSupported) {
@@ -71998,7 +71998,7 @@ var init_pdf_worker = __esm({
       var defineProperty = Object.defineProperty;
       var stringSlice = uncurryThis("".slice);
       var replace = uncurryThis("".replace);
-      var join3 = uncurryThis([].join);
+      var join4 = uncurryThis([].join);
       var CONFIGURABLE_LENGTH = DESCRIPTORS && !fails(function() {
         return defineProperty(function() {
         }, "length", { value: 8 }).length !== 8;
@@ -72025,7 +72025,7 @@ var init_pdf_worker = __esm({
         }
         var state = enforceInternalState(value);
         if (!hasOwn(state, "source")) {
-          state.source = join3(TEMPLATE, typeof name2 == "string" ? name2 : "");
+          state.source = join4(TEMPLATE, typeof name2 == "string" ? name2 : "");
         }
         return value;
       };
@@ -74033,7 +74033,7 @@ var init_pdf_worker = __esm({
       var charAt = uncurryThis("".charAt);
       var Uint8Array2 = globalThis2.Uint8Array;
       var $Array = globalThis2.Array;
-      var join3 = uncurryThis([].join);
+      var join4 = uncurryThis([].join);
       var INCORRECT_BEHAVIOR_OR_DOESNT_EXISTS = !Uint8Array2 || !Uint8Array2.prototype.toBase64 || !(function() {
         try {
           var target = new Uint8Array2();
@@ -74079,7 +74079,7 @@ var init_pdf_worker = __esm({
               result[written++] = "=";
             }
           }
-          return join3(result, "");
+          return join4(result, "");
         }
       });
     });
@@ -74090,7 +74090,7 @@ var init_pdf_worker = __esm({
       var anUint8Array = an_uint8_array_namespaceFn2();
       var notDetached = array_buffer_not_detached_namespaceFn2();
       var numberToString = uncurryThis(1.1.toString);
-      var join3 = uncurryThis([].join);
+      var join4 = uncurryThis([].join);
       var $Array = Array;
       var Uint8Array2 = globalThis2.Uint8Array;
       var INCORRECT_BEHAVIOR_OR_DOESNT_EXISTS = !Uint8Array2 || !Uint8Array2.prototype.toHex || !(function() {
@@ -74110,7 +74110,7 @@ var init_pdf_worker = __esm({
             var hex = numberToString(this[i2], 16);
             result[i2] = hex.length === 1 ? "0" + hex : hex;
           }
-          return join3(result, "");
+          return join4(result, "");
         }
       });
     });
@@ -130199,8 +130199,8 @@ var init_pdf_worker = __esm({
 
 // src/host/index.js
 import path3 from "node:path";
-import { readdir as readdir3, stat as stat3 } from "node:fs/promises";
-import { join as join2, resolve, sep as sep2 } from "node:path";
+import { readdir as readdir3, stat as stat4 } from "node:fs/promises";
+import { join as join3, resolve, sep as sep2 } from "node:path";
 import { TypertRemoteService, Remote } from "@deepseek-ai/dsh-typert-protocol";
 import { defineTool as defineTool2 } from "@deepseek-ai/dsh-tools";
 
@@ -130589,9 +130589,353 @@ var DropletsStore = class {
   }
 };
 
+// src/host/workspace-store.js
+import { mkdir as mkdir3, readFile as readFile3, rename as rename3, rm as rm3, stat as stat2, writeFile as writeFile3 } from "node:fs/promises";
+import { dirname as dirname3, join as join2 } from "node:path";
+var SIDECAR = ".droplets-dsh";
+function defaultsSidecar() {
+  return {
+    version: 1,
+    settings: {
+      showImages: true,
+      refreshMinutes: 60,
+      refreshOnStart: true,
+      hoverPreview: false,
+      cacheDays: 60,
+      refreshWorkers: 3,
+      fetchTimeoutSec: 20
+    },
+    favorites: {},
+    inbox: [],
+    vaultCache: null,
+    companionContexts: {}
+  };
+}
+async function loadSqlite() {
+  const { DatabaseSync } = await import("node:sqlite");
+  return DatabaseSync;
+}
+var WorkspaceStore = class {
+  constructor(logger, root, maxBodies = 300) {
+    this.logger = logger;
+    this.root = root;
+    this.dir = root;
+    this.appDbPath = join2(root, "state", "app.sqlite");
+    this.indexDbPath = join2(root, "state", "index.sqlite");
+    this.sidecarDir = join2(root, SIDECAR);
+    this.path = join2(this.sidecarDir, "state.json");
+    this.bodies = new BodyStore(join2(this.sidecarDir, "bodies.json"), maxBodies);
+    this.data = { ...defaultsSidecar(), subscriptions: [], states: {}, read: {} };
+    this.saveTimer = void 0;
+    this.saving = Promise.resolve();
+    this.lastKnownMtime = 0;
+    this.appDb = null;
+    this.indexDb = null;
+    this.persistedFeed = /* @__PURE__ */ new Map();
+    this.persistedFeeds = /* @__PURE__ */ new Map();
+    this.persistedStates = /* @__PURE__ */ new Map();
+  }
+  setMaxBodies(maxBodies) {
+    if (Number.isFinite(maxBodies) && maxBodies >= 10) this.bodies.maxBodies = Math.floor(maxBodies);
+  }
+  async cleanStaleTemps() {
+    try {
+      const { readdir: readdir4 } = await import("node:fs/promises");
+      for (const name2 of await readdir4(this.sidecarDir)) {
+        if (!name2.endsWith(".tmp")) continue;
+        const full = join2(this.sidecarDir, name2);
+        const info3 = await stat2(full).catch(() => null);
+        if (info3 && info3.mtimeMs < Date.now() - 10 * 60 * 1e3) await rm3(full, { force: true });
+      }
+    } catch {
+    }
+  }
+  async openDatabases() {
+    const DatabaseSync = await loadSqlite();
+    if (!this.appDb) {
+      this.appDb = new DatabaseSync(this.appDbPath);
+      this.appDb.exec("PRAGMA busy_timeout = 5000");
+    }
+    if (!this.indexDb) {
+      this.indexDb = new DatabaseSync(this.indexDbPath);
+      this.indexDb.exec("PRAGMA busy_timeout = 5000");
+    }
+  }
+  closeDatabases() {
+    try {
+      this.appDb?.close();
+    } catch {
+    }
+    try {
+      this.indexDb?.close();
+    } catch {
+    }
+    this.appDb = null;
+    this.indexDb = null;
+  }
+  /** Feed row -> the subscription shape the rest of the plugin expects. */
+  #toSubscription(row, entries) {
+    return {
+      id: row.id,
+      url: row.url,
+      name: row.title,
+      group: row.group_name || void 0,
+      enabled: row.enabled !== 0,
+      siteUrl: row.site_url || void 0,
+      refreshStrategy: row.refresh_strategy || "follow",
+      showUnreadBadge: row.show_unread_badge !== 0,
+      includeInAll: row.include_in_all !== 0,
+      note: row.note || void 0,
+      createdAt: row.created_at ? Math.round(row.created_at * 1e3) : void 0,
+      lastFetchedAt: row.last_fetch_at ? Math.round(row.last_fetch_at * 1e3) : void 0,
+      lastError: row.last_error || void 0,
+      entries
+    };
+  }
+  /** rss_item row -> the entry shape the reader/sorting code uses. */
+  #toEntry(feedId, row) {
+    const html = row.content_html || row.content || row.summary || "";
+    return {
+      key: feedId + "|" + row.item_key,
+      guid: row.item_key,
+      title: row.title,
+      publishedAt: row.published_at || new Date((row.fetched_at ?? 0) * 1e3).toISOString(),
+      url: row.link || "",
+      summary: row.summary || "",
+      html,
+      truncated: false
+    };
+  }
+  async load() {
+    await this.openDatabases();
+    await mkdir3(this.sidecarDir, { recursive: true });
+    const sidecar = await readFile3(this.path, "utf8").then((raw) => JSON.parse(raw)).catch(() => null);
+    const base = defaultsSidecar();
+    this.data = {
+      ...base,
+      ...sidecar ?? {},
+      settings: { ...base.settings, ...sidecar?.settings ?? {} },
+      states: {},
+      read: {}
+    };
+    if (!Array.isArray(this.data.inbox)) this.data.inbox = [];
+    if (!this.data.favorites || typeof this.data.favorites !== "object") this.data.favorites = {};
+    if (!this.data.companionContexts || typeof this.data.companionContexts !== "object") this.data.companionContexts = {};
+    const feedRows = this.appDb.prepare(
+      "SELECT id, title, url, group_name, enabled, created_at, last_fetch_at, last_error, site_url, refresh_strategy, show_unread_badge, include_in_all, note, consecutive_failures, last_success_at FROM feeds ORDER BY created_at ASC"
+    ).all();
+    const itemsByFeed = /* @__PURE__ */ new Map();
+    const itemRows = this.indexDb.prepare(
+      "SELECT source_id, item_key, title, link, summary, content, content_html, published_at, fetched_at FROM rss_item ORDER BY COALESCE(published_at, '') DESC, fetched_at DESC"
+    ).all();
+    for (const row of itemRows) {
+      const list = itemsByFeed.get(row.source_id) ?? [];
+      list.push(this.#toEntry(row.source_id, row));
+      itemsByFeed.set(row.source_id, list);
+    }
+    this.data.subscriptions = feedRows.map((row) => this.#toSubscription(row, itemsByFeed.get(row.id) ?? []));
+    for (const sub of this.data.subscriptions) {
+      this.persistedFeed.set(sub.id, sub.entries.length);
+      this.persistedFeeds.set(sub.id, this.#feedSignature(sub));
+    }
+    const stateRows = this.appDb.prepare("SELECT source_id, item_key, state FROM rss_item_state").all();
+    for (const row of stateRows) {
+      this.data.states[row.source_id + "|" + row.item_key] = row.state;
+      this.persistedStates.set(row.source_id + "|" + row.item_key, row.state);
+    }
+    await this.cleanStaleTemps();
+  }
+  #feedSignature(sub) {
+    return [sub.name, sub.url, sub.group ?? "", sub.enabled === false ? 0 : 1, sub.note ?? "", sub.siteUrl ?? "", sub.refreshStrategy ?? "follow"].join("\0");
+  }
+  touch() {
+    if (this.saveTimer !== void 0) return;
+    this.saveTimer = setTimeout(() => {
+      this.saveTimer = void 0;
+      void this.flush().catch(() => {
+      });
+    }, 500);
+  }
+  async loadEntries(feedId) {
+    return this.data.subscriptions.find((sub) => sub.id === feedId)?.entries;
+  }
+  async saveEntries(feedId, entries) {
+    const sub = this.data.subscriptions.find((item) => item.id === feedId);
+    if (sub) sub.entries = entries;
+  }
+  /** Persist the in-memory view back into the Droplets tables (transactional). */
+  async flush() {
+    this.saving = this.saving.catch(() => {
+    }).then(async () => {
+      try {
+        await this.openDatabases();
+        await mkdir3(this.sidecarDir, { recursive: true });
+        const liveIds = new Set(this.data.subscriptions.map((sub) => sub.id));
+        const upsertFeed = this.appDb.prepare(
+          `INSERT INTO feeds (id, title, url, group_name, enabled, created_at, last_fetch_at, last_error, site_url, refresh_strategy, show_unread_badge, include_in_all, note)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT(id) DO UPDATE SET title=excluded.title, url=excluded.url, group_name=excluded.group_name,
+             enabled=excluded.enabled, last_fetch_at=excluded.last_fetch_at, last_error=excluded.last_error,
+             site_url=excluded.site_url, refresh_strategy=excluded.refresh_strategy,
+             show_unread_badge=excluded.show_unread_badge, include_in_all=excluded.include_in_all, note=excluded.note`
+        );
+        const upsertItem = this.indexDb.prepare(
+          `INSERT INTO rss_item (source_id, item_key, title, link, summary, content, content_html, published_at, source_title, fetched_at, item_hash)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT(source_id, item_key) DO UPDATE SET title=excluded.title, link=excluded.link,
+             summary=excluded.summary, content=excluded.content, content_html=excluded.content_html,
+             published_at=excluded.published_at, source_title=excluded.source_title`
+        );
+        const upsertState = this.appDb.prepare(
+          "INSERT INTO rss_item_state (source_id, item_key, state, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(source_id, item_key) DO UPDATE SET state=excluded.state, updated_at=excluded.updated_at"
+        );
+        const deleteState = this.appDb.prepare("DELETE FROM rss_item_state WHERE source_id = ? AND item_key = ?");
+        this.appDb.exec("BEGIN");
+        try {
+          for (const sub of this.data.subscriptions) {
+            const signature = this.#feedSignature(sub);
+            if (this.persistedFeeds.get(sub.id) !== signature) {
+              upsertFeed.run(
+                sub.id,
+                sub.name ?? "",
+                sub.url ?? "",
+                sub.group ?? "",
+                sub.enabled === false ? 0 : 1,
+                (sub.createdAt ?? Date.now()) / 1e3,
+                sub.lastFetchedAt ? sub.lastFetchedAt / 1e3 : null,
+                sub.lastError ?? null,
+                sub.siteUrl ?? "",
+                sub.refreshStrategy ?? "follow",
+                sub.showUnreadBadge === false ? 0 : 1,
+                sub.includeInAll === false ? 0 : 1,
+                sub.note ?? ""
+              );
+              this.persistedFeeds.set(sub.id, signature);
+            }
+          }
+          for (const [key, state] of Object.entries(this.data.states)) {
+            if (this.persistedStates.get(key) === state) continue;
+            const split = key.indexOf("|");
+            if (split === -1) continue;
+            upsertState.run(key.slice(0, split), key.slice(split + 1), state, Date.now() / 1e3);
+            this.persistedStates.set(key, state);
+          }
+        } finally {
+          this.appDb.exec("COMMIT");
+        }
+        const seenStates = new Set(Object.keys(this.data.states));
+        this.appDb.exec("BEGIN");
+        try {
+          for (const key of [...this.persistedStates.keys()]) {
+            if (seenStates.has(key)) continue;
+            const split = key.indexOf("|");
+            if (split === -1) continue;
+            deleteState.run(key.slice(0, split), key.slice(split + 1));
+            this.persistedStates.delete(key);
+          }
+        } finally {
+          this.appDb.exec("COMMIT");
+        }
+        this.indexDb.exec("BEGIN");
+        try {
+          for (const sub of this.data.subscriptions) {
+            const entries = sub.entries ?? [];
+            if (this.persistedFeed.get(sub.id) === entries.length) continue;
+            const now = Date.now() / 1e3;
+            for (const entry of entries) {
+              upsertItem.run(
+                sub.id,
+                entry.guid ?? entry.key,
+                entry.title ?? "",
+                entry.url ?? "",
+                entry.summary ?? "",
+                "",
+                entry.html ?? "",
+                entry.publishedAt ?? null,
+                sub.name ?? "",
+                now,
+                null
+              );
+            }
+            this.persistedFeed.set(sub.id, entries.length);
+          }
+        } finally {
+          this.indexDb.exec("COMMIT");
+        }
+        const removed = [...this.persistedFeeds.keys()].filter((id) => !liveIds.has(id));
+        if (removed.length > 0) {
+          const deleteFeed = this.appDb.prepare("DELETE FROM feeds WHERE id = ?");
+          const deleteItems = this.indexDb.prepare("DELETE FROM rss_item WHERE source_id = ?");
+          const deleteFeedStates = this.appDb.prepare("DELETE FROM rss_item_state WHERE source_id = ?");
+          this.appDb.exec("BEGIN");
+          try {
+            for (const id of removed) {
+              deleteFeedStates.run(id);
+              deleteFeed.run(id);
+              this.persistedFeeds.delete(id);
+            }
+          } finally {
+            this.appDb.exec("COMMIT");
+          }
+          this.indexDb.exec("BEGIN");
+          try {
+            for (const id of removed) deleteItems.run(id);
+          } finally {
+            this.indexDb.exec("COMMIT");
+          }
+        }
+        const sidecar = {
+          version: 1,
+          settings: this.data.settings,
+          favorites: this.data.favorites,
+          inbox: this.data.inbox,
+          vaultCache: this.data.vaultCache ?? null,
+          companionContexts: this.data.companionContexts
+        };
+        const temp = `${this.path}.${process.pid}.tmp`;
+        try {
+          await writeFile3(temp, JSON.stringify(sidecar), { encoding: "utf8", mode: 384 });
+          await rename3(temp, this.path);
+        } catch (error) {
+          await rm3(temp, { force: true }).catch(() => {
+          });
+          throw error;
+        }
+        this.lastKnownMtime = (await stat2(this.path)).mtimeMs;
+      } catch (error) {
+        this.logger?.warn?.("droplets: failed to save workspace data: %s", String(error));
+        throw error;
+      }
+    });
+    return this.saving;
+  }
+  /** Release the SQLite handles (the service calls this on shutdown). */
+  async dispose() {
+    if (this.saveTimer !== void 0) {
+      clearTimeout(this.saveTimer);
+      this.saveTimer = void 0;
+    }
+    await this.saving.catch(() => {
+    });
+    this.closeDatabases();
+  }
+  async stats() {
+    const feeds = this.data.subscriptions.length;
+    const items = this.data.subscriptions.reduce((sum, sub) => sum + (sub.entries?.length ?? 0), 0);
+    const appInfo = await stat2(this.appDbPath).catch(() => null);
+    const indexInfo = await stat2(this.indexDbPath).catch(() => null);
+    return {
+      feeds,
+      items,
+      appDbBytes: appInfo?.size ?? 0,
+      indexDbBytes: indexInfo?.size ?? 0
+    };
+  }
+};
+
 // src/host/inbox.js
 import { createHash as createHash2 } from "node:crypto";
-import { mkdir as mkdir3, readFile as readFile3, rm as rm3, stat as stat2, writeFile as writeFile3 } from "node:fs/promises";
+import { mkdir as mkdir4, readFile as readFile4, rm as rm4, stat as stat3, writeFile as writeFile4 } from "node:fs/promises";
 import path from "node:path";
 
 // node_modules/fflate/esm/index.mjs
@@ -136287,10 +136631,10 @@ var Inbox = class {
         if (response.body.byteLength > INBOX_LIMITS.maxDocumentBytes) {
           throw new Error(`\u6587\u4EF6\u8D85\u8FC7 ${Math.round(INBOX_LIMITS.maxDocumentBytes / 1024 / 1024)} MB \u4E0A\u9650`);
         }
-        await mkdir3(this.filesDir, { recursive: true });
+        await mkdir4(this.filesDir, { recursive: true });
         const ext = kind === "pdf" ? "pdf" : "epub";
         const file = `${key.slice("inbox:".length)}.${ext}`;
-        await writeFile3(path.join(this.filesDir, file), response.body);
+        await writeFile4(path.join(this.filesDir, file), response.body);
         item.kind = kind;
         item.file = file;
         item.title = guessTitle(finalUrl, response.headers);
@@ -136367,7 +136711,7 @@ var Inbox = class {
       result.text = htmlToText(result.html);
     } else if (item.kind === "pdf" || item.kind === "epub") {
       const absolute = path.join(this.filesDir, item.file);
-      const bytes = await readFile3(absolute).catch(() => null);
+      const bytes = await readFile4(absolute).catch(() => null);
       if (bytes === null) throw new Error("\u539F\u4EF6\u6587\u4EF6\u7F3A\u5931\uFF0C\u8BF7\u91CD\u65B0\u6293\u53D6");
       result.base64 = bytes.toString("base64");
       result.bytes = bytes.byteLength;
@@ -136383,7 +136727,7 @@ var Inbox = class {
   async pdfText(key, { maxPages = 400 } = {}) {
     const item = this.find(key);
     if (!item || item.kind !== "pdf") throw new Error("\u4E0D\u662F PDF \u6761\u76EE");
-    const bytes = await readFile3(path.join(this.filesDir, item.file));
+    const bytes = await readFile4(path.join(this.filesDir, item.file));
     const [{ getDocument: getDocument2 }, { WorkerMessageHandler: WorkerMessageHandler2 }] = await Promise.all([
       Promise.resolve().then(() => (init_pdf(), pdf_exports)),
       Promise.resolve().then(() => (init_pdf_worker(), pdf_worker_exports))
@@ -136411,7 +136755,7 @@ var Inbox = class {
     const [item] = this.items().splice(index, 1);
     this.store.bodies.delete([key]);
     if (item.file) {
-      await rm3(path.join(this.filesDir, item.file), { force: true }).catch(() => {
+      await rm4(path.join(this.filesDir, item.file), { force: true }).catch(() => {
       });
     }
     this.store.touch();
@@ -136420,7 +136764,7 @@ var Inbox = class {
   }
   async fileSize(item) {
     if (!item.file) return 0;
-    const info3 = await stat2(path.join(this.filesDir, item.file)).catch(() => null);
+    const info3 = await stat3(path.join(this.filesDir, item.file)).catch(() => null);
     return info3?.size ?? 0;
   }
 };
@@ -136477,7 +136821,7 @@ function epubPlainText(bytes, limits = INBOX_LIMITS.epub, { maxChars = 4e5 } = {
 
 // src/host/vault.js
 import { createHash as createHash3 } from "node:crypto";
-import { lstat, mkdir as mkdir4, readFile as readFile4, readdir as readdir2, realpath, rename as rename3, writeFile as writeFile4 } from "node:fs/promises";
+import { lstat, mkdir as mkdir5, readFile as readFile5, readdir as readdir2, realpath, rename as rename4, writeFile as writeFile5 } from "node:fs/promises";
 import path2 from "node:path";
 var EXCLUDED_DIRS = /* @__PURE__ */ new Set([".obsidian", ".trash", ".stfolder", ".git"]);
 var PARA_FOLDERS = ["0-Inbox", "1-Projects", "2-Areas", "3-Resources", "4-Archives"];
@@ -136608,7 +136952,7 @@ async function indexFile(root, rel, previous) {
   const absolute = path2.join(root, rel);
   const info3 = await lstat(absolute);
   if (previous && previous.mtimeMs === info3.mtimeMs && previous.size === info3.size) return null;
-  const text2 = await readFile4(absolute, "utf8");
+  const text2 = await readFile5(absolute, "utf8");
   return recordOf(rel, text2, info3.mtimeMs, info3.size);
 }
 function recordOf(rel, text2, mtimeMs, size) {
@@ -136740,7 +137084,7 @@ var Vault = class {
   }
   async readRaw(rel) {
     const absolute = await safeResolve(this.root, rel);
-    return readFile4(absolute, "utf8");
+    return readFile5(absolute, "utf8");
   }
   async read(rel) {
     const normalized = normalizeVaultPath(rel);
@@ -136769,7 +137113,7 @@ var Vault = class {
     if (typeof content !== "string") throw new VaultError("invalid_content", "\u5185\u5BB9\u5FC5\u987B\u662F\u5B57\u7B26\u4E32");
     if (content.length > 2e6) throw new VaultError("too_large", "\u7B14\u8BB0\u5185\u5BB9\u8D85\u8FC7 2 MB \u4E0A\u9650");
     const absolute = await safeResolve(this.root, normalized);
-    const existing = await readFile4(absolute, "utf8").catch(() => null);
+    const existing = await readFile5(absolute, "utf8").catch(() => null);
     if (existing !== null) {
       const currentSha = shaOf(existing);
       if (expectedSha !== void 0 && expectedSha !== currentSha) {
@@ -136779,10 +137123,10 @@ var Vault = class {
     } else if (expectedSha !== void 0) {
       return { conflict: true, path: normalized, currentSha: null, currentExcerpt: "" };
     }
-    await mkdir4(path2.dirname(absolute), { recursive: true });
+    await mkdir5(path2.dirname(absolute), { recursive: true });
     const temp = `${absolute}.tmp-${process.pid}-${Date.now().toString(36)}`;
-    await writeFile4(temp, content, "utf8");
-    await rename3(temp, absolute);
+    await writeFile5(temp, content, "utf8");
+    await rename4(temp, absolute);
     const info3 = await lstat(absolute);
     const record = recordOf(normalized, content, info3.mtimeMs, info3.size);
     const cache = this.cache();
@@ -136871,9 +137215,9 @@ function excerptOf3(text2, limit = 160) {
   return flat.length > limit ? `${flat.slice(0, limit)}\u2026` : flat;
 }
 async function ensureDefaultVault(root) {
-  await mkdir4(root, { recursive: true });
+  await mkdir5(root, { recursive: true });
   for (const folder of PARA_FOLDERS) {
-    await mkdir4(path2.join(root, folder), { recursive: true });
+    await mkdir5(path2.join(root, folder), { recursive: true });
   }
 }
 
@@ -137143,7 +137487,7 @@ var name = "droplets";
 var inject = ["tools"];
 var REFRESH_WORKERS = 3;
 var FEED_TIMEOUT_MS = 2e4;
-var CONFIG_KEYS = /* @__PURE__ */ new Set(["vaultPath", "refreshInterval", "maxBodies", "enableTranslation"]);
+var CONFIG_KEYS = /* @__PURE__ */ new Set(["workspacePath", "vaultPath", "refreshInterval", "maxBodies", "enableTranslation"]);
 var Config2 = {
   "~standard": {
     version: 1,
@@ -137156,6 +137500,9 @@ var Config2 = {
       const issues = [];
       for (const key of Object.keys(value)) {
         if (!CONFIG_KEYS.has(key)) issues.push({ message: `droplets\uFF1A\u4E0D\u8BA4\u8BC6\u914D\u7F6E\u9879\u300C${key}\u300D`, path: [key] });
+      }
+      if (typeof value.workspacePath === "string" && value.workspacePath.trim() === "") {
+        issues.push({ message: "droplets\uFF1AworkspacePath \u4E0D\u80FD\u4E3A\u7A7A\u5B57\u7B26\u4E32\uFF08\u7559\u7A7A\u8BF7\u5220\u9664\u8BE5\u952E\uFF09", path: ["workspacePath"] });
       }
       if (typeof value.vaultPath === "string" && value.vaultPath.trim() === "") {
         issues.push({ message: "droplets\uFF1AvaultPath \u4E0D\u80FD\u4E3A\u7A7A\u5B57\u7B26\u4E32\uFF08\u7559\u7A7A\u8BF7\u5220\u9664\u8BE5\u952E\uFF09", path: ["vaultPath"] });
@@ -137170,6 +137517,7 @@ var Config2 = {
       }
       if (issues.length > 0) return { issues };
       const result = {};
+      if (typeof value.workspacePath === "string" && value.workspacePath.trim() !== "") result.workspacePath = path3.resolve(value.workspacePath.trim());
       if (typeof value.vaultPath === "string" && value.vaultPath.trim() !== "") result.vaultPath = path3.resolve(value.vaultPath.trim());
       if (typeof value.refreshInterval === "number") result.refreshInterval = Math.max(6e4, Math.floor(value.refreshInterval));
       if (typeof value.maxBodies === "number") result.maxBodies = Math.floor(value.maxBodies);
@@ -137184,7 +137532,8 @@ var DropletsService = class extends TypertRemoteService {
     super(ctx, "droplets");
     this.ctx = ctx;
     this.config = config;
-    this.store = new DropletsStore(ctx.logger, config.maxBodies ?? 300);
+    this.store = config.workspacePath ? new WorkspaceStore(ctx.logger, config.workspacePath, config.maxBodies ?? 300) : new DropletsStore(ctx.logger, config.maxBodies ?? 300);
+    this.sharedWorkspace = Boolean(config.workspacePath);
     this.fetcher = guardedFetch;
     this.inbox = new Inbox(this.store, ctx.logger, () => this.fetcher);
     this.refreshing = false;
@@ -137244,7 +137593,9 @@ var DropletsService = class extends TypertRemoteService {
   }
   vaultRoot() {
     const configured = this.config.vaultPath;
-    return typeof configured === "string" && configured.trim() !== "" ? configured : defaultVaultPath();
+    if (typeof configured === "string" && configured.trim() !== "") return configured;
+    if (this.sharedWorkspace) return join3(this.store.root, "vault");
+    return defaultVaultPath();
   }
   vaultService() {
     const root = this.vaultRoot();
@@ -137946,12 +138297,60 @@ var DropletsService = class extends TypertRemoteService {
   /** Workspace screen: where the data actually lives, its layout and git state. */
   async getWorkspace() {
     await this.ready;
-    const root = storageDir();
+    const shared = this.sharedWorkspace;
+    const root = shared ? this.store.root : storageDir();
+    if (shared) {
+      const stats = await this.store.stats().catch(() => null);
+      const directory2 = [];
+      const probe2 = async (relPath, label, kind) => {
+        const full = join3(root, relPath);
+        const info3 = await stat4(full).catch(() => null);
+        directory2.push({
+          path: relPath,
+          label,
+          kind,
+          exists: Boolean(info3),
+          isDirectory: Boolean(info3?.isDirectory?.()),
+          bytes: info3 && info3.isFile?.() ? info3.size : void 0
+        });
+      };
+      await probe2("state/app.sqlite", "\u8BA2\u9605\u6E90\u4E0E\u5DF2\u8BFB\u72B6\u6001(Droplets \u5171\u4EAB)", "\u5185\u5BB9");
+      await probe2("state/index.sqlite", "\u6761\u76EE\u4E0E\u5168\u6587\u7D22\u5F15(Droplets \u5171\u4EAB)", "\u5185\u5BB9");
+      await probe2("vault", "\u77E5\u8BC6\u5E93\u7B14\u8BB0(Droplets \u5171\u4EAB)", "\u5185\u5BB9");
+      await probe2("inbox", "\u6536\u4EF6\u7BB1\u6293\u53D6\u7684\u539F\u4EF6(Droplets \u5171\u4EAB)", "\u5185\u5BB9");
+      await probe2(".droplets-dsh", "\u63D2\u4EF6\u79C1\u6709:\u8BBE\u7F6E/\u6536\u85CF/\u6B63\u6587\u7F13\u5B58", "\u6D3E\u751F");
+      await probe2("backups", "\u5E94\u7528\u5185\u5907\u4EFD\u5F52\u6863", "\u6D3E\u751F");
+      let git2 = null;
+      try {
+        const { execFile } = await import("node:child_process");
+        const run = (args) => new Promise((resolveResult) => {
+          execFile("git", args, { cwd: root, timeout: 3e3 }, (error, stdout) => resolveResult(error ? "" : String(stdout).trim()));
+        });
+        const branch = await run(["rev-parse", "--abbrev-ref", "HEAD"]);
+        if (branch) {
+          const dirty = await run(["status", "--porcelain"]);
+          git2 = { branch, changed: dirty === "" ? 0 : dirty.split("\n").filter(Boolean).length };
+        }
+      } catch {
+      }
+      return {
+        shared: true,
+        root,
+        directory: directory2,
+        storage: {
+          documentBytes: stats?.appDbBytes ?? 0,
+          entryBytes: stats?.indexDbBytes ?? 0,
+          entryFiles: stats?.items ?? 0,
+          subscriptionCount: stats?.feeds ?? 0
+        },
+        git: git2
+      };
+    }
     const entryDir = entriesDir();
     const directory = [];
     const probe = async (relPath, label, kind) => {
-      const full = join2(root, relPath);
-      const info3 = await stat3(full).catch(() => null);
+      const full = join3(root, relPath);
+      const info3 = await stat4(full).catch(() => null);
       directory.push({
         path: relPath,
         label,
@@ -137972,14 +138371,14 @@ var DropletsService = class extends TypertRemoteService {
     let entryBytes = 0;
     let entryFiles = 0;
     try {
-      documentBytes = (await stat3(this.store.path)).size;
+      documentBytes = (await stat4(this.store.path)).size;
     } catch {
     }
     try {
       for (const name2 of await readdir3(entryDir)) {
         if (!name2.endsWith(".json")) continue;
         entryFiles += 1;
-        entryBytes += (await stat3(join2(entryDir, name2))).size;
+        entryBytes += (await stat4(join3(entryDir, name2))).size;
       }
     } catch {
     }
@@ -138030,7 +138429,8 @@ var DropletsService = class extends TypertRemoteService {
   async getStorageInfo() {
     await this.ready;
     return {
-      storageDir: storageDir(),
+      storageDir: this.sharedWorkspace ? this.store.root : storageDir(),
+      sharedWorkspace: this.sharedWorkspace,
       vaultRoot: this.vaultRoot(),
       subscriptions: this.store.data.subscriptions.length,
       inbox: this.inbox.items().filter((item) => item.doneAt === void 0).length,
@@ -138039,6 +138439,7 @@ var DropletsService = class extends TypertRemoteService {
   }
   async clearData() {
     await this.ready;
+    if (this.sharedWorkspace) throw new Error("droplets\uFF1A\u6B63\u5728\u4E0E Droplets \u5171\u7528\u5DE5\u4F5C\u533A\uFF0C\u8BF7\u52FF\u5728\u6B64\u6E05\u7A7A\u6570\u636E");
     await this.store.destroy();
     await this.store.load();
     await this.ensureVault();

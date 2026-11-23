@@ -106,6 +106,12 @@ export function SettingsView({ api, onClose }) {
         {section === 'workspace' ? (
           <div className="dpl-settings-section">
             <h2>{t('settings.workspace')}</h2>
+            {workspace?.shared ? (
+              <div className="dpl-settings-shared" role="status">
+                <Check size={13} />
+                正在与 Droplets 桌面端共用同一个工作区：订阅源、条目、已读状态与知识库都是同一份数据,两边实时一致。
+              </div>
+            ) : null}
             <div className="dpl-settings-card">
               <div className="dpl-settings-rowname">根目录</div>
               <div className="dpl-settings-pathrow">
@@ -146,11 +152,11 @@ export function SettingsView({ api, onClose }) {
                 <div className="dpl-settings-rowname">存储占用</div>
                 <div className="dpl-settings-metrics">
                   <div>
-                    <span>元数据 data.json</span>
+                    <span>{workspace.shared ? 'state/app.sqlite(订阅源/已读)' : '元数据 data.json'}</span>
                     <strong>{formatBytes(workspace.storage.documentBytes)}</strong>
                   </div>
                   <div>
-                    <span>条目 {workspace.storage.entryFiles} 个文件</span>
+                    <span>{workspace.shared ? 'state/index.sqlite(条目)' : 'entries/'}</span>
                     <strong>{formatBytes(workspace.storage.entryBytes)}</strong>
                   </div>
                   <div>

@@ -1378,3 +1378,15 @@
   color: var(--dpl-muted);
 }
 .dpl-root .dpl-settings-saved { color: #1e9e6a; background: color-mix(in srgb, #34c98e 12%, transparent); }
+.dpl-root .dpl-settings-shared {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, #34c98e 12%, transparent);
+  color: #1e9e6a;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.dpl-root .dpl-settings-shared svg { flex: none; margin-top: 2px; }

@@ -15,6 +15,7 @@ import { join, resolve, sep } from 'node:path';
 import { TypertRemoteService, Remote } from '@deepseek-ai/dsh-typert-protocol';
 import { defineTool } from '@deepseek-ai/dsh-tools';
 import { DropletsStore, defaultVaultPath, entriesDir, storageDir } from './store.js';
+import { WorkspaceStore } from './workspace-store.js';
 import { Inbox } from './inbox.js';
 import { Vault, ensureDefaultVault } from './vault.js';
 import { buildAskPrompt, buildReadingContext, storeContext } from './context.js';
@@ -38,7 +39,7 @@ const FEED_TIMEOUT_MS = 20_000;
  * reference). Keys per the plan: vaultPath, refreshInterval, maxBodies,
  * enableTranslation.
  */
-const CONFIG_KEYS = new Set(['vaultPath', 'refreshInterval', 'maxBodies', 'enableTranslation']);
+const CONFIG_KEYS = new Set(['workspacePath', 'vaultPath', 'refreshInterval', 'maxBodies', 'enableTranslation']);
 
 export const Config = {
   '~standard': {
@@ -53,6 +54,9 @@ export const Config = {
       for (const key of Object.keys(value)) {
         if (!CONFIG_KEYS.has(key)) issues.push({ message: `droplets：不认识配置项「${key}」`, path: [key] });
       }
+      if (typeof value.workspacePath === 'string' && value.workspacePath.trim() === '') {
+        issues.push({ message: 'droplets：workspacePath 不能为空字符串（留空请删除该键）', path: ['workspacePath'] });
+      }
       if (typeof value.vaultPath === 'string' && value.vaultPath.trim() === '') {
         issues.push({ message: 'droplets：vaultPath 不能为空字符串（留空请删除该键）', path: ['vaultPath'] });
       }
@@ -66,6 +70,7 @@ export const Config = {
       }
       if (issues.length > 0) return { issues };
       const result = {};
+      if (typeof value.workspacePath === 'string' && value.workspacePath.trim() !== '') result.workspacePath = path.resolve(value.workspacePath.trim());
       if (typeof value.vaultPath === 'string' && value.vaultPath.trim() !== '') result.vaultPath = path.resolve(value.vaultPath.trim());
       if (typeof value.refreshInterval === 'number') result.refreshInterval = Math.max(60_000, Math.floor(value.refreshInterval));
       if (typeof value.maxBodies === 'number') result.maxBodies = Math.floor(value.maxBodies);
@@ -82,7 +87,13 @@ export class DropletsService extends TypertRemoteService {
     super(ctx, 'droplets');
     this.ctx = ctx;
     this.config = config;
-    this.store = new DropletsStore(ctx.logger, config.maxBodies ?? 300);
+    // workspacePath switches to sharing the Droplets desktop app's own
+    // workspace (its SQLite tables + vault + inbox) instead of a private
+    // document, so both apps read and write the same subscriptions and items.
+    this.store = config.workspacePath
+      ? new WorkspaceStore(ctx.logger, config.workspacePath, config.maxBodies ?? 300)
+      : new DropletsStore(ctx.logger, config.maxBodies ?? 300);
+    this.sharedWorkspace = Boolean(config.workspacePath);
     // The strict shared instance by default; tests (and only tests) may swap
     // this for a permissive factory to exercise the full flow on loopback.
     this.fetcher = guardedFetch;
@@ -144,7 +155,10 @@ export class DropletsService extends TypertRemoteService {
 
   vaultRoot() {
     const configured = this.config.vaultPath;
-    return typeof configured === 'string' && configured.trim() !== '' ? configured : defaultVaultPath();
+    if (typeof configured === 'string' && configured.trim() !== '') return configured;
+    // Sharing the Droplets workspace means sharing its markdown vault too.
+    if (this.sharedWorkspace) return join(this.store.root, 'vault');
+    return defaultVaultPath();
   }
 
   vaultService() {
@@ -921,7 +935,54 @@ export class DropletsService extends TypertRemoteService {
   /** Workspace screen: where the data actually lives, its layout and git state. */
   async getWorkspace() {
     await this.ready;
-    const root = storageDir();
+    const shared = this.sharedWorkspace;
+    const root = shared ? this.store.root : storageDir();
+    if (shared) {
+      const stats = await this.store.stats().catch(() => null);
+      const directory = [];
+      const probe = async (relPath, label, kind) => {
+        const full = join(root, relPath);
+        const info = await stat(full).catch(() => null);
+        directory.push({
+          path: relPath,
+          label,
+          kind,
+          exists: Boolean(info),
+          isDirectory: Boolean(info?.isDirectory?.()),
+          bytes: info && info.isFile?.() ? info.size : undefined,
+        });
+      };
+      await probe('state/app.sqlite', '订阅源与已读状态(Droplets 共享)', '内容');
+      await probe('state/index.sqlite', '条目与全文索引(Droplets 共享)', '内容');
+      await probe('vault', '知识库笔记(Droplets 共享)', '内容');
+      await probe('inbox', '收件箱抓取的原件(Droplets 共享)', '内容');
+      await probe('.droplets-dsh', '插件私有:设置/收藏/正文缓存', '派生');
+      await probe('backups', '应用内备份归档', '派生');
+      let git = null;
+      try {
+        const { execFile } = await import('node:child_process');
+        const run = (args) => new Promise((resolveResult) => {
+          execFile('git', args, { cwd: root, timeout: 3000 }, (error, stdout) => resolveResult(error ? '' : String(stdout).trim()));
+        });
+        const branch = await run(['rev-parse', '--abbrev-ref', 'HEAD']);
+        if (branch) {
+          const dirty = await run(['status', '--porcelain']);
+          git = { branch, changed: dirty === '' ? 0 : dirty.split('\n').filter(Boolean).length };
+        }
+      } catch { /* git optional */ }
+      return {
+        shared: true,
+        root,
+        directory,
+        storage: {
+          documentBytes: stats?.appDbBytes ?? 0,
+          entryBytes: stats?.indexDbBytes ?? 0,
+          entryFiles: stats?.items ?? 0,
+          subscriptionCount: stats?.feeds ?? 0,
+        },
+        git,
+      };
+    }
     const entryDir = entriesDir();
     const directory = [];
     const probe = async (relPath, label, kind) => {
@@ -1005,7 +1066,8 @@ export class DropletsService extends TypertRemoteService {
   async getStorageInfo() {
     await this.ready;
     return {
-      storageDir: storageDir(),
+      storageDir: this.sharedWorkspace ? this.store.root : storageDir(),
+      sharedWorkspace: this.sharedWorkspace,
       vaultRoot: this.vaultRoot(),
       subscriptions: this.store.data.subscriptions.length,
       inbox: this.inbox.items().filter((item) => item.doneAt === undefined).length,
@@ -1015,6 +1077,8 @@ export class DropletsService extends TypertRemoteService {
 
   async clearData() {
     await this.ready;
+    // Never wipe a workspace another application owns.
+    if (this.sharedWorkspace) throw new Error('droplets：正在与 Droplets 共用工作区，请勿在此清空数据');
     await this.store.destroy();
     await this.store.load();
     await this.ensureVault();
