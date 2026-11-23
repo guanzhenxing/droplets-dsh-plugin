@@ -320,7 +320,7 @@ export function SettingsView({ api, onClose }) {
 
         {pickerOpen ? (
           <div className="dpl-dialog-backdrop" onClick={() => { if (!pickerBusy) setPickerOpen(false); }}>
-            <div className="dpl-dialog dpl-edit-dialog" onClick={(event) => event.stopPropagation()}>
+            <div className="dpl-dialog dpl-ws-dialog" onClick={(event) => event.stopPropagation()}>
               <div className="dpl-dialog-headline">
                 <span className="dpl-dialog-title">选择工作区</span>
                 <span className="dpl-grow" />

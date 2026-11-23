@@ -1,6 +1,6 @@
 {
   "name": "droplets-dsh",
-  "version": "0.4.42",
+  "version": "0.4.43",
   "private": true,
   "description": "Droplets for DeepSeek Harness: 信息流 + 收件箱 + 知识库三空间,原生 AI 伴读与 Agent 工具",
   "license": "GPL-3.0-only",
