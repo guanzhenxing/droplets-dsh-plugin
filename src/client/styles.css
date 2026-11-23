@@ -44,7 +44,12 @@
   justify-content: space-between;
   gap: 12px;
   height: 44px;
-  padding: 0 12px;
+  /* Follow the host frame's leading clearance: when the DSH sidebar is
+     collapsed the macOS traffic lights sit over this header, and the frame
+     publishes the required inset as --dsh-frame-leading-clearance (same
+     formula the host's own title cluster uses). */
+  padding-inline-start: max(0px, calc(var(--dsh-frame-leading-clearance, 0px) - 20px));
+  padding-inline-end: 12px;
   border-bottom: 1px solid var(--dpl-border);
   flex: none;
 }
