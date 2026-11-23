@@ -154,3 +154,22 @@ test('feed-sorting: manage table sinks disabled feeds', () => {
   assert.deepEqual(sortManageFeeds(feeds, 'title', true).map((f) => f.id), ['on', 'err', 'off']);
   assert.deepEqual(sortManageFeeds(feeds, 'health', true).map((f) => f.id), ['err', 'on', 'off']);
 });
+
+test('inbox list treats doneAt: null as not done (legacy records)', async () => {
+  const home = tempHome();
+  const ctx = fakeCtx();
+  const service = new DropletsService(ctx, {});
+  await service.ready;
+  try {
+    service.store.data.inbox.push({
+      key: 'inbox:legacy', url: 'https://x.example/a', title: 'Legacy', kind: 'web',
+      addedAt: 1, readAt: null, doneAt: null, bytes: 1, file: null, status: 'ready', excerpt: '',
+    });
+    const { items } = await service.inboxList({});
+    assert.ok(items.some((item) => item.key === 'inbox:legacy'), 'doneAt:null item must stay visible');
+    const removed = await service.inboxMarkDone({ key: 'inbox:legacy' });
+    assert.equal(removed.removed, true);
+    const after = await service.inboxList({});
+    assert.ok(!after.items.some((item) => item.key === 'inbox:legacy'));
+  } finally { service.shutdown(); await ctx.dispose(); home.cleanup(); }
+});

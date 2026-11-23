@@ -179,7 +179,9 @@ export class Inbox {
   }
 
   list({ filter } = {}) {
-    const items = this.items().filter((item) => item.doneAt === undefined);
+    // Done check must treat both null and undefined as "not done": older
+    // records persist an explicit doneAt: null and were being hidden.
+    const items = this.items().filter((item) => item.doneAt == null);
     const sorted = [...sortedByAdded(items)];
     if (filter === 'unread') return sorted.filter((item) => !item.readAt).map((item) => this.summarize(item));
     return sorted.map((item) => this.summarize(item));
