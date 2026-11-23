@@ -137756,7 +137756,7 @@ var DropletsService = class extends TypertRemoteService {
     const { sourceId, groupName, limit } = request ?? {};
     await this.ready;
     const data = this.store.data;
-    const size = Math.min(Math.max(limit ?? 120, 1), 500);
+    const size = Math.min(Math.max(limit ?? 5e3, 1), 8e3);
     let pool = [];
     if (typeof sourceId === "string" && sourceId) {
       const sub = data.subscriptions.find((candidate) => candidate.id === sourceId);
@@ -137766,16 +137766,17 @@ var DropletsService = class extends TypertRemoteService {
     } else {
       pool = data.subscriptions.flatMap((sub) => this.entriesOfFeed(sub));
     }
-    pool.sort(sortByDate);
+    const isUnread = (entry) => data.states[entry.key] === void 0 ? 0 : 1;
+    pool.sort((a, b) => isUnread(a) - isUnread(b) || sortByDate(a, b));
     return {
       items: pool.slice(0, size).map((entry) => ({
         sourceId: entry.channelKey,
         key: entry.key,
         title: entry.title,
         link: entry.url ?? "",
-        summary: entry.summary ?? "",
+        // Excerpt only: bodies are fetched per article when opened.
+        summary: (entry.summary ?? "").slice(0, 200),
         content: "",
-        contentHtml: entry.html ?? "",
         publishedAt: entry.publishedAt ?? null,
         state: data.states[entry.key] ?? "unseen"
       }))

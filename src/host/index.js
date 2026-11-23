@@ -331,7 +331,9 @@ export class DropletsService extends TypertRemoteService {
     const { sourceId, groupName, limit } = request ?? {};
     await this.ready;
     const data = this.store.data;
-    const size = Math.min(Math.max(limit ?? 120, 1), 500);
+    // The list carries no article bodies (the reader fetches those on open),
+    // so it can hold the whole scope instead of a 120-row window.
+    const size = Math.min(Math.max(limit ?? 5000, 1), 8000);
     let pool = [];
     if (typeof sourceId === 'string' && sourceId) {
       const sub = data.subscriptions.find((candidate) => candidate.id === sourceId);
@@ -343,16 +345,19 @@ export class DropletsService extends TypertRemoteService {
     } else {
       pool = data.subscriptions.flatMap((sub) => this.entriesOfFeed(sub));
     }
-    pool.sort(sortByDate);
+    // Reading order: every unread item first, newest to oldest inside each
+    // group — the order the list has to show on entry, for 全部源 as well.
+    const isUnread = (entry) => (data.states[entry.key] === undefined ? 0 : 1);
+    pool.sort((a, b) => isUnread(a) - isUnread(b) || sortByDate(a, b));
     return {
       items: pool.slice(0, size).map((entry) => ({
         sourceId: entry.channelKey,
         key: entry.key,
         title: entry.title,
         link: entry.url ?? '',
-        summary: entry.summary ?? '',
+        // Excerpt only: bodies are fetched per article when opened.
+        summary: (entry.summary ?? '').slice(0, 200),
         content: '',
-        contentHtml: entry.html ?? '',
         publishedAt: entry.publishedAt ?? null,
         state: data.states[entry.key] ?? 'unseen',
       })),

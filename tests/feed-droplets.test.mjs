@@ -266,3 +266,41 @@ test('refreshStatus derives progress from disk before any refresh runs', async (
     assert.ok(status.finishedAt >= 1000);
   } finally { service.shutdown(); await ctx.dispose(); home.cleanup(); }
 });
+
+test('listItems orders unread first then newest, and omits article bodies', async () => {
+  const home = tempHome();
+  const ctx = fakeCtx();
+  const service = new DropletsService(ctx, {});
+  await service.ready;
+  try {
+    service.store.data.subscriptions.push({
+      id: 'feed:order', url: 'https://order.example/f', name: 'Order', enabled: true,
+      entries: [
+        { key: 'k-old-unread', guid: 'k-old-unread', title: 'old unread', publishedAt: '2026-01-01T00:00:00.000Z', summary: 's', html: '<p>body</p>' },
+        { key: 'k-new-read', guid: 'k-new-read', title: 'new read', publishedAt: '2026-03-01T00:00:00.000Z', summary: 's', html: '<p>body</p>' },
+        { key: 'k-new-unread', guid: 'k-new-unread', title: 'new unread', publishedAt: '2026-02-01T00:00:00.000Z', summary: 's', html: '<p>body</p>' },
+      ],
+    });
+    service.store.data.states['k-new-read'] = 'seen';
+    const { items } = await service.listItems({ sourceId: 'feed:order' });
+    assert.deepEqual(items.map((item) => item.key), ['k-new-unread', 'k-old-unread', 'k-new-read'], 'unread newest-first, then read');
+    assert.ok(items.every((item) => item.contentHtml === undefined), 'list payload carries no bodies');
+  } finally { service.shutdown(); await ctx.dispose(); home.cleanup(); }
+});
+
+test('the all-scope list is not capped at the old 120-row window', async () => {
+  const home = tempHome();
+  const ctx = fakeCtx();
+  const service = new DropletsService(ctx, {});
+  await service.ready;
+  try {
+    const entries = Array.from({ length: 300 }, (_, i) => ({
+      key: 'k' + i, guid: 'k' + i, title: 't' + i,
+      publishedAt: new Date(Date.UTC(2026, 0, 1) + i * 3600_000).toISOString(),
+      summary: 's', html: '',
+    }));
+    service.store.data.subscriptions.push({ id: 'feed:many', url: 'https://many.example/f', name: 'Many', enabled: true, entries });
+    const { items } = await service.listItems({});
+    assert.equal(items.length, 300, 'whole scope reaches the client');
+  } finally { service.shutdown(); await ctx.dispose(); home.cleanup(); }
+});

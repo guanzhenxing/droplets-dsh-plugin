@@ -1462,3 +1462,10 @@
 .dpl-root .dpl-modal-title { font-size: 13.5px; font-weight: 600; }
 .dpl-root .dpl-modal-text { margin: 0; font-size: 12.5px; color: var(--dpl-muted); line-height: 1.65; }
 .dpl-root .dpl-modal strong { color: var(--dpl-fg); }
+
+/* Long lists (全部源 can hold thousands of rows): let the browser skip
+   off-screen rows instead of laying them all out. */
+.dpl-root .dpl-entry-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 72px;
+}
