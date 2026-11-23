@@ -73,6 +73,7 @@ export function ManageTable({ api, feeds, onBack, onChanged }) {
   // OPML import dialog (window.prompt is not supported in the sandboxed
   // renderer): paste XML or a URL, preview, then import everything.
   const [importOpen, setImportOpen] = useState(false);
+  const [importNotice, setImportNotice] = useState('');
   async function importOpml() {
     setImportOpen(true);
   }
@@ -105,6 +106,13 @@ export function ManageTable({ api, feeds, onBack, onChanged }) {
           {opmlBusy === 'export' ? <Loader2 size={14} className="dpl-spin" /> : null} 导出
         </button>
       </div>
+      {importNotice ? (
+        <div className="dpl-import-successbar" role="status">
+          <CheckCheck size={14} />
+          <span>{importNotice}</span>
+          <button type="button" className="dpl-icon-btn" aria-label="关闭提示" onClick={() => setImportNotice('')}>✕</button>
+        </div>
+      ) : null}
       <div className="dpl-manage-filters">
         <input className="dpl-manage-search" placeholder="搜索名称 / URL" value={query} onChange={(e) => setQuery(e.target.value)} />
         <div className="dpl-seg">
@@ -231,7 +239,13 @@ export function ManageTable({ api, feeds, onBack, onChanged }) {
         <ImportDialog
           api={api}
           onClose={() => setImportOpen(false)}
-          onImported={onChanged}
+          onImported={async (count) => {
+            await onChanged();
+            if (count > 0) {
+              setImportNotice('已导入 ' + count + ' 个源,正在后台抓取条目…');
+              setTimeout(() => setImportNotice(''), 6000);
+            }
+          }}
         />
       ) : null}
       {confirmBatchDelete ? (
@@ -447,7 +461,12 @@ function ImportDialog({ api, onClose, onImported }) {
     setBusy(true);
     setError('');
     try { previewOf(await api.opmlPreview({ xml })); }
-    catch (cause) { setError(String(cause?.message ?? cause)); }
+    catch (cause) {
+      const message = String(cause?.message ?? cause);
+      setError(message);
+      // file mode has no visible body — mirror the failure into its status area
+      if (mode === 'file') setFileError(message);
+    }
     finally { setBusy(false); }
   };
 
@@ -459,11 +478,29 @@ function ImportDialog({ api, onClose, onImported }) {
     finally { setBusy(false); }
   };
 
+  const [fileName, setFileName] = useState('');
+  const [fileError, setFileError] = useState('');
+  const [parsing, setParsing] = useState(false);
   const onFile = (event) => {
     const file = event.target.files?.[0];
+    // allow re-picking the same file
+    event.target.value = '';
     if (!file) return;
+    setMode('file');
+    setFileName(file.name);
+    setFileError('');
+    setParsing(true);
     const reader = new FileReader();
-    reader.onload = () => void loadXml(String(reader.result ?? ''));
+    reader.onload = () => {
+      const xml = String(reader.result ?? '');
+      if (xml.trim() === '') {
+        setParsing(false);
+        setFileError('文件是空的');
+        return;
+      }
+      void loadXml(xml).finally(() => setParsing(false));
+    };
+    reader.onerror = () => { setParsing(false); setFileError('读取文件失败'); };
     reader.readAsText(file);
   };
 
@@ -486,7 +523,7 @@ function ImportDialog({ api, onClose, onImported }) {
       } else {
         await api.opmlImport(text, [...picked]);
       }
-      await onImported();
+      await onImported(picked.size);
       onClose();
     } catch (cause) { setError(String(cause?.message ?? cause)); }
     finally { setBusy(false); }
@@ -502,6 +539,19 @@ function ImportDialog({ api, onClose, onImported }) {
           <span className="dpl-grow" />
           <button type="button" className="dpl-icon-btn dpl-round" onClick={onClose} aria-label="关闭"><X size={15} /></button>
         </div>
+
+        {!mode || (mode === 'file' && !entries) ? (
+          <div className="dpl-import-filestatus">
+            {parsing ? (
+              <div className="dpl-import-parsing"><Loader2 size={16} className="dpl-spin" /> 正在解析 {fileName}…</div>
+            ) : fileError ? (
+              <div className="dpl-dialog-error">
+                解析 {fileName} 失败:{fileError}
+                <button type="button" className="dpl-btn dpl-sm" onClick={() => { setMode(null); setFileError(''); }}>重新选择</button>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
         {!mode ? (
           <div className="dpl-import-choices">
