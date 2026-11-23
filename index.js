@@ -136020,7 +136020,7 @@ function sortByDate(left, right) {
   return b - a;
 }
 var FEED_LIMITS = {
-  maxSubscriptions: 200,
+  maxSubscriptions: 500,
   maxEntriesKept: MAX_ENTRIES_KEPT,
   maxBodyChars: MAX_BODY_CHARS
 };
