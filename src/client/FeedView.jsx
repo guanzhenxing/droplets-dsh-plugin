@@ -194,6 +194,23 @@ function ItemList(props) {
 
   const unseenCount = items.filter((item) => item.state === 'unseen').length;
 
+  // The dialog must quote the number the action will actually change. The
+  // loaded list is capped (listItems ≤ 120/500), so counting its rows
+  // under-reports a big feed — use the feed table's authoritative unread
+  // count for the current scope instead.
+  const scopeUnseen = (() => {
+    if (typeof feeds?.[0]?.unreadCount !== 'number') return unseenCount;
+    if (typeof sourceId === 'string' && sourceId) {
+      const feed = feeds.find((entry) => entry.id === sourceId);
+      return feed?.unreadCount ?? unseenCount;
+    }
+    if (selectedGroup !== null && selectedGroup !== undefined) {
+      return feeds.filter((feed) => (feed.group ?? '') === selectedGroup)
+        .reduce((sum, feed) => sum + (feed.unreadCount ?? 0), 0);
+    }
+    return feeds.reduce((sum, feed) => sum + (feed.unreadCount ?? 0), 0);
+  })();
+
   const markState = async (item, state) => {
     setItems((current) => current.map((entry) => (entry.key === item.key && entry.sourceId === item.sourceId ? { ...entry, state } : entry)));
     await api.setItemState({ keys: [item.key], state }).catch(() => {});
@@ -250,7 +267,7 @@ function ItemList(props) {
         <button type="button" className={'dpl-icon-btn' + (viewFilter === 'skipped' ? ' is-toggled' : '')} data-tip="只显示略过" aria-label="只显示略过" aria-pressed={viewFilter === 'skipped'} onClick={() => setViewFilter(viewFilter === 'skipped' ? 'all' : 'skipped')}>
           <Archive size={15} />
         </button>
-        <button type="button" className="dpl-icon-btn" data-tip="标记全部为已读" aria-label="标记全部为已读" disabled={unseenCount === 0} onClick={() => setConfirmMarkAllRead(true)}>
+        <button type="button" className="dpl-icon-btn" data-tip="标记全部为已读" aria-label="标记全部为已读" disabled={scopeUnseen === 0} onClick={() => setConfirmMarkAllRead(true)}>
           <CheckCheck size={15} />
         </button>
         <span className="dpl-flex-fill" />
@@ -312,7 +329,7 @@ function ItemList(props) {
         <div className="dpl-modal-backdrop" onClick={() => setConfirmMarkAllRead(false)}>
           <div className="dpl-modal" onClick={(e) => e.stopPropagation()}>
             <div className="dpl-modal-title">标记全部为已读</div>
-            <p className="dpl-modal-text">将当前范围的 <strong>{unseenCount}</strong> 条未读全部标记为已读，已略过的条目不受影响。此操作无法批量撤销。</p>
+            <p className="dpl-modal-text">将当前范围的 <strong>{scopeUnseen}</strong> 条未读全部标记为已读，已略过的条目不受影响。此操作无法批量撤销。</p>
             <div className="dpl-form-row dpl-end">
               <button type="button" className="dpl-btn" onClick={() => setConfirmMarkAllRead(false)}>取消</button>
               <button type="button" className="dpl-btn dpl-primary-solid" onClick={() => void markAllRead()}>标记</button>
