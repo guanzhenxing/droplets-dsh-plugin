@@ -231,7 +231,9 @@ function RefreshProgressLine({ progress }) {
           ? <><Loader2 size={12} className="dpl-spin" /> 抓取中 {done}/{total}{failed > 0 ? <> · 失败 {failed}</> : null}</>
           : <>上次抓取 成功 {progress.ok ?? 0}{failed > 0 ? <> · 失败 {failed}</> : null}{progress.finishedAt ? ' · ' + new Date(progress.finishedAt).toLocaleTimeString('zh-Hans-CN', { hour: '2-digit', minute: '2-digit' }) : ''}</>}
       </button>
-      <div className="dpl-refresh-bar"><div className="dpl-refresh-bar-fill" style={{ width: pct + '%' }} /></div>
+      {progress.running ? (
+        <div className="dpl-refresh-bar"><div className="dpl-refresh-bar-fill" style={{ width: pct + '%' }} /></div>
+      ) : null}
       {open && failed > 0 ? (
         <div className="dpl-refresh-errors" role="list">
           {(progress.errors ?? []).slice(0, 60).map((error, index) => (

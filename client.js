@@ -3749,7 +3749,7 @@ function RefreshProgressLine({ progress }) {
       ] }) : null,
       progress.finishedAt ? " \xB7 " + new Date(progress.finishedAt).toLocaleTimeString("zh-Hans-CN", { hour: "2-digit", minute: "2-digit" }) : ""
     ] }) }),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "dpl-refresh-bar", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "dpl-refresh-bar-fill", style: { width: pct + "%" } }) }),
+    progress.running ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "dpl-refresh-bar", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "dpl-refresh-bar-fill", style: { width: pct + "%" } }) }) : null,
     open && failed > 0 ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "dpl-refresh-errors", role: "list", children: (progress.errors ?? []).slice(0, 60).map((error, index2) => /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "dpl-refresh-error", role: "listitem", children: [
       /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: "dpl-truncate", children: error.name }),
       /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("em", { children: String(error.reason).slice(0, 90) })
