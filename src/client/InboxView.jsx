@@ -19,6 +19,7 @@ export function InboxView({ api, onMaterial }) {
   const [doc, setDoc] = useState(null); // { kind, html?, pdf?, epub?, chapter }
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const docRef = useRef(null);
 
   const load = useCallback(async () => {
@@ -41,7 +42,8 @@ export function InboxView({ api, onMaterial }) {
       const { item, duplicate } = await api.inboxAddUrl({ url: trimmed });
       setUrl('');
       await load();
-      if (!duplicate && item?.key) await open(item);
+      if (duplicate) setNotice(t('inbox.alreadySaved'));
+      if (item?.key) await open(item);
     } catch (cause) {
       setError(String(cause?.message ?? cause));
       await load();
@@ -116,6 +118,12 @@ export function InboxView({ api, onMaterial }) {
           <button type="button" className="dpl-btn" disabled={busy || url.trim() === ''} onClick={() => void addUrl()}>{busy ? t('inbox.fetching') : t('inbox.add')}</button>
         </div>
         {error && <div className="dpl-error" role="alert">{error}</div>}
+        {notice && (
+          <div className="dpl-notice" role="status">
+            <span>{notice}</span>
+            <button type="button" aria-label={t('common.close')} onClick={() => setNotice('')}>✕</button>
+          </div>
+        )}
         {items.length === 0 && !busy && (
           <div className="dpl-empty">
             <p>{t('inbox.empty')}</p>

@@ -87,7 +87,7 @@ export function VaultView({ api, onMaterial }) {
 
   async function runSearch() {
     const query = search.trim();
-    if (query === '') { setResults(null); return; }
+    if (query === '') { clearSearch(); return; }
     setBusy(true);
     try {
       const { results: found } = await api.vaultSearch({ query, limit: 30 });
@@ -100,6 +100,12 @@ export function VaultView({ api, onMaterial }) {
       });
     } catch (cause) { setError(String(cause?.message ?? cause)); }
     finally { setBusy(false); }
+  }
+
+  function clearSearch() {
+    setSearch('');
+    setResults(null);
+    setGraph(null);
   }
 
   async function openGraph() {
@@ -166,7 +172,7 @@ export function VaultView({ api, onMaterial }) {
             type="search"
             placeholder={t('common.searchPlaceholder')}
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => { setSearch(event.target.value); if (event.target.value.trim() === '') clearSearch(); }}
             onKeyDown={(event) => { if (event.key === 'Enter') void runSearch(); }}
           />
         </div>
@@ -182,7 +188,10 @@ export function VaultView({ api, onMaterial }) {
         {graph && <GraphView graph={graph} onOpen={(path) => { setGraph(null); void openNote(path); }} />}
         {results && (
           <div className="dpl-search-results">
-            <h2>{t('common.search')} · {results.length}</h2>
+            <h2>
+              {t('common.search')} · {results.length}
+              <button type="button" className="dpl-btn dpl-sm" onClick={clearSearch}>{t('vault.clearSearch')}</button>
+            </h2>
             <ul>
               {results.map((item) => (
                 <li key={item.path}>
