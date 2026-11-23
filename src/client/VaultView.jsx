@@ -97,7 +97,7 @@ export function VaultView({ api, onMaterial }) {
         title: t('companion.askVaultTitle') + ' · ' + query,
         matches: found.map((item) => ({ path: item.path, title: item.title, excerpt: item.excerpt })),
         content: '',
-      });
+      }, { reveal: true });
     } catch (cause) { setError(String(cause?.message ?? cause)); }
     finally { setBusy(false); }
   }

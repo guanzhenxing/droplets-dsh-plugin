@@ -4924,7 +4924,7 @@ function Preview({ api, feeds, item, onMaterial, onJumpSpace, onMarked }) {
       {
         headings,
         containerRef: scrollRef,
-        onAskAi: () => onMaterial({ space: "feed", key: item.key, title: item.title, url: item.link, content: plainOf(html2) })
+        onAskAi: () => onMaterial({ space: "feed", key: item.key, title: item.title, url: item.link, content: plainOf(html2) }, { reveal: true })
       }
     )
   ] });
@@ -107572,7 +107572,7 @@ function VaultView({ api, onMaterial }) {
         title: t("companion.askVaultTitle") + " \xB7 " + query,
         matches: found.map((item) => ({ path: item.path, title: item.title, excerpt: item.excerpt })),
         content: ""
-      });
+      }, { reveal: true });
     } catch (cause) {
       setError(String(cause?.message ?? cause));
     } finally {
@@ -108499,9 +108499,9 @@ function DropletsPanel({ api, SessionProvider, renderSlot }) {
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, [onFocus]);
-  const onMaterial = (0, import_react14.useCallback)((next) => {
+  const onMaterial = (0, import_react14.useCallback)((next, options = {}) => {
     setMaterial(next);
-    setCompanionOpen(true);
+    if (options.reveal) setCompanionOpen(true);
   }, []);
   (0, import_react14.useEffect)(() => {
     const tip = document.createElement("div");

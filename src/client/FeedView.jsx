@@ -434,7 +434,7 @@ function Preview({ api, feeds, item, onMaterial, onJumpSpace, onMarked }) {
       <AuxRail
         headings={headings}
         containerRef={scrollRef}
-        onAskAi={() => onMaterial({ space: 'feed', key: item.key, title: item.title, url: item.link, content: plainOf(html) })}
+        onAskAi={() => onMaterial({ space: 'feed', key: item.key, title: item.title, url: item.link, content: plainOf(html) }, { reveal: true })}
       />
     </div>
   );

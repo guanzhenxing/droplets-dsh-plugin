@@ -40,9 +40,11 @@ export function DropletsPanel({ api, SessionProvider, renderSlot }) {
     return () => window.removeEventListener('focus', onFocus);
   }, [onFocus]);
 
-  const onMaterial = useCallback((next) => {
+  const onMaterial = useCallback((next, options = {}) => {
     setMaterial(next);
-    setCompanionOpen(true);
+    // Only an explicit 问 AI reveals the companion. Switching articles keeps
+    // the context fresh but must never resurrect a pane the user closed.
+    if (options.reveal) setCompanionOpen(true);
   }, []);
 
   // Global tooltip layer (droplets TooltipLayer parity): one fixed div at the
