@@ -4529,6 +4529,10 @@ function FeedView({ api, onMaterial, onJumpSpace }) {
   const [selected, setSelected] = (0, import_react9.useState)(null);
   const [spinning, setSpinning] = (0, import_react9.useState)(false);
   const refreshTick = (0, import_react9.useRef)(0);
+  const bumpUnread = (0, import_react9.useCallback)((feedId, delta) => {
+    if (typeof feedId !== "string" || !delta) return;
+    setFeeds((current) => current.map((feed) => feed.id === feedId ? { ...feed, unreadCount: Math.max(0, (feed.unreadCount ?? 0) + delta) } : feed));
+  }, []);
   const loadFeeds = (0, import_react9.useCallback)(async () => {
     try {
       const { feeds: next } = await api.listFeeds();
@@ -4634,6 +4638,7 @@ function FeedView({ api, onMaterial, onJumpSpace }) {
             selected,
             onSelect: setSelected,
             onMaterial,
+            onUnreadChange: bumpUnread,
             spinning,
             onRefresh: () => void refresh(),
             onFeedsChanged: loadFeeds,
@@ -4643,13 +4648,13 @@ function FeedView({ api, onMaterial, onJumpSpace }) {
             onCollapse: collapse
           }
         ) },
-        { id: "preview", initialWidth: 700, minWidth: 420, collapsible: false, render: () => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Preview, { api, feeds, item: selected, onMaterial, onJumpSpace, onMarked: loadFeeds }) }
+        { id: "preview", initialWidth: 700, minWidth: 420, collapsible: false, render: () => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Preview, { api, feeds, item: selected, onMaterial, onJumpSpace, onMarked: loadFeeds, onUnreadChange: bumpUnread }) }
       ]
     }
   );
 }
 function ItemList(props) {
-  const { api, feeds, sourceId, selectedGroup, selected, onSelect, onMaterial, spinning, onRefresh, onFeedsChanged, onManage, collapsed, onExpand, onCollapse } = props;
+  const { api, feeds, sourceId, selectedGroup, selected, onSelect, onMaterial, onUnreadChange, spinning, onRefresh, onFeedsChanged, onManage, collapsed, onExpand, onCollapse } = props;
   const [items, setItems] = (0, import_react9.useState)([]);
   const [loading, setLoading] = (0, import_react9.useState)(true);
   const [viewFilter, setViewFilter] = (0, import_react9.useState)("all");
@@ -4722,6 +4727,8 @@ function ItemList(props) {
   })();
   const markState = async (item, state) => {
     setItems((current) => current.map((entry) => entry.key === item.key && entry.sourceId === item.sourceId ? { ...entry, state } : entry));
+    if (item.state === "unseen" && state !== "unseen") onUnreadChange?.(item.sourceId, -1);
+    else if (item.state !== "unseen" && state === "unseen") onUnreadChange?.(item.sourceId, 1);
     await api.setItemState({ keys: [item.key], state }).catch(() => {
     });
     void onFeedsChanged();
@@ -4731,6 +4738,7 @@ function ItemList(props) {
     onMaterial({ space: "feed", key: item.key, title: item.title, url: item.link, content: "" });
     if (item.state === "unseen") {
       setItems((current) => current.map((entry) => entry.key === item.key && entry.sourceId === item.sourceId ? { ...entry, state: "seen" } : entry));
+      onUnreadChange?.(item.sourceId, -1);
       void api.setItemState({ keys: [item.key], state: "seen" }).then(() => onFeedsChanged()).catch(() => {
       });
       onSelect({ ...item, state: "seen" });
@@ -4844,7 +4852,7 @@ function ItemList(props) {
     ] }) }) : null
   ] });
 }
-function Preview({ api, feeds, item, onMaterial, onJumpSpace, onMarked }) {
+function Preview({ api, feeds, item, onMaterial, onJumpSpace, onMarked, onUnreadChange }) {
   const [html2, setHtml] = (0, import_react9.useState)("");
   const [notice, setNotice] = (0, import_react9.useState)("");
   const [busyAction, setBusyAction] = (0, import_react9.useState)("");
@@ -4888,6 +4896,7 @@ function Preview({ api, feeds, item, onMaterial, onJumpSpace, onMarked }) {
     setBusyAction("skip");
     try {
       await api.setItemState({ keys: [item.key], state: "skipped" });
+      if (item.state === "unseen") onUnreadChange?.(item.sourceId, -1);
       void onMarked();
     } catch (cause) {
       setNotice(String(cause?.message ?? cause));

@@ -2,3 +2,5 @@
 .DS_Store
 .m0-home/
 node_modules/
+.t1-home/
+.t*-home/

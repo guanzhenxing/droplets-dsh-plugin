@@ -14,7 +14,9 @@ export function tempHome() {
 }
 
 function cleanup(dir) {
-  rmSync(dir, { recursive: true, force: true });
+  // A debounced flush may still be landing per-feed entry files when a test
+  // finishes; retry instead of failing the test on a transient ENOTEMPTY.
+  rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 40 });
   delete process.env.DSH_HOME;
 }
 

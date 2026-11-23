@@ -33,6 +33,18 @@ export function FeedView({ api, onMaterial, onJumpSpace }) {
   const [spinning, setSpinning] = useState(false);
   const refreshTick = useRef(0);
 
+  // Optimistic unread adjustment: the source badge and the 全部源 total must
+  // drop the moment an item is read, not after the host round-trip. loadFeeds
+  // reconciles the authoritative numbers right after.
+  const bumpUnread = useCallback((feedId, delta) => {
+    if (typeof feedId !== 'string' || !delta) return;
+    setFeeds((current) => current.map((feed) => (
+      feed.id === feedId
+        ? { ...feed, unreadCount: Math.max(0, (feed.unreadCount ?? 0) + delta) }
+        : feed
+    )));
+  }, []);
+
   const loadFeeds = useCallback(async () => {
     try {
       const { feeds: next } = await api.listFeeds();
@@ -108,13 +120,14 @@ export function FeedView({ api, onMaterial, onJumpSpace }) {
           <ItemList
             api={api} feeds={feeds} sourceId={sourceId} selectedGroup={selectedGroup}
             selected={selected} onSelect={setSelected} onMaterial={onMaterial}
+            onUnreadChange={bumpUnread}
             spinning={spinning} onRefresh={() => void refresh()} onFeedsChanged={loadFeeds}
             onManage={() => setManaging(true)}
             collapsed={collapsed} onExpand={expand} onCollapse={collapse}
           />
         ) },
         { id: 'preview', initialWidth: 700, minWidth: 420, collapsible: false, render: () => (
-          <Preview api={api} feeds={feeds} item={selected} onMaterial={onMaterial} onJumpSpace={onJumpSpace} onMarked={loadFeeds} />
+          <Preview api={api} feeds={feeds} item={selected} onMaterial={onMaterial} onJumpSpace={onJumpSpace} onMarked={loadFeeds} onUnreadChange={bumpUnread} />
         ) },
       ]}
     />
@@ -123,7 +136,7 @@ export function FeedView({ api, onMaterial, onJumpSpace }) {
 
 /** Items pane: title + pill + refresh + three-state filter + mark-all + «. */
 function ItemList(props) {
-  const { api, feeds, sourceId, selectedGroup, selected, onSelect, onMaterial, spinning, onRefresh, onFeedsChanged, onManage, collapsed, onExpand, onCollapse } = props;
+  const { api, feeds, sourceId, selectedGroup, selected, onSelect, onMaterial, onUnreadChange, spinning, onRefresh, onFeedsChanged, onManage, collapsed, onExpand, onCollapse } = props;
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewFilter, setViewFilter] = useState('all');
@@ -213,6 +226,9 @@ function ItemList(props) {
 
   const markState = async (item, state) => {
     setItems((current) => current.map((entry) => (entry.key === item.key && entry.sourceId === item.sourceId ? { ...entry, state } : entry)));
+    // unseen -> read removes one from the unread count, and vice versa.
+    if (item.state === 'unseen' && state !== 'unseen') onUnreadChange?.(item.sourceId, -1);
+    else if (item.state !== 'unseen' && state === 'unseen') onUnreadChange?.(item.sourceId, 1);
     await api.setItemState({ keys: [item.key], state }).catch(() => {});
     void onFeedsChanged();
   };
@@ -222,6 +238,7 @@ function ItemList(props) {
     onMaterial({ space: 'feed', key: item.key, title: item.title, url: item.link, content: '' });
     if (item.state === 'unseen') {
       setItems((current) => current.map((entry) => (entry.key === item.key && entry.sourceId === item.sourceId ? { ...entry, state: 'seen' } : entry)));
+      onUnreadChange?.(item.sourceId, -1);
       void api.setItemState({ keys: [item.key], state: 'seen' }).then(() => onFeedsChanged()).catch(() => {});
       onSelect({ ...item, state: 'seen' });
     }
@@ -342,7 +359,7 @@ function ItemList(props) {
 }
 
 /** Preview pane: sticky round actions + header meta + body + AuxRail. */
-function Preview({ api, feeds, item, onMaterial, onJumpSpace, onMarked }) {
+function Preview({ api, feeds, item, onMaterial, onJumpSpace, onMarked, onUnreadChange }) {
   const [html, setHtml] = useState('');
   const [notice, setNotice] = useState('');
   const [busyAction, setBusyAction] = useState('');
@@ -383,7 +400,11 @@ function Preview({ api, feeds, item, onMaterial, onJumpSpace, onMarked }) {
   const skip = async () => {
     if (!item) return;
     setBusyAction('skip');
-    try { await api.setItemState({ keys: [item.key], state: 'skipped' }); void onMarked(); }
+    try {
+      await api.setItemState({ keys: [item.key], state: 'skipped' });
+      if (item.state === 'unseen') onUnreadChange?.(item.sourceId, -1);
+      void onMarked();
+    }
     catch (cause) { setNotice(String(cause?.message ?? cause)); }
     finally { setBusyAction(''); }
   };
