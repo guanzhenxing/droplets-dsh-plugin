@@ -138908,7 +138908,7 @@ function parseInboxMetaCompat(raw) {
   const data = JSON.parse(raw);
   if (data?.status === "reading") data.status = "unread";
   if (typeof data !== "object" || data === null) throw new Error("meta.json \u4E0D\u662F\u5BF9\u8C61");
-  return {
+  return stripUndefined({
     id: String(data.id ?? ""),
     objectType: data.objectType ?? "article",
     space: data.space ?? "inbox",
@@ -138919,7 +138919,18 @@ function parseInboxMetaCompat(raw) {
     source: data.source ?? { kind: "markdown-import", addedAt: (/* @__PURE__ */ new Date()).toISOString() },
     createdAt: data.createdAt ?? (/* @__PURE__ */ new Date()).toISOString(),
     updatedAt: data.updatedAt ?? data.createdAt ?? (/* @__PURE__ */ new Date()).toISOString()
-  };
+  });
+}
+function stripUndefined(value) {
+  if (Array.isArray(value)) return value.map(stripUndefined);
+  if (value && typeof value === "object") {
+    const out = {};
+    for (const [key, item] of Object.entries(value)) {
+      if (item !== void 0) out[key] = stripUndefined(item);
+    }
+    return out;
+  }
+  return value;
 }
 async function atomicWriteFile(absolute, data) {
   const temp = `${absolute}.${process.pid}.${Date.now()}.tmp`;
@@ -139363,7 +139374,7 @@ var WorkspaceInbox = class {
       throw new Error("\u8FC1\u79FB\u6821\u9A8C\u5931\u8D25\uFF1A\u6E90\u5143\u6570\u636E\u5728\u590D\u5236\u671F\u95F4\u88AB\u4FEE\u6539\uFF0C\u5DF2\u56DE\u6EDA\uFF0C\u8BF7\u91CD\u8BD5\u79FB\u52A8");
     }
     await rm5(sourceDir, { recursive: true, force: true });
-    const finalMeta = { ...libMeta, migration: void 0 };
+    const finalMeta = stripUndefined({ ...libMeta, migration: void 0 });
     await atomicWriteFile(join3(libDir, "meta.json"), JSON.stringify(finalMeta, null, 2));
     await rm5(stagedOriginal, { force: true }).catch(() => {
     });

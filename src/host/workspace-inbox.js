@@ -66,7 +66,9 @@ export function parseInboxMetaCompat(raw) {
   const data = JSON.parse(raw);
   if (data?.status === 'reading') data.status = 'unread';
   if (typeof data !== 'object' || data === null) throw new Error('meta.json 不是对象');
-  return {
+  // Undefined values (migration, fetchError, …) must not survive into Remote
+  // results: the wire codec is lossless JSON and rejects them outright.
+  return stripUndefined({
     id: String(data.id ?? ''),
     objectType: data.objectType ?? 'article',
     space: data.space ?? 'inbox',
@@ -77,7 +79,20 @@ export function parseInboxMetaCompat(raw) {
     source: data.source ?? { kind: 'markdown-import', addedAt: new Date().toISOString() },
     createdAt: data.createdAt ?? new Date().toISOString(),
     updatedAt: data.updatedAt ?? data.createdAt ?? new Date().toISOString(),
-  };
+  });
+}
+
+/** Recursively drop undefined-valued keys (lossless-JSON-safe objects). */
+export function stripUndefined(value) {
+  if (Array.isArray(value)) return value.map(stripUndefined);
+  if (value && typeof value === 'object') {
+    const out = {};
+    for (const [key, item] of Object.entries(value)) {
+      if (item !== undefined) out[key] = stripUndefined(item);
+    }
+    return out;
+  }
+  return value;
 }
 
 async function atomicWriteFile(absolute, data) {
@@ -572,7 +587,7 @@ export class WorkspaceInbox {
     await rm(sourceDir, { recursive: true, force: true });
 
     // 5. clear the library marker + drop the staged original
-    const finalMeta = { ...libMeta, migration: undefined };
+    const finalMeta = stripUndefined({ ...libMeta, migration: undefined });
     await atomicWriteFile(join(libDir, 'meta.json'), JSON.stringify(finalMeta, null, 2));
     await rm(stagedOriginal, { force: true }).catch(() => {});
     return finalMeta;
