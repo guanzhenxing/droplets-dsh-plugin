@@ -49,7 +49,7 @@ const TYPERT_REMOTE = {
     'opmlPreview', 'opmlImport', 'opmlExport', 'refresh',
     'inboxAddUrl', 'inboxList', 'inboxRead', 'inboxMarkDone',
     'vaultStatus', 'vaultReindex', 'vaultTree', 'vaultRead', 'vaultSearch', 'vaultGraph', 'vaultBacklinks', 'vaultWrite',
-    'getSettings', 'saveSettings', 'getWorkspace', 'openPath', 'getStorageInfo', 'clearData', 'setReadingContext', 'prepareChat',
+    'getSettings', 'saveSettings', 'getWorkspace', 'setWorkspace', 'openPath', 'getStorageInfo', 'clearData', 'setReadingContext', 'prepareChat',
   ].map((name) => method(name, !NO_PARAM_METHODS.has(name))),
 };
 
@@ -123,6 +123,7 @@ function registerPanel(ctx) {
     vaultWrite: (params) => call('vaultWrite', params),
     getSettings: () => call('getSettings'),
     getWorkspace: () => call('getWorkspace'),
+    setWorkspace: (params) => call('setWorkspace', params),
     openPath: (params) => call('openPath', params),
     // The remote layer takes the argument object flat (a wrapped { patch }
     // object is silently ignored), so send the patch as the request itself.

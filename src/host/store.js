@@ -86,6 +86,7 @@ export class DropletsStore {
     // Signature of what is already persisted per feed, so a flush only rewrites
     // the feeds whose entries actually changed.
     this.persistedSignatures = new Map();
+    this.tempSeq = 0;
   }
 
   /** Remove temp files a killed process left behind (atomic writes are
@@ -131,7 +132,9 @@ export class DropletsStore {
     }
     await mkdir(entriesDir(), { recursive: true });
     const target = join(entriesDir(), entryFileName(feedId));
-    const temp = `${target}.${process.pid}.tmp`;
+    // Unique per call: two overlapping flushes for the same feed must not
+    // share a temp path, or the first rename steals the second's file (ENOENT).
+    const temp = `${target}.${process.pid}.${++this.tempSeq}.tmp`;
     try {
       await writeFile(temp, JSON.stringify(entries), { encoding: 'utf8', mode: 0o600 });
       await rename(temp, target);

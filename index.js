@@ -16305,7 +16305,7 @@ var require_snapshot_utils = __commonJS({
 var require_snapshot_recorder = __commonJS({
   "node_modules/undici/lib/mock/snapshot-recorder.js"(exports2, module) {
     "use strict";
-    var { writeFile: writeFile6, readFile: readFile6, mkdir: mkdir6 } = __require("node:fs/promises");
+    var { writeFile: writeFile7, readFile: readFile7, mkdir: mkdir7 } = __require("node:fs/promises");
     var { dirname: dirname4, resolve: resolve2 } = __require("node:path");
     var { setTimeout: setTimeout2, clearTimeout: clearTimeout2 } = __require("node:timers");
     var { InvalidArgumentError, UndiciError } = require_errors();
@@ -16507,7 +16507,7 @@ var require_snapshot_recorder = __commonJS({
           throw new InvalidArgumentError("Snapshot path is required");
         }
         try {
-          const data = await readFile6(resolve2(path4), "utf8");
+          const data = await readFile7(resolve2(path4), "utf8");
           const parsed = JSON.parse(data);
           if (Array.isArray(parsed)) {
             this.#snapshots.clear();
@@ -16537,12 +16537,12 @@ var require_snapshot_recorder = __commonJS({
           throw new InvalidArgumentError("Snapshot path is required");
         }
         const resolvedPath = resolve2(path4);
-        await mkdir6(dirname4(resolvedPath), { recursive: true });
+        await mkdir7(dirname4(resolvedPath), { recursive: true });
         const data = Array.from(this.#snapshots.entries()).map(([hash, snapshot]) => ({
           hash,
           snapshot
         }));
-        await writeFile6(resolvedPath, JSON.stringify(data, null, 2), { flush: true });
+        await writeFile7(resolvedPath, JSON.stringify(data, null, 2), { flush: true });
       }
       /**
        * Clears all recorded snapshots
@@ -130199,7 +130199,7 @@ var init_pdf_worker = __esm({
 
 // src/host/index.js
 import path3 from "node:path";
-import { readdir as readdir3, stat as stat4 } from "node:fs/promises";
+import { mkdir as mkdir6, readdir as readdir3, readFile as readFile6, rename as rename5, stat as stat4, writeFile as writeFile6 } from "node:fs/promises";
 import { join as join3, resolve, sep as sep2 } from "node:path";
 import { TypertRemoteService, Remote } from "@deepseek-ai/dsh-typert-protocol";
 import { defineTool as defineTool2 } from "@deepseek-ai/dsh-tools";
@@ -130397,6 +130397,7 @@ var DropletsStore = class {
     this.saving = Promise.resolve();
     this.lastKnownMtime = 0;
     this.persistedSignatures = /* @__PURE__ */ new Map();
+    this.tempSeq = 0;
   }
   /** Remove temp files a killed process left behind (atomic writes are
    * tmp+rename; a SIGKILL between them strands the whole document). */
@@ -130439,7 +130440,7 @@ var DropletsStore = class {
     }
     await mkdir2(entriesDir(), { recursive: true });
     const target = join(entriesDir(), entryFileName(feedId));
-    const temp = `${target}.${process.pid}.tmp`;
+    const temp = `${target}.${process.pid}.${++this.tempSeq}.tmp`;
     try {
       await writeFile2(temp, JSON.stringify(entries), { encoding: "utf8", mode: 384 });
       await rename2(temp, target);
@@ -137532,14 +137533,36 @@ var DropletsService = class extends TypertRemoteService {
     super(ctx, "droplets");
     this.ctx = ctx;
     this.config = config;
-    this.store = config.workspacePath ? new WorkspaceStore(ctx.logger, config.workspacePath, config.maxBodies ?? 300) : new DropletsStore(ctx.logger, config.maxBodies ?? 300);
-    this.sharedWorkspace = Boolean(config.workspacePath);
+    this.workspacePointer = join3(storageDir(), "workspace.json");
+    this.workspacePath = config.workspacePath ?? null;
+    this.store = this.workspacePath ? new WorkspaceStore(ctx.logger, this.workspacePath, config.maxBodies ?? 300) : new DropletsStore(ctx.logger, config.maxBodies ?? 300);
+    this.sharedWorkspace = Boolean(this.workspacePath);
     this.fetcher = guardedFetch;
     this.inbox = new Inbox(this.store, ctx.logger, () => this.fetcher);
     this.refreshing = false;
     this.tickTimer = void 0;
     this.stopped = false;
-    this.ready = this.store.load().then(async () => {
+    this.ready = this.readWorkspacePointer().then(async (pointer) => {
+      if (pointer !== null) {
+        if (pointer === "") {
+          if (this.sharedWorkspace) {
+            this.workspacePath = null;
+            this.sharedWorkspace = false;
+            this.store = new DropletsStore(this.ctx.logger, this.config.maxBodies ?? 300);
+            this.inbox = new Inbox(this.store, this.ctx.logger, () => this.fetcher);
+          }
+        } else if (pointer !== this.workspacePath) {
+          const probe = await stat4(join3(pointer, "state", "app.sqlite")).catch(() => null);
+          if (probe) {
+            this.workspacePath = pointer;
+            this.sharedWorkspace = true;
+            this.store = new WorkspaceStore(this.ctx.logger, pointer, this.config.maxBodies ?? 300);
+            this.inbox = new Inbox(this.store, this.ctx.logger, () => this.fetcher);
+          }
+        }
+      }
+      return this.store.load();
+    }).then(async () => {
       this.store.setMaxBodies(config.maxBodies ?? 300);
       await this.ensureVault(false);
     });
@@ -138294,6 +138317,58 @@ var DropletsService = class extends TypertRemoteService {
     await this.store.flush();
     return this.getSettings();
   }
+  /** Read the persisted workspace pointer (null = private storage). */
+  async readWorkspacePointer() {
+    try {
+      const raw = await readFile6(this.workspacePointer, "utf8");
+      const parsed = JSON.parse(raw);
+      return typeof parsed?.path === "string" && parsed.path.trim() !== "" ? parsed.path : null;
+    } catch {
+      return null;
+    }
+  }
+  /**
+   * Switch the storage root at runtime. Accepts a Droplets workspace (one that
+   * carries state/app.sqlite, or at least droplets.json) or '' to fall back to
+   * the plugin's private storage. Persists the choice so the next boot honours
+   * it without touching any profile YAML.
+   */
+  async setWorkspace(request) {
+    await this.ready;
+    const requested = String(request?.path ?? "").trim();
+    let target = null;
+    if (requested !== "") {
+      const resolved = path3.resolve(requested);
+      const checks = await Promise.all([
+        stat4(join3(resolved, "state", "app.sqlite")).catch(() => null),
+        stat4(join3(resolved, "droplets.json")).catch(() => null)
+      ]);
+      if (!checks[0] && !checks[1]) {
+        throw new Error("droplets\uFF1A\u8FD9\u4E2A\u76EE\u5F55\u4E0D\u50CF Droplets \u5DE5\u4F5C\u533A\uFF08\u7F3A\u5C11 state/app.sqlite \u6216 droplets.json\uFF09");
+      }
+      if (!checks[0]) throw new Error("droplets\uFF1A\u7F3A\u5C11 state/app.sqlite\uFF0C\u65E0\u6CD5\u5171\u7528\u6570\u636E");
+      target = resolved;
+    }
+    await this.store.flush().catch(() => {
+    });
+    await this.store.dispose?.().catch?.(() => {
+    });
+    this.workspacePath = target;
+    this.sharedWorkspace = Boolean(target);
+    this.store = target ? new WorkspaceStore(this.ctx.logger, target, this.config.maxBodies ?? 300) : new DropletsStore(this.ctx.logger, this.config.maxBodies ?? 300);
+    this.vaultInstance = void 0;
+    this.inbox = new Inbox(this.store, this.ctx.logger, () => this.fetcher);
+    this.ready = this.store.load().then(async () => {
+      this.store.setMaxBodies(this.config.maxBodies ?? 300);
+      await ensureDefaultVault(this.vaultRoot());
+    });
+    await this.ready;
+    await mkdir6(storageDir(), { recursive: true });
+    const temp = this.workspacePointer + "." + process.pid + ".tmp";
+    await writeFile6(temp, JSON.stringify({ path: target ?? "" }), { encoding: "utf8", mode: 384 });
+    await rename5(temp, this.workspacePointer);
+    return this.getWorkspace();
+  }
   /** Workspace screen: where the data actually lives, its layout and git state. */
   async getWorkspace() {
     await this.ready;
@@ -138513,6 +138588,7 @@ var DropletsService = class extends TypertRemoteService {
     "saveSettings",
     "getStorageInfo",
     "getWorkspace",
+    "setWorkspace",
     "openPath",
     "clearData",
     "setReadingContext",

@@ -26,6 +26,10 @@ export function SettingsView({ api, onClose }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [savedFlash, setSavedFlash] = useState('');
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerPath, setPickerPath] = useState('');
+  const [pickerError, setPickerError] = useState('');
+  const [pickerBusy, setPickerBusy] = useState(false);
 
   const load = useCallback(async () => {
     setBusy(true);
@@ -62,6 +66,22 @@ export function SettingsView({ api, onClose }) {
       setBusy(false);
     }
   }, [api]);
+
+  const applyWorkspace = useCallback(async (nextPath) => {
+    setPickerBusy(true);
+    setPickerError('');
+    try {
+      await api.setWorkspace({ path: nextPath });
+      setPickerOpen(false);
+      await load();
+      setSavedFlash('工作区已切换');
+      setTimeout(() => setSavedFlash(''), 2000);
+    } catch (cause) {
+      setPickerError(String(cause?.message ?? cause));
+    } finally {
+      setPickerBusy(false);
+    }
+  }, [api, load]);
 
   const openPath = useCallback(async (relative) => {
     try {
@@ -118,6 +138,13 @@ export function SettingsView({ api, onClose }) {
                 <code>{workspace?.root ?? storage?.storageDir ?? '—'}</code>
                 <button type="button" className="dpl-btn dpl-sm" onClick={() => void openPath('')}>
                   <ExternalLink size={12} /> 在 Finder 中打开
+                </button>
+                <button
+                  type="button"
+                  className="dpl-btn dpl-sm dpl-primary-solid"
+                  onClick={() => { setPickerPath(workspace?.root ?? ''); setPickerError(''); setPickerOpen(true); }}
+                >
+                  更改工作区…
                 </button>
               </div>
               {storage ? (
@@ -287,6 +314,55 @@ export function SettingsView({ api, onClose }) {
               <p className="dpl-settings-hint">
                 Droplets for DSH — 信息流、收件箱与知识库三空间。界面使用宿主主题令牌,交互与布局对齐 droplets。
               </p>
+            </div>
+          </div>
+        ) : null}
+
+        {pickerOpen ? (
+          <div className="dpl-dialog-backdrop" onClick={() => { if (!pickerBusy) setPickerOpen(false); }}>
+            <div className="dpl-dialog dpl-edit-dialog" onClick={(event) => event.stopPropagation()}>
+              <div className="dpl-dialog-headline">
+                <span className="dpl-dialog-title">选择工作区</span>
+                <span className="dpl-grow" />
+                <button type="button" className="dpl-icon-btn dpl-round" onClick={() => setPickerOpen(false)} aria-label="关闭">✕</button>
+              </div>
+              <div className="dpl-dialog-body">
+                <p className="dpl-settings-hint">
+                  填一个 Droplets 工作区目录即可与 Droplets 共用订阅源、条目、已读状态和知识库。
+                  路径下必须存在 <code>state/app.sqlite</code>。
+                </p>
+                <label className="dpl-dialog-field">
+                  <span>工作区路径</span>
+                  <input
+                    autoFocus
+                    value={pickerPath}
+                    placeholder="/Users/you/WorkSpace/DropletsSpace"
+                    onChange={(event) => setPickerPath(event.target.value)}
+                    spellCheck={false}
+                  />
+                </label>
+                <div className="dpl-settings-presets">
+                  <button type="button" className="dpl-btn dpl-sm" onClick={() => setPickerPath('/Users/' + 'jesen' + '/WorkSpace/DropletsSpace')}>
+                    填入 DropletsSpace
+                  </button>
+                  <button type="button" className="dpl-btn dpl-sm" onClick={() => setPickerPath('')}>
+                    改回插件独立存储
+                  </button>
+                </div>
+                {pickerError ? <div className="dpl-dialog-error">{pickerError}</div> : null}
+              </div>
+              <div className="dpl-dialog-footer">
+                <span className="dpl-grow" />
+                <button type="button" className="dpl-btn dpl-sm" disabled={pickerBusy} onClick={() => setPickerOpen(false)}>取消</button>
+                <button
+                  type="button"
+                  className="dpl-btn dpl-sm dpl-primary-solid"
+                  disabled={pickerBusy}
+                  onClick={() => void applyWorkspace(pickerPath.trim())}
+                >
+                  {pickerBusy ? <Loader2 size={13} className="dpl-spin" /> : null} 确定
+                </button>
+              </div>
             </div>
           </div>
         ) : null}

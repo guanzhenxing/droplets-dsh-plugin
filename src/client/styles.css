@@ -1390,3 +1390,4 @@
   line-height: 1.55;
 }
 .dpl-root .dpl-settings-shared svg { flex: none; margin-top: 2px; }
+.dpl-root .dpl-settings-presets { display: flex; gap: 8px; flex-wrap: wrap; }

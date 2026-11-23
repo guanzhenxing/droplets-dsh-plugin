@@ -10,7 +10,7 @@
  * refreshes feeds with bounded concurrency, per-feed timeouts and caps.
  */
 import path from 'node:path';
-import { readdir, stat } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
 import { join, resolve, sep } from 'node:path';
 import { TypertRemoteService, Remote } from '@deepseek-ai/dsh-typert-protocol';
 import { defineTool } from '@deepseek-ai/dsh-tools';
@@ -90,10 +90,15 @@ export class DropletsService extends TypertRemoteService {
     // workspacePath switches to sharing the Droplets desktop app's own
     // workspace (its SQLite tables + vault + inbox) instead of a private
     // document, so both apps read and write the same subscriptions and items.
-    this.store = config.workspacePath
-      ? new WorkspaceStore(ctx.logger, config.workspacePath, config.maxBodies ?? 300)
+    // The chosen workspace can come from the profile config OR from the
+    // in-app switcher (which persists a pointer file so no YAML edit is
+    // needed). The pointer wins: it is the user's most recent explicit action.
+    this.workspacePointer = join(storageDir(), 'workspace.json');
+    this.workspacePath = config.workspacePath ?? null;
+    this.store = this.workspacePath
+      ? new WorkspaceStore(ctx.logger, this.workspacePath, config.maxBodies ?? 300)
       : new DropletsStore(ctx.logger, config.maxBodies ?? 300);
-    this.sharedWorkspace = Boolean(config.workspacePath);
+    this.sharedWorkspace = Boolean(this.workspacePath);
     // The strict shared instance by default; tests (and only tests) may swap
     // this for a permissive factory to exercise the full flow on loopback.
     this.fetcher = guardedFetch;
@@ -101,7 +106,30 @@ export class DropletsService extends TypertRemoteService {
     this.refreshing = false;
     this.tickTimer = undefined;
     this.stopped = false;
-    this.ready = this.store.load().then(async () => {
+    this.ready = this.readWorkspacePointer().then(async (pointer) => {
+      // A pointer written by the in-app switcher replaces whatever the profile
+      // config said, so the user's last explicit choice always wins.
+      if (pointer !== null) {
+        if (pointer === '') {
+          // Explicitly switched back to the plugin's private storage.
+          if (this.sharedWorkspace) {
+            this.workspacePath = null;
+            this.sharedWorkspace = false;
+            this.store = new DropletsStore(this.ctx.logger, this.config.maxBodies ?? 300);
+            this.inbox = new Inbox(this.store, this.ctx.logger, () => this.fetcher);
+          }
+        } else if (pointer !== this.workspacePath) {
+          const probe = await stat(join(pointer, 'state', 'app.sqlite')).catch(() => null);
+          if (probe) {
+            this.workspacePath = pointer;
+            this.sharedWorkspace = true;
+            this.store = new WorkspaceStore(this.ctx.logger, pointer, this.config.maxBodies ?? 300);
+            this.inbox = new Inbox(this.store, this.ctx.logger, () => this.fetcher);
+          }
+        }
+      }
+      return this.store.load();
+    }).then(async () => {
       this.store.setMaxBodies(config.maxBodies ?? 300);
       await this.ensureVault(false);
     });
@@ -932,6 +960,65 @@ export class DropletsService extends TypertRemoteService {
     return this.getSettings();
   }
 
+  /** Read the persisted workspace pointer (null = private storage). */
+  async readWorkspacePointer() {
+    try {
+      const raw = await readFile(this.workspacePointer, 'utf8');
+      const parsed = JSON.parse(raw);
+      return typeof parsed?.path === 'string' && parsed.path.trim() !== '' ? parsed.path : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Switch the storage root at runtime. Accepts a Droplets workspace (one that
+   * carries state/app.sqlite, or at least droplets.json) or '' to fall back to
+   * the plugin's private storage. Persists the choice so the next boot honours
+   * it without touching any profile YAML.
+   */
+  async setWorkspace(request) {
+    await this.ready;
+    const requested = String(request?.path ?? '').trim();
+    let target = null;
+    if (requested !== '') {
+      const resolved = path.resolve(requested);
+      const checks = await Promise.all([
+        stat(join(resolved, 'state', 'app.sqlite')).catch(() => null),
+        stat(join(resolved, 'droplets.json')).catch(() => null),
+      ]);
+      if (!checks[0] && !checks[1]) {
+        throw new Error('droplets：这个目录不像 Droplets 工作区（缺少 state/app.sqlite 或 droplets.json）');
+      }
+      if (!checks[0]) throw new Error('droplets：缺少 state/app.sqlite，无法共用数据');
+      target = resolved;
+    }
+
+    // Flush and release the current backend before swapping it out.
+    await this.store.flush().catch(() => {});
+    await this.store.dispose?.().catch?.(() => {});
+
+    this.workspacePath = target;
+    this.sharedWorkspace = Boolean(target);
+    this.store = target
+      ? new WorkspaceStore(this.ctx.logger, target, this.config.maxBodies ?? 300)
+      : new DropletsStore(this.ctx.logger, this.config.maxBodies ?? 300);
+    this.vaultInstance = undefined;
+    this.inbox = new Inbox(this.store, this.ctx.logger, () => this.fetcher);
+    this.ready = this.store.load().then(async () => {
+      this.store.setMaxBodies(this.config.maxBodies ?? 300);
+      await ensureDefaultVault(this.vaultRoot());
+    });
+    await this.ready;
+
+    await mkdir(storageDir(), { recursive: true });
+    const temp = this.workspacePointer + '.' + process.pid + '.tmp';
+    await writeFile(temp, JSON.stringify({ path: target ?? '' }), { encoding: 'utf8', mode: 0o600 });
+    await rename(temp, this.workspacePointer);
+
+    return this.getWorkspace();
+  }
+
   /** Workspace screen: where the data actually lives, its layout and git state. */
   async getWorkspace() {
     await this.ready;
@@ -1127,7 +1214,7 @@ export class DropletsService extends TypertRemoteService {
     // vault
     'vaultStatus', 'vaultReindex', 'vaultTree', 'vaultRead', 'vaultSearch', 'vaultGraph', 'vaultBacklinks', 'vaultWrite',
     // settings / companion
-    'getSettings', 'saveSettings', 'getStorageInfo', 'getWorkspace', 'openPath', 'clearData', 'setReadingContext', 'prepareChat',
+    'getSettings', 'saveSettings', 'getStorageInfo', 'getWorkspace', 'setWorkspace', 'openPath', 'clearData', 'setReadingContext', 'prepareChat',
   ];
   const prototype = DropletsService.prototype;
   for (const method of names) {
