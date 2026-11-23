@@ -118,14 +118,36 @@ function depthCheck(node, depth) {
  * @param {string} xmlText - raw XML text (already size-capped by the caller).
  * @returns {{type:'element',name:string,attrs:object,children:object[],text:string}}
  */
-export function parseXml(xmlText) {
-  const head = xmlText.slice(0, 4096);
-  if (/<!DOCTYPE/i.test(head) || /<!ENTITY/i.test(xmlText)) {
-    throw new XmlParseError('documents with DTD or entity declarations are rejected');
+/** Remove a DOCTYPE declaration (with its optional internal subset). Many
+ * legitimate feeds ship one; the declaration itself carries no data we use. */
+function stripDoctype(text) {
+  // Linear scan — a nested-quantifier regex here backtracks catastrophically
+  // on large feeds. Handles the optional [ ... ] internal subset.
+  const start = text.search(/<!DOCTYPE/i);
+  if (start === -1) return text;
+  let index = start + '<!DOCTYPE'.length;
+  let depth = 0;
+  while (index < text.length) {
+    const char = text[index];
+    if (char === '[') depth += 1;
+    else if (char === ']') depth -= 1;
+    else if (char === '>' && depth <= 0) break;
+    index += 1;
   }
+  return text.slice(0, start) + text.slice(index + 1);
+}
+
+export function parseXml(xmlText) {
+  // XXE guard: entity declarations are refused outright (they are the actual
+  // attack surface), but a bare DOCTYPE is stripped rather than rejected —
+  // refusing it dropped whole legitimate feeds.
+  if (/<!ENTITY/i.test(xmlText)) {
+    throw new XmlParseError('documents with entity declarations are rejected');
+  }
+  const sanitized = stripDoctype(xmlText);
   let raw;
   try {
-    raw = PARSER.parse(xmlText);
+    raw = PARSER.parse(sanitized);
   } catch (error) {
     throw new XmlParseError(`malformed XML (${error?.message ?? error})`);
   }

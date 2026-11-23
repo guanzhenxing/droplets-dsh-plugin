@@ -66,7 +66,7 @@ export function FeedView({ api, onMaterial, onJumpSpace }) {
         panels={[
           { id: 'sources', initialWidth: 240, minWidth: 205, collapsible: true, render: ({ collapsed, expand, collapse }) => (
             <SourcesPane
-              feeds={feeds} sourceId={sourceId} selectedGroup={selectedGroup}
+              api={api} feeds={feeds} sourceId={sourceId} selectedGroup={selectedGroup}
               spinning={spinning} onRefresh={() => void refresh()}
               onManage={() => setManaging(false)}
               onSelectSource={selectSource} onSelectGroup={selectGroup}
@@ -87,7 +87,7 @@ export function FeedView({ api, onMaterial, onJumpSpace }) {
       panels={[
         { id: 'sources', initialWidth: 240, minWidth: 205, collapsible: true, render: ({ collapsed, expand, collapse }) => (
           <SourcesPane
-            feeds={feeds} sourceId={sourceId} selectedGroup={selectedGroup}
+            api={api} feeds={feeds} sourceId={sourceId} selectedGroup={selectedGroup}
             spinning={spinning} onRefresh={() => void refresh()}
             onManage={() => setManaging(true)}
             onSelectSource={selectSource} onSelectGroup={selectGroup}

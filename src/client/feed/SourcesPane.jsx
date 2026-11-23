@@ -18,10 +18,32 @@ import { DEFAULT_FEED_SORT_MODE, groupAndSortFeeds } from './feed-sorting.js';
  *   disabled feeds dimmed)
  * - default sort unread-desc; ungrouped bucket always last.
  */
+function useRefreshProgress(api) {
+  const [progress, setProgress] = useState(null);
+  useEffect(() => {
+    if (!api?.refreshStatus) return undefined;
+    let stopped = false;
+    let timer = null;
+    const poll = async () => {
+      let delay = 5000;
+      try {
+        const status = await api.refreshStatus();
+        if (!stopped) setProgress(status);
+        if (status?.running) delay = 1500;
+      } catch { /* host not ready */ }
+      if (!stopped) timer = setTimeout(poll, delay);
+    };
+    void poll();
+    return () => { stopped = true; if (timer) clearTimeout(timer); };
+  }, [api]);
+  return progress;
+}
+
 export function SourcesPane({
-  feeds, sourceId, selectedGroup, spinning, onRefresh, onManage,
+  api, feeds, sourceId, selectedGroup, spinning, onRefresh, onManage,
   onSelectSource, onSelectGroup, collapsed, onExpand, onCollapse,
 }) {
+  const progress = useRefreshProgress(api);
   const [collapsedGroups, setCollapsedGroups] = useState(() => new Set());
   const [sortMode, setSortMode] = useState(DEFAULT_FEED_SORT_MODE);
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
@@ -112,6 +134,7 @@ export function SourcesPane({
           </button>
         </div>
       </div>
+      {progress && progress.total > 0 ? <RefreshProgressLine progress={progress} /> : null}
       <div className="dpl-sources-list" ref={host}>
         <button
           type="button"
@@ -192,5 +215,33 @@ export function FeedBadge({ feed }) {
       aria-hidden="true"
       style={{ background: 'oklch(0.58 0.14 ' + hue + ')', color: '#fff' }}
     >{letter}</span>
+  );
+}
+
+function RefreshProgressLine({ progress }) {
+  const [open, setOpen] = useState(false);
+  const done = progress.done ?? 0;
+  const total = progress.total ?? 0;
+  const failed = progress.failed ?? 0;
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  return (
+    <div className="dpl-refresh-progress">
+      <button type="button" className="dpl-refresh-progress-head" onClick={() => { if (failed > 0) setOpen((v) => !v); }} aria-expanded={open}>
+        {progress.running
+          ? <><Loader2 size={12} className="dpl-spin" /> 抓取中 {done}/{total}{failed > 0 ? <> · 失败 {failed}</> : null}</>
+          : <>上次抓取 成功 {progress.ok ?? 0}{failed > 0 ? <> · 失败 {failed}</> : null}{progress.finishedAt ? ' · ' + new Date(progress.finishedAt).toLocaleTimeString('zh-Hans-CN', { hour: '2-digit', minute: '2-digit' }) : ''}</>}
+      </button>
+      <div className="dpl-refresh-bar"><div className="dpl-refresh-bar-fill" style={{ width: pct + '%' }} /></div>
+      {open && failed > 0 ? (
+        <div className="dpl-refresh-errors" role="list">
+          {(progress.errors ?? []).slice(0, 60).map((error, index) => (
+            <div key={index} className="dpl-refresh-error" role="listitem">
+              <span className="dpl-truncate">{error.name}</span>
+              <em>{String(error.reason).slice(0, 90)}</em>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }

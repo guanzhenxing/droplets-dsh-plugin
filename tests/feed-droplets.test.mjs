@@ -173,3 +173,96 @@ test('inbox list treats doneAt: null as not done (legacy records)', async () => 
     assert.ok(!after.items.some((item) => item.key === 'inbox:legacy'));
   } finally { service.shutdown(); await ctx.dispose(); home.cleanup(); }
 });
+
+test('store merges a foreign writer instead of clobbering (session processes share data.json)', async () => {
+  const home = tempHome();
+  const { DropletsStore, storageDir } = await import('../src/host/store.js');
+  const { mkdirSync, writeFileSync, statSync } = await import('node:fs');
+  const path = await import('node:path');
+  try {
+    mkdirSync(storageDir(), { recursive: true });
+    const file = path.join(storageDir(), 'data.json');
+    // Instance A (the panel host) starts empty, then the user imports.
+    const a = new DropletsStore(console);
+    await a.load();
+    a.data.subscriptions.push({ id: 'feed:x', url: 'https://x.example/f', name: 'X', entries: [] });
+    // Instance B (an older session host) flushes its EMPTY state to disk first.
+    writeFileSync(file, JSON.stringify({ version: 1, subscriptions: [], states: {}, favorites: {} }));
+    const foreignMtime = statSync(file).mtimeMs;
+    await new Promise((r) => setTimeout(r, 12));
+    // A flushes later: must detect the foreign write and union-merge.
+    await a.flush();
+    const onDisk = JSON.parse((await (await import('node:fs/promises')).readFile(file, 'utf8')));
+    assert.ok(onDisk.subscriptions.some((sub) => sub.id === 'feed:x'), 'imported sub survives an interleaved foreign empty flush');
+    assert.ok(statSync(file).mtimeMs >= foreignMtime);
+  } finally { home.cleanup(); }
+});
+
+test('refresh reports live progress with per-feed error reasons', async () => {
+  const home = tempHome();
+  const ctx = fakeCtx();
+  const service = new DropletsService(ctx, {});
+  await service.ready;
+  try {
+    service.store.data.subscriptions.push(
+      { id: 'feed:ok1', url: 'https://ok1.example/f', name: 'OK1', enabled: true, entries: [] },
+      { id: 'feed:bad', url: 'https://bad.example/f', name: 'Bad', enabled: true, entries: [] },
+    );
+    // route both through the loopback fetcher: ok1 serves, bad refuses
+    const http = await import('node:http');
+    const { createGuardedFetch } = await import('../src/host/guarded-fetch.js');
+    const server = http.createServer((req, res) => { res.writeHead(200, { 'content-type': 'text/xml' }); res.end('<?xml version="1.0"?><rss><channel><title>T</title><item><title>one</title><guid>g1</guid></item></channel></rss>'); });
+    await new Promise((r) => server.listen(0, '127.0.0.1', r));
+    const port = server.address().port;
+    const fetcher = createGuardedFetch({ resolver: { async resolve(h) { return h === 'bad.test' ? ['203.0.113.9'] : ['127.0.0.1']; } }, ipPolicy: (ip) => ip === '127.0.0.1', portGate: () => true });
+    service.fetcher = fetcher;
+    service.store.data.subscriptions.find((s) => s.id === 'feed:ok1').url = 'http://ok.test:' + port + '/f';
+    service.store.data.subscriptions.find((s) => s.id === 'feed:bad').url = 'http://bad.test:' + port + '/f';
+    const statusDuring = service.refreshProgress;
+    const outcome = await service.refresh({});
+    const status = await service.refreshStatus();
+    assert.equal(status.total, 2);
+    assert.equal(status.done, 2);
+    assert.equal(status.ok + status.failed, 2);
+    assert.equal(status.running, false);
+    if (status.failed > 0) {
+      assert.ok(status.errors.length >= 1);
+      assert.ok(status.errors[0].name);
+      assert.ok(status.errors[0].reason);
+    }
+    assert.equal(outcome.feeds, 2);
+    server.close();
+  } finally { service.shutdown(); await ctx.dispose(); home.cleanup(); }
+});
+
+test('a bare DOCTYPE is stripped but entity declarations stay rejected', async () => {
+  const { parseXml } = await import('../src/host/xml.js');
+  const withDoctype = '<?xml version="1.0"?><!DOCTYPE rss PUBLIC "-//Netscape//DTD RSS//EN"><rss><channel><title>T</title></channel></rss>';
+  assert.ok(parseXml(withDoctype), 'legitimate feeds shipping a DOCTYPE must parse');
+  const withSubset = '<!DOCTYPE rss [<!ELEMENT rss ANY>]><rss><channel><title>U</title></channel></rss>';
+  assert.ok(parseXml(withSubset), 'internal subset declaration is stripped too');
+  assert.throws(() => parseXml('<!DOCTYPE x [<!ENTITY a "b">]><rss/>'), /entity declarations/i, 'XXE vector still refused');
+});
+
+test('refreshStatus derives progress from disk before any refresh runs', async () => {
+  const home = tempHome();
+  const ctx = fakeCtx();
+  const service = new DropletsService(ctx, {});
+  await service.ready;
+  try {
+    service.store.data.subscriptions.push(
+      { id: 'feed:h1', url: 'https://h1.example/f', name: 'Healthy', enabled: true, lastFetchedAt: 1000, entries: [] },
+      { id: 'feed:h2', url: 'https://h2.example/f', name: 'Broken', enabled: true, lastError: 'HTTP 404', entries: [] },
+      { id: 'feed:h3', url: 'https://h3.example/f', name: 'Off', enabled: false, entries: [] },
+    );
+    const status = await service.refreshStatus();
+    assert.equal(status.running, false);
+    assert.equal(status.total, 2, 'disabled feeds are not counted');
+    assert.equal(status.ok, 1);
+    assert.equal(status.failed, 1);
+    assert.equal(status.done, 1);
+    assert.equal(status.errors[0].name, 'Broken');
+    assert.equal(status.errors[0].reason, 'HTTP 404');
+    assert.ok(status.finishedAt >= 1000);
+  } finally { service.shutdown(); await ctx.dispose(); home.cleanup(); }
+});

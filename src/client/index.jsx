@@ -36,7 +36,7 @@ function method(name, params = true) {
 }
 
 const NO_PARAM_METHODS = new Set([
-  'listChannels', 'listFeeds', 'listSubscriptions', 'opmlExport', 'vaultStatus', 'vaultReindex',
+  'listChannels', 'listFeeds', 'refreshStatus', 'listSubscriptions', 'opmlExport', 'vaultStatus', 'vaultReindex',
   'vaultTree', 'vaultGraph', 'getSettings', 'getStorageInfo', 'clearData',
 ]);
 
@@ -44,7 +44,7 @@ const TYPERT_REMOTE = {
   package: PLUGIN_ID,
   descriptors: [
     'listChannels', 'listEntries', 'getEntry', 'searchEntries', 'setRead', 'setFavorite',
-    'listFeeds', 'listItems', 'setItemState', 'markAllRead', 'setFeed',
+    'listFeeds', 'refreshStatus', 'listItems', 'setItemState', 'markAllRead', 'setFeed',
     'listSubscriptions', 'addSubscription', 'removeSubscription', 'updateSubscription',
     'opmlPreview', 'opmlImport', 'opmlExport', 'refresh',
     'inboxAddUrl', 'inboxList', 'inboxRead', 'inboxMarkDone',
@@ -96,6 +96,7 @@ function registerPanel(ctx) {
     setRead: (keys, read) => call('setRead', { keys, read }),
     setFavorite: (key, favorite) => call('setFavorite', { key, favorite }),
     listFeeds: () => call('listFeeds'),
+    refreshStatus: () => call('refreshStatus'),
     listItems: (params) => call('listItems', params),
     setItemState: (params) => call('setItemState', params),
     markAllRead: (params) => call('markAllRead', params),

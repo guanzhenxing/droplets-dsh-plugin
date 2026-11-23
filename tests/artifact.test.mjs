@@ -62,3 +62,39 @@ test('client bundle is a ModuleLoader wrapper with matching id', () => {
   assert.ok(source.includes('droplets.chat'), 'companion child slot present');
   assert.ok(source.includes('sidebar.panellist'), 'sidebar entry present');
 });
+
+test('every zero-arg client api method is registered in NO_PARAM_METHODS', async () => {
+  // Guards the class of bug where a parameterless Remote (listFeeds,
+  // refreshStatus) is sent an empty params object and the host rejects it —
+  // the call fails silently and the feature looks "just not there".
+  const { readFile } = await import('node:fs/promises');
+  const source = await readFile(new URL('../src/client/index.jsx', import.meta.url), 'utf8');
+
+  const declared = source.match(/const NO_PARAM_METHODS = new Set\(\[([\s\S]*?)\]\)/);
+  assert.ok(declared, 'NO_PARAM_METHODS set not found');
+  const registered = new Set(
+    [...declared[1].matchAll(/'([A-Za-z0-9_]+)'/g)].map((match) => match[1]),
+  );
+
+  const zeroArgPattern = new RegExp("([A-Za-z0-9_]+)\\s*:\\s*\\(\\)\\s*=>\\s*call\\('([A-Za-z0-9_]+)'\\)", 'g');
+  const zeroArg = [...source.matchAll(zeroArgPattern)].map((match) => match[2]);
+  assert.ok(zeroArg.length > 0, 'no zero-arg api methods discovered');
+
+  const missing = zeroArg.filter((name) => !registered.has(name));
+  assert.deepEqual(missing, [], 'these zero-arg methods must be added to NO_PARAM_METHODS');
+
+  // ...and every api method must also be DECLARED in TYPERT_REMOTE.descriptors,
+  // otherwise the remote proxy has no such function and the call throws
+  // "服务未就绪" (listFeeds and refreshStatus both shipped broken this way).
+  const declaredBlock = source.match(/descriptors:\s*\[([\s\S]*?)\]\.map/);
+  assert.ok(declaredBlock, 'TYPERT_REMOTE.descriptors not found');
+  const declaredNames = new Set(
+    [...declaredBlock[1].matchAll(/'([A-Za-z0-9_]+)'/g)].map((match) => match[1]),
+  );
+  const apiBlock = source.match(/const api = \{([\s\S]*?)\n  \};/);
+  assert.ok(apiBlock, 'client api object not found');
+  const allApi = [...apiBlock[1].matchAll(/^\s{4}([A-Za-z0-9_]+):/gm)].map((match) => match[1]);
+  assert.ok(allApi.length > 20, 'api object keys not discovered');
+  const undeclared = allApi.filter((name) => !declaredNames.has(name));
+  assert.deepEqual(undeclared, [], 'these api methods must be added to TYPERT_REMOTE.descriptors');
+});

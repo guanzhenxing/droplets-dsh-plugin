@@ -604,18 +604,72 @@ export class DropletsService extends TypertRemoteService {
   // Refresh
   // ------------------------------------------------------------------
 
+  /** Live refresh progress for the UI (Remote: refreshStatus). */
+  refreshProgress = { running: false, total: 0, done: 0, ok: 0, failed: 0, errors: [] };
+
+  async refreshStatus() {
+    await this.ready;
+    // Before (or between) refreshes in this process there is no live run, so
+    // derive the summary from what is already on disk: an app restart must
+    // still tell the user how many feeds are healthy and WHY the others
+    // failed — never an empty "no information" state.
+    if (this.refreshProgress.running) return { ...this.refreshProgress };
+    const feeds = this.store.data.subscriptions.filter((sub) => sub.enabled !== false);
+    const errors = [];
+    let ok = 0;
+    let failed = 0;
+    let fetched = 0;
+    let finishedAt = this.refreshProgress.finishedAt;
+    for (const sub of feeds) {
+      // "done" means attempted, not succeeded: a feed that failed still
+      // consumed a slot in the run and must show up in the ratio.
+      const attempted = sub.lastAttemptAt ?? sub.lastFetchedAt;
+      if (attempted) {
+        fetched += 1;
+        if (!finishedAt || attempted > finishedAt) finishedAt = attempted;
+      }
+      if (sub.lastError) {
+        failed += 1;
+        if (errors.length < 100) errors.push({ name: sub.name || sub.url, reason: sub.lastError });
+      } else {
+        ok += 1;
+      }
+    }
+    return {
+      running: false,
+      total: feeds.length,
+      done: fetched,
+      ok,
+      failed,
+      errors,
+      finishedAt,
+    };
+  }
+
   async refresh(request) {
     const { channel } = request ?? {};
     await this.ready;
     const outcome = { feeds: 0, entries: 0, errors: 0 };
     const subs = this.selectSubscriptions(channel);
+    this.refreshProgress = { running: true, total: subs.length, done: 0, ok: 0, failed: 0, startedAt: Date.now(), errors: [] };
     await this.forEachWithPool(subs, REFRESH_WORKERS, async (sub) => {
       const count = await this.refreshSubscription(sub);
       outcome.feeds += 1;
       outcome.entries += count;
-      if (sub.lastError) outcome.errors += 1;
+      const progress = this.refreshProgress;
+      progress.done += 1;
+      if (sub.lastError) {
+        outcome.errors += 1;
+        progress.failed += 1;
+        if (progress.errors.length < 100) progress.errors.push({ name: sub.name, reason: sub.lastError });
+      } else {
+        progress.ok += 1;
+      }
     });
-    this.store.touch();
+    this.refreshProgress = { ...this.refreshProgress, running: false, finishedAt: Date.now() };
+    // Only persist when something actually changed (refreshSubscription
+    // touches per mutation); an idle instance must never flush over a
+    // concurrent writer.
     this.pruneBodies();
     return outcome;
   }
@@ -649,14 +703,23 @@ export class DropletsService extends TypertRemoteService {
       const xml = await this.fetchFeedText(sub.url);
       const parsed = parseFeed(xml, sub.url);
       sub.name = sub.name || parsed.title;
+      const previous = sub.entries ?? [];
+      const merged = mergeEntries(previous, parsed.entries);
+      const changed = sub.lastError !== undefined
+        || merged.length !== previous.length
+        || (merged[0]?.key ?? '') !== (previous[0]?.key ?? '');
       sub.lastFetchedAt = Date.now();
+      sub.lastAttemptAt = sub.lastFetchedAt;
       sub.lastError = undefined;
       sub.status = 'ok';
-      sub.entries = mergeEntries(sub.entries ?? [], parsed.entries);
-      this.store.touch();
+      sub.entries = merged;
+      if (changed) this.store.touch();
       return parsed.entries.length;
     } catch (error) {
-      sub.lastError = error instanceof Error ? error.message : String(error);
+      const message = error instanceof Error ? error.message : String(error);
+      if (sub.lastError === message) return 0; // same failure, nothing new
+      sub.lastError = message;
+      sub.lastAttemptAt = Date.now();
       sub.status = 'error';
       this.store.touch();
       return 0;
@@ -875,7 +938,7 @@ export class DropletsService extends TypertRemoteService {
   const names = [
     // feed
     'listChannels', 'listEntries', 'getEntry', 'searchEntries', 'setRead', 'setFavorite',
-    'listFeeds', 'listItems', 'setItemState', 'markAllRead', 'setFeed',
+    'listFeeds', 'listItems', 'setItemState', 'markAllRead', 'setFeed', 'refreshStatus',
     'listSubscriptions', 'addSubscription', 'removeSubscription', 'updateSubscription',
     'opmlPreview', 'opmlImport', 'opmlExport', 'refresh',
     // inbox

@@ -47755,12 +47755,12 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
         } = stream._source;
         this._isStreamingSupported = !disableStream;
         const fs = process.getBuiltinModule("fs/promises");
-        fs.lstat(url).then((stat2) => {
+        fs.lstat(url).then((stat3) => {
           const readableStream = getReadableStream(url);
           this._reader = readableStream.getReader();
           const {
             size
-          } = stat2;
+          } = stat3;
           this._contentLength = size;
           this._isRangeSupported = !disableRange && size > 2 * rangeChunkSize;
           if (!this._isStreamingSupported && this._isRangeSupported) {
@@ -130203,7 +130203,7 @@ import { TypertRemoteService, Remote } from "@deepseek-ai/dsh-typert-protocol";
 import { defineTool as defineTool2 } from "@deepseek-ai/dsh-tools";
 
 // src/host/store.js
-import { mkdir as mkdir2, readFile as readFile2, rename as rename2, rm as rm2, writeFile as writeFile2 } from "node:fs/promises";
+import { mkdir as mkdir2, readFile as readFile2, rename as rename2, rm as rm2, stat, writeFile as writeFile2 } from "node:fs/promises";
 import { dirname as dirname2, join } from "node:path";
 import { resolveDshHome } from "@deepseek-ai/dsh-home-paths";
 
@@ -130361,6 +130361,13 @@ function defaults() {
   };
 }
 var DropletsStore = class {
+  setMaxBodies(maxBodies) {
+    if (Number.isFinite(maxBodies) && maxBodies >= 10) this.bodies.maxBodies = Math.floor(maxBodies);
+  }
+  /** File stamp of the last load/flush — detects foreign writers (every DSH
+   * session process instantiates this service against the same data.json;
+   * without merging, an idle instance's periodic flush wipes concurrent
+   * imports). */
   constructor(logger, maxBodies = 300) {
     this.logger = logger;
     this.dir = storageDir();
@@ -130369,14 +130376,13 @@ var DropletsStore = class {
     this.data = defaults();
     this.saveTimer = void 0;
     this.saving = Promise.resolve();
-  }
-  setMaxBodies(maxBodies) {
-    if (Number.isFinite(maxBodies) && maxBodies >= 10) this.bodies.maxBodies = Math.floor(maxBodies);
+    this.lastKnownMtime = 0;
   }
   async load() {
     try {
       const raw = await readFile2(this.path, "utf8");
       const parsed = JSON.parse(raw);
+      this.lastKnownMtime = (await stat(this.path)).mtimeMs;
       this.data = { ...defaults(), ...parsed };
       this.data.settings = { ...defaults().settings, ...parsed.settings ?? {} };
       if (!Array.isArray(this.data.subscriptions)) this.data.subscriptions = [];
@@ -130405,15 +130411,61 @@ var DropletsStore = class {
       });
     }, 500);
   }
+  /**
+   * Union-merge collections a foreign writer may have advanced: subscriptions
+   * by id (ours win on conflict, theirs added), state maps by key. Prevents
+   * an instance with stale memory from erasing a concurrent import.
+   */
+  mergeForeign(foreign) {
+    if (!foreign || typeof foreign !== "object") return;
+    const mine = this.data;
+    if (Array.isArray(foreign.subscriptions)) {
+      const byId = new Map(mine.subscriptions.map((sub) => [sub.id, sub]));
+      for (const sub of foreign.subscriptions) {
+        if (sub && typeof sub.id === "string" && !byId.has(sub.id)) mine.subscriptions.push(sub);
+      }
+    }
+    for (const key of ["states", "favorites", "read"]) {
+      const theirs = foreign[key];
+      if (theirs && typeof theirs === "object") {
+        mine[key] ??= {};
+        for (const [k, v] of Object.entries(theirs)) {
+          if (mine[key][k] === void 0) mine[key][k] = v;
+        }
+      }
+    }
+    if (Array.isArray(foreign.inbox)) {
+      const keys = new Set(mine.inbox.map((item) => item.key));
+      for (const item of foreign.inbox) {
+        if (item && typeof item.key === "string" && !keys.has(item.key)) mine.inbox.push(item);
+      }
+    }
+  }
   /** Write the document through a temp file + rename, serialized. */
   async flush() {
     this.saving = this.saving.catch(() => {
     }).then(async () => {
       try {
         await mkdir2(dirname2(this.path), { recursive: true });
+        try {
+          const info3 = await stat(this.path);
+          if (info3.mtimeMs > this.lastKnownMtime) {
+            try {
+              this.mergeForeign(JSON.parse(await readFile2(this.path, "utf8")));
+            } catch {
+            }
+          }
+        } catch {
+        }
+        try {
+          const previous = await readFile2(this.path, "utf8");
+          if (previous.length > 2) await writeFile2(this.path + ".bak", previous, "utf8");
+        } catch {
+        }
         const temp = `${this.path}.${process.pid}.tmp`;
         await writeFile2(temp, JSON.stringify(this.data), { encoding: "utf8", mode: 384 });
         await rename2(temp, this.path);
+        this.lastKnownMtime = (await stat(this.path)).mtimeMs;
       } catch (error) {
         this.logger?.warn?.("droplets: failed to save data: %s", String(error));
         throw error;
@@ -130439,7 +130491,7 @@ var DropletsStore = class {
 
 // src/host/inbox.js
 import { createHash as createHash2 } from "node:crypto";
-import { mkdir as mkdir3, readFile as readFile3, rm as rm3, stat, writeFile as writeFile3 } from "node:fs/promises";
+import { mkdir as mkdir3, readFile as readFile3, rm as rm3, stat as stat2, writeFile as writeFile3 } from "node:fs/promises";
 import path from "node:path";
 
 // node_modules/fflate/esm/index.mjs
@@ -135694,14 +135746,28 @@ function depthCheck(node, depth) {
     if (child.type === "element") depthCheck(child, depth + 1);
   }
 }
-function parseXml2(xmlText) {
-  const head = xmlText.slice(0, 4096);
-  if (/<!DOCTYPE/i.test(head) || /<!ENTITY/i.test(xmlText)) {
-    throw new XmlParseError("documents with DTD or entity declarations are rejected");
+function stripDoctype(text2) {
+  const start = text2.search(/<!DOCTYPE/i);
+  if (start === -1) return text2;
+  let index = start + "<!DOCTYPE".length;
+  let depth = 0;
+  while (index < text2.length) {
+    const char = text2[index];
+    if (char === "[") depth += 1;
+    else if (char === "]") depth -= 1;
+    else if (char === ">" && depth <= 0) break;
+    index += 1;
   }
+  return text2.slice(0, start) + text2.slice(index + 1);
+}
+function parseXml2(xmlText) {
+  if (/<!ENTITY/i.test(xmlText)) {
+    throw new XmlParseError("documents with entity declarations are rejected");
+  }
+  const sanitized = stripDoctype(xmlText);
   let raw;
   try {
-    raw = PARSER.parse(xmlText);
+    raw = PARSER.parse(sanitized);
   } catch (error) {
     throw new XmlParseError(`malformed XML (${error?.message ?? error})`);
   }
@@ -136254,7 +136320,7 @@ var Inbox = class {
   }
   async fileSize(item) {
     if (!item.file) return 0;
-    const info3 = await stat(path.join(this.filesDir, item.file)).catch(() => null);
+    const info3 = await stat2(path.join(this.filesDir, item.file)).catch(() => null);
     return info3?.size ?? 0;
   }
 };
@@ -137507,18 +137573,61 @@ var DropletsService = class extends TypertRemoteService {
   // ------------------------------------------------------------------
   // Refresh
   // ------------------------------------------------------------------
+  /** Live refresh progress for the UI (Remote: refreshStatus). */
+  refreshProgress = { running: false, total: 0, done: 0, ok: 0, failed: 0, errors: [] };
+  async refreshStatus() {
+    await this.ready;
+    if (this.refreshProgress.running) return { ...this.refreshProgress };
+    const feeds = this.store.data.subscriptions.filter((sub) => sub.enabled !== false);
+    const errors = [];
+    let ok = 0;
+    let failed = 0;
+    let fetched = 0;
+    let finishedAt = this.refreshProgress.finishedAt;
+    for (const sub of feeds) {
+      const attempted = sub.lastAttemptAt ?? sub.lastFetchedAt;
+      if (attempted) {
+        fetched += 1;
+        if (!finishedAt || attempted > finishedAt) finishedAt = attempted;
+      }
+      if (sub.lastError) {
+        failed += 1;
+        if (errors.length < 100) errors.push({ name: sub.name || sub.url, reason: sub.lastError });
+      } else {
+        ok += 1;
+      }
+    }
+    return {
+      running: false,
+      total: feeds.length,
+      done: fetched,
+      ok,
+      failed,
+      errors,
+      finishedAt
+    };
+  }
   async refresh(request) {
     const { channel } = request ?? {};
     await this.ready;
     const outcome = { feeds: 0, entries: 0, errors: 0 };
     const subs = this.selectSubscriptions(channel);
+    this.refreshProgress = { running: true, total: subs.length, done: 0, ok: 0, failed: 0, startedAt: Date.now(), errors: [] };
     await this.forEachWithPool(subs, REFRESH_WORKERS, async (sub) => {
       const count = await this.refreshSubscription(sub);
       outcome.feeds += 1;
       outcome.entries += count;
-      if (sub.lastError) outcome.errors += 1;
+      const progress = this.refreshProgress;
+      progress.done += 1;
+      if (sub.lastError) {
+        outcome.errors += 1;
+        progress.failed += 1;
+        if (progress.errors.length < 100) progress.errors.push({ name: sub.name, reason: sub.lastError });
+      } else {
+        progress.ok += 1;
+      }
     });
-    this.store.touch();
+    this.refreshProgress = { ...this.refreshProgress, running: false, finishedAt: Date.now() };
     this.pruneBodies();
     return outcome;
   }
@@ -137548,14 +137657,21 @@ var DropletsService = class extends TypertRemoteService {
       const xml = await this.fetchFeedText(sub.url);
       const parsed = parseFeed(xml, sub.url);
       sub.name = sub.name || parsed.title;
+      const previous = sub.entries ?? [];
+      const merged = mergeEntries(previous, parsed.entries);
+      const changed = sub.lastError !== void 0 || merged.length !== previous.length || (merged[0]?.key ?? "") !== (previous[0]?.key ?? "");
       sub.lastFetchedAt = Date.now();
+      sub.lastAttemptAt = sub.lastFetchedAt;
       sub.lastError = void 0;
       sub.status = "ok";
-      sub.entries = mergeEntries(sub.entries ?? [], parsed.entries);
-      this.store.touch();
+      sub.entries = merged;
+      if (changed) this.store.touch();
       return parsed.entries.length;
     } catch (error) {
-      sub.lastError = error instanceof Error ? error.message : String(error);
+      const message = error instanceof Error ? error.message : String(error);
+      if (sub.lastError === message) return 0;
+      sub.lastError = message;
+      sub.lastAttemptAt = Date.now();
       sub.status = "error";
       this.store.touch();
       return 0;
@@ -137756,6 +137872,7 @@ var DropletsService = class extends TypertRemoteService {
     "setItemState",
     "markAllRead",
     "setFeed",
+    "refreshStatus",
     "listSubscriptions",
     "addSubscription",
     "removeSubscription",
