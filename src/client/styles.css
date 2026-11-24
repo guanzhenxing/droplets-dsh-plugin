@@ -1989,3 +1989,231 @@
 .dpl-vault2-trashrow { display: flex; align-items: center; gap: 8px; padding: 5px 10px; border-radius: 7px; }
 .dpl-vault2-trashrow:hover { background: var(--dpl-bg-hover); }
 .dpl-vault2-trashinfo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; font-size: 12.5px; }
+
+/* ---- vault2 alignment (native Droplets parity): seg / dot toolbar / breadcrumb / menus ---- */
+.dpl-vault2-treehead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 40px;
+  flex: none;
+  padding: 0 10px 0 14px;
+}
+.dpl-vault2-treehead span { font-size: 12.5px; font-weight: 600; color: var(--dpl-fg); }
+
+.dpl-vault2-seg { display: flex; gap: 6px; padding: 0 10px 8px; flex: none; }
+.dpl-vault2-seg button {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 30px;
+  border: none;
+  background: var(--dpl-bg-2);
+  border-radius: var(--dpl-radius-sm);
+  font-size: 12.5px;
+  color: var(--dpl-muted);
+  cursor: pointer;
+}
+.dpl-vault2-seg button:hover { background: var(--dpl-bg-active); color: var(--dpl-fg); }
+.dpl-vault2-seg button.is-active { background: var(--dpl-accent-soft); color: var(--dpl-accent); font-weight: 600; }
+
+.dpl-vault2-tbrow { position: relative; height: 28px; flex: none; margin: 0 10px 6px; }
+.dpl-vault2-tbdots {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  transition: opacity 0.12s;
+}
+.dpl-vault2-tbdots span { width: 4px; height: 4px; border-radius: 50%; background: var(--dpl-faint); }
+.dpl-vault2-tbactions {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  opacity: 0;
+  pointer-events: none;
+  background: var(--dpl-bg);
+  transition: opacity 0.12s;
+}
+.dpl-vault2-tbrow:hover .dpl-vault2-tbdots { opacity: 0; }
+.dpl-vault2-tbrow:hover .dpl-vault2-tbactions { opacity: 1; pointer-events: auto; }
+.dpl-vault2-tbactions button {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  color: var(--dpl-faint);
+  cursor: pointer;
+}
+.dpl-vault2-tbactions button:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }
+.dpl-vault2-tbactions button.is-on { color: var(--dpl-accent); background: color-mix(in srgb, var(--dpl-accent) 12%, transparent); }
+.dpl-relative { position: relative; }
+
+.dpl-vault2-popmenu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 60;
+  margin-top: 4px;
+  min-width: 150px;
+  max-height: 60vh;
+  overflow: auto;
+  background: var(--dpl-bg);
+  border: 1px solid var(--dpl-border);
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 10px 32px rgba(15, 23, 42, 0.18);
+  display: flex;
+  flex-direction: column;
+}
+.dpl-vault2-popmenu.is-wide { min-width: 260px; }
+
+/* 右键菜单（fixed，光标处） */
+.dpl-vault2-ctxmenu {
+  position: fixed;
+  z-index: 300;
+  min-width: 160px;
+  background: var(--dpl-bg);
+  border: 1px solid var(--dpl-border);
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 12px 36px rgba(15, 23, 42, 0.22);
+  display: flex;
+  flex-direction: column;
+}
+.dpl-vault2-ctxitem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: var(--dpl-fg);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.dpl-vault2-ctxitem:hover { background: var(--dpl-bg-hover); }
+.dpl-vault2-ctxitem.is-danger { color: var(--dpl-danger); }
+.dpl-vault2-ctxitem.is-danger:hover { background: color-mix(in srgb, var(--dpl-danger) 10%, transparent); }
+.dpl-vault2-ctxdivider { height: 1px; background: var(--dpl-border); margin: 4px 6px; }
+
+/* 面包屑行 */
+.dpl-vault2-crumbbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  height: 38px;
+  flex: none;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--dpl-border);
+}
+.dpl-vault2-crumb { display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; font-size: 12.5px; color: var(--dpl-muted); }
+.dpl-vault2-crumb span { white-space: nowrap; }
+.dpl-vault2-crumb .is-last { color: var(--dpl-fg); font-weight: 600; }
+.dpl-vault2-crumbsep { color: var(--dpl-faint); }
+.dpl-vault2-crumbright { display: flex; align-items: center; gap: 4px; flex: none; }
+.dpl-vault2-crumbbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 26px;
+  padding: 0 6px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  color: var(--dpl-muted);
+  cursor: pointer;
+}
+.dpl-vault2-crumbbtn:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }
+
+/* 格式工具栏 */
+.dpl-vault2-fmtbar {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  flex: none;
+  padding: 3px 12px;
+  border-bottom: 1px solid var(--dpl-border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.dpl-vault2-fmtbtn {
+  display: grid;
+  place-items: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 4px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  color: var(--dpl-muted);
+  cursor: pointer;
+}
+.dpl-vault2-fmtbtn:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }
+.dpl-vault2-fmtmore { position: relative; display: flex; }
+.dpl-vault2-fmtmoremenu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 60;
+  min-width: 130px;
+  background: var(--dpl-bg);
+  border: 1px solid var(--dpl-border);
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 10px 32px rgba(15, 23, 42, 0.18);
+  flex-direction: column;
+}
+.dpl-vault2-fmtmoremenu.is-open { display: flex; }
+
+/* 反向链接抽屉 */
+.dpl-vault2-bldrawer {
+  flex: none;
+  max-height: 38%;
+  border-top: 1px solid var(--dpl-border);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.dpl-vault2-bldrawhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--dpl-muted);
+  flex: none;
+}
+.dpl-vault2-bldrawbody { flex: 1; min-height: 60px; overflow: auto; padding: 4px 8px 8px; display: flex; flex-direction: column; gap: 2px; }
+
+/* 底部整库问 AI */
+.dpl-vault2-askall {
+  flex: none;
+  min-height: 34px;
+  border: none;
+  border-top: 1px solid var(--dpl-border);
+  background: var(--dpl-bg);
+  color: var(--dpl-fg);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.dpl-vault2-askall:hover { background: var(--dpl-bg-2); }
+.dpl-vault2-helplist { padding: 8px 10px; font-size: 11.5px; color: var(--dpl-muted); line-height: 1.7; }

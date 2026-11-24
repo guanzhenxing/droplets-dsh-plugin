@@ -118,4 +118,13 @@ test('client bundle exports the inbox UI against the new remote methods', () => 
   assert.ok(client.includes('dpl-ib-reader'), 'inbox Reader present');
   assert.ok(client.includes('"retry-all-failed"'), 'retry-all-failed control present');
   assert.ok(client.includes('"done-dialog"'), '处理完成 dialog present');
+  // 样式冻结：JSX 用到的每个新交互类名必须有对应 CSS 规则（防「无样式上线」复发）
+  for (const rule of [
+    '.dpl-vault2-crumbbar {', '.dpl-vault2-crumbbtn {', '.dpl-vault2-ctxmenu {',
+    '.dpl-vault2-ctxitem {', '.dpl-vault2-seg {', '.dpl-vault2-tbrow {',
+    '.dpl-vault2-tbactions {', '.dpl-vault2-fmtbar {', '.dpl-vault2-fmtbtn {',
+    '.dpl-vault2-bldrawer {', '.dpl-vault2-askall {', '.dpl-vault2-popmenu {',
+  ]) {
+    assert.ok(client.includes(rule), `stylesheet must carry ${rule} (交互对齐样式不可缺)`);
+  }
 });
