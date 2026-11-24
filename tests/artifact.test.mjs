@@ -168,3 +168,15 @@ test('vault toolbar regressions are frozen: scoped button rule, dots, help popov
   assert.ok(client.includes('.dpl-vault2-helprow {'), 'help rows present');
   assert.ok(client.includes('.dpl-vault2-helprow kbd {'), 'help kbd chips present');
 });
+
+test('pane control buttons are one family across the three spaces', () => {
+  const client = readFileSync(new URL('../client.js', import.meta.url), 'utf8');
+  // 信息流 刷新/管理 · 收件箱 添加URL/导入 · 知识库 图谱/标签云 must all
+  // ride the same .dpl-pane-btn (geometry + rhythm), not three private looks.
+  assert.ok(client.includes('.dpl-pane-btn {'), 'unified pane button rule present');
+  assert.ok(!client.includes('.dpl-vault2-seg button {'), 'vault seg has no private button rule');
+  assert.ok(!client.includes('.dpl-ib-actionbtn {'), 'inbox has no private action rule');
+  assert.ok(!client.includes('.dpl-sources-actions .dpl-btn'), 'sources actions no longer restyle dpl-btn');
+  const markupUses = (client.match(/"dpl-pane-btn"/g) || []).length;
+  assert.ok(markupUses >= 6, 'all six pane buttons ride the unified class, found ' + markupUses);
+});

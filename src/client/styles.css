@@ -95,6 +95,35 @@
 .dpl-root .dpl-btn.is-primary { background: var(--dpl-accent-solid); color: #fff; }
 .dpl-root .dpl-btn.is-primary:hover { background: var(--dpl-accent-solid-hover); }
 .dpl-btn:disabled { opacity: 0.45; cursor: default; background: transparent; }
+
+/* 统一面板控制按钮：信息流 刷新/管理 · 收件箱 添加URL/导入 · 知识库
+   图谱/标签云——同一空间位置（左栏第二行）的三组控件，同一几何
+   (28px 高 / 12.5px 字 / 8px 圆角 / 14px 图标) 与同一节奏（等宽半分、
+   gap 6、行下距 8）。灰底色块是「面板控件」家族语言；is-active 选中态
+   只用于分段选择（图谱/标签云），动作按钮不常驻高亮。
+   .dpl-root 前缀不是装饰：顶部的 .dpl-root button { font: inherit } 重置
+   （特异度 0,1,1）会压过任何单类按钮规则的字号/颜色——老版三组按钮
+   各自漂移正是因为这个。 */
+.dpl-root .dpl-pane-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 5px 10px;
+  border: none;
+  background: var(--dpl-bg-2);
+  border-radius: var(--dpl-radius-sm);
+  font-size: 12.5px;
+  color: var(--dpl-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.dpl-root .dpl-pane-btn:hover:not(:disabled) { background: var(--dpl-bg-active); color: var(--dpl-fg); }
+.dpl-root .dpl-pane-btn:disabled { opacity: 0.45; cursor: default; }
+.dpl-root .dpl-pane-btn.is-active { background: var(--dpl-accent-soft); color: var(--dpl-accent); font-weight: 600; }
+.dpl-root .dpl-pane-btn.is-active:hover:not(:disabled) { background: var(--dpl-accent-soft); color: var(--dpl-accent); }
 .dpl-icon-btn {
   display: inline-flex;
   align-items: center;
@@ -444,8 +473,7 @@
 
 /* sources pane */
 .dpl-sources { border-right: 1px solid var(--dpl-border); }
-.dpl-sources-actions { display: flex; gap: 4px; padding: 0 10px 10px; }
-.dpl-sources-actions .dpl-btn { justify-content: center; }
+.dpl-sources-actions { display: flex; gap: 6px; padding: 0 10px 8px; flex: none; }
 .dpl-sources-toolbar {
   position: relative;
   display: flex;
@@ -751,17 +779,8 @@
 .dpl-ib-pansub { font-size: 12px; font-weight: 500; color: var(--dpl-faint); }
 
 /* 操作行：添加 URL / 导入（viewToggle 双按钮，或内联 URL 输入） */
-.dpl-ib-actions { display: flex; flex: none; align-items: center; gap: 6px; padding: 0 10px 10px; }
-.dpl-ib-actionbtn {
-  flex: 1;
-  justify-content: center;
-  min-height: 28px;
-  padding: 4px 8px;
-  background: var(--dpl-bg-2);
-  color: var(--dpl-muted);
-  font-size: 12.5px;
-}
-.dpl-ib-actionbtn:hover:not(:disabled) { background: var(--dpl-bg-active); color: var(--dpl-fg); }
+.dpl-ib-actions { display: flex; flex: none; align-items: center; gap: 6px; padding: 0 10px 8px; }
+/* 操作行: 添加 URL / 导入 — buttons are .dpl-pane-btn (统一面板控制按钮). */
 .dpl-ib-urlrow { display: flex; width: 100%; align-items: center; gap: 4px; }
 .dpl-ib-urlrow input { min-width: 0; flex: 1; }
 .dpl-ib-cancelurl {
@@ -2030,22 +2049,7 @@
 .dpl-vault2-treehead span { font-size: 12.5px; font-weight: 600; color: var(--dpl-fg); }
 
 .dpl-vault2-seg { display: flex; gap: 6px; padding: 0 10px 8px; flex: none; }
-.dpl-vault2-seg button {
-  flex: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-height: 30px;
-  border: none;
-  background: var(--dpl-bg-2);
-  border-radius: var(--dpl-radius-sm);
-  font-size: 12.5px;
-  color: var(--dpl-muted);
-  cursor: pointer;
-}
-.dpl-vault2-seg button:hover { background: var(--dpl-bg-active); color: var(--dpl-fg); }
-.dpl-vault2-seg button.is-active { background: var(--dpl-accent-soft); color: var(--dpl-accent); font-weight: 600; }
+/* 图谱/标签云 buttons are .dpl-pane-btn (统一面板控制按钮) with is-active. */
 
 .dpl-vault2-tbrow { position: relative; height: 28px; flex: none; margin: 0 10px 6px; }
 .dpl-vault2-tbdots {

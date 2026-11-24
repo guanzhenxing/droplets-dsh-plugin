@@ -664,10 +664,10 @@ export function VaultView({ api, onMaterial }) {
           <PanelCollapseButton />
         </div>
         <div className="dpl-vault2-seg">
-          <button type="button" className={leftMode === 'graph' ? 'is-active' : ''} onClick={() => void switchLeft('graph')} data-testid="vault-graph-toggle">
+          <button type="button" className={'dpl-pane-btn' + (leftMode === 'graph' ? ' is-active' : '')} onClick={() => void switchLeft('graph')} data-testid="vault-graph-toggle">
             <Network size={14} /> 图谱
           </button>
-          <button type="button" className={leftMode === 'tags' ? 'is-active' : ''} onClick={() => void switchLeft('tags')} data-testid="vault-tags-toggle">
+          <button type="button" className={'dpl-pane-btn' + (leftMode === 'tags' ? ' is-active' : '')} onClick={() => void switchLeft('tags')} data-testid="vault-tags-toggle">
             <Tags size={14} /> 标签云
           </button>
         </div>

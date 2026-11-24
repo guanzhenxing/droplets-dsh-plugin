@@ -224,11 +224,11 @@ function FilterPane({ api, filter, setFilter, counts, onChanged, onCollapse }) {
       <div className="dpl-ib-actions">
         {urlInput === null ? (
           <>
-            <button type="button" className="dpl-btn dpl-ib-actionbtn" onClick={() => setUrlInput('')} data-testid="add-url-button">
+            <button type="button" className="dpl-pane-btn" onClick={() => setUrlInput('')} data-testid="add-url-button">
               <Link2 size={14} /> 添加 URL
             </button>
             <button
-              type="button" className="dpl-btn dpl-ib-actionbtn" disabled={importing}
+              type="button" className="dpl-pane-btn" disabled={importing}
               onClick={() => fileRef.current?.click()} data-testid="import-button"
             >
               {importing ? <Loader2 size={14} className="dpl-spin" /> : <FilePlus2 size={14} />} 导入

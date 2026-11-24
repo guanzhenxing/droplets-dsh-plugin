@@ -95,10 +95,10 @@ export function SourcesPane({
         <PanelCollapseButton onClick={onCollapse} />
       </div>
       <div className="dpl-sources-actions">
-        <button type="button" className="dpl-btn dpl-grow" disabled={spinning} onClick={onRefresh} title="刷新全部：后台重抓所有启用源">
+        <button type="button" className="dpl-pane-btn" disabled={spinning} onClick={onRefresh} title="刷新全部：后台重抓所有启用源">
           {spinning ? <Loader2 size={14} className="dpl-spin" /> : <RefreshCw size={14} />} 刷新
         </button>
-        <button type="button" className="dpl-btn dpl-grow" onClick={onManage} title="管理订阅源（添加/编辑/删除源）">
+        <button type="button" className="dpl-pane-btn" onClick={onManage} title="管理订阅源（添加/编辑/删除源）">
           <ListTree size={14} /> 管理
         </button>
       </div>
