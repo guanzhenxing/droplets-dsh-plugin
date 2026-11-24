@@ -37,7 +37,7 @@ function method(name, params = true) {
 
 const NO_PARAM_METHODS = new Set([
   'listChannels', 'listFeeds', 'refreshStatus', 'listSubscriptions', 'opmlExport', 'vaultStatus', 'vaultReindex',
-  'vaultTree', 'vaultGraph', 'getSettings', 'getWorkspace', 'getStorageInfo', 'clearData', 'inboxRetryAllFailed',
+  'vaultTree', 'vaultGraph', 'vaultTags', 'getSettings', 'getWorkspace', 'getStorageInfo', 'clearData', 'inboxRetryAllFailed',
 ]);
 
 const TYPERT_REMOTE = {
@@ -51,6 +51,7 @@ const TYPERT_REMOTE = {
     'inboxUpdate', 'inboxRetry', 'inboxRetryAllFailed', 'inboxImportMarkdown',
     'inboxMoveToLibrary', 'inboxMoveToTrash', 'inboxMarkDone',
     'vaultStatus', 'vaultReindex', 'vaultTree', 'vaultRead', 'vaultSearch', 'vaultGraph', 'vaultBacklinks', 'vaultWrite',
+    'vaultList', 'vaultCreate', 'vaultCreateDir', 'vaultRename', 'vaultDuplicate', 'vaultDelete', 'vaultTags',
     'getSettings', 'saveSettings', 'getWorkspace', 'setWorkspace', 'openPath', 'getStorageInfo', 'clearData', 'setReadingContext', 'prepareChat',
   ].map((name) => method(name, !NO_PARAM_METHODS.has(name))),
 };
@@ -129,6 +130,13 @@ function registerPanel(ctx) {
     vaultSearch: (params) => call('vaultSearch', params),
     vaultGraph: () => call('vaultGraph'),
     vaultBacklinks: (path) => call('vaultBacklinks', { path }),
+    vaultList: (dir) => call('vaultList', { dir }),
+    vaultCreate: (params) => call('vaultCreate', params),
+    vaultCreateDir: (params) => call('vaultCreateDir', params),
+    vaultRename: (params) => call('vaultRename', params),
+    vaultDuplicate: (path) => call('vaultDuplicate', { path }),
+    vaultDelete: (path) => call('vaultDelete', { path }),
+    vaultTags: () => call('vaultTags'),
     vaultWrite: (params) => call('vaultWrite', params),
     getSettings: () => call('getSettings'),
     getWorkspace: () => call('getWorkspace'),

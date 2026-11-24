@@ -16,8 +16,9 @@ import { TypertRemoteService, Remote } from '@deepseek-ai/dsh-typert-protocol';
 import { defineTool } from '@deepseek-ai/dsh-tools';
 import { DropletsStore, defaultVaultPath, entriesDir, storageDir } from './store.js';
 import { WorkspaceStore } from './workspace-store.js';
-import { WorkspaceInbox } from './workspace-inbox.js';
+import { WorkspaceInbox, stripUndefined } from './workspace-inbox.js';
 import { Vault, ensureDefaultVault } from './vault.js';
+import { createVaultIndex } from './vault-index.js';
 import { buildAskPrompt, buildReadingContext, storeContext } from './context.js';
 import { createToolDefinitions } from './tools.js';
 import { extractArticle } from './extract.js';
@@ -209,8 +210,21 @@ export class DropletsService extends TypertRemoteService {
         touch: () => this.store.touch(),
       };
       this.vaultInstance = new Vault(root, holder, this.ctx.logger);
+      // Index backend choice follows the vault root: a shared Droplets
+      // workspace gets the native index database (read-only); anything else
+      // wraps the plugin cache. Recomputed when the root changes.
+      this.vaultIndexPromise = createVaultIndex(this.vaultInstance, this.sharedWorkspace && this.store?.root ? this.store.root : null, this.ctx.logger);
+      this.vaultIndex = null;
+      void this.vaultIndexPromise.then((backend) => { this.vaultIndex = backend; }).catch(() => { this.vaultIndex = null; });
     }
     return this.vaultInstance;
+  }
+
+  /** The picked index backend (resolves once per vault root). */
+  async indexBackend() {
+    this.vaultService();
+    if (this.vaultIndex !== null) return this.vaultIndex;
+    return this.vaultIndexPromise ?? Promise.resolve(null);
   }
 
   async ensureVault(seed = true) {
@@ -991,25 +1005,99 @@ export class DropletsService extends TypertRemoteService {
     return this.vaultService().read(p);
   }
 
+  /** Lazy directory listing for the tree panel (plan §7 vaultList). */
+  async vaultList(request) {
+    await this.ready;
+    const dir = typeof request === 'string' ? request : request?.dir;
+    return stripUndefined(await this.vaultService().list(dir ?? ''));
+  }
+
+  async vaultCreate(request) {
+    await this.ready;
+    await this.ensureVault();
+    return stripUndefined(await this.vaultService().createNote(request?.dir ?? '', request?.title, { template: request?.template }));
+  }
+
+  async vaultCreateDir(request) {
+    await this.ready;
+    await this.ensureVault();
+    return stripUndefined(await this.vaultService().createDir(request?.dir));
+  }
+
+  async vaultRename(request) {
+    await this.ready;
+    const from = typeof request === 'string' ? request : request?.from;
+    return stripUndefined(await this.vaultService().renameNote(from, request?.to, { updateLinks: request?.updateLinks !== false }));
+  }
+
+  async vaultDuplicate(request) {
+    await this.ready;
+    const p = typeof request === 'string' ? request : request?.path;
+    return stripUndefined(await this.vaultService().duplicate(p));
+  }
+
+  /** vaultDelete → .trash（Droplets 回收站可恢复）。 */
+  async vaultDelete(request) {
+    await this.ready;
+    const p = typeof request === 'string' ? request : request?.path;
+    return stripUndefined(await this.vaultService().trash(p));
+  }
+
   async vaultSearch(request) {
     await this.ready;
+    const query = typeof request === 'string' ? request : request?.query;
+    const limit = Math.min(Math.max(request?.limit ?? 30, 1), 100);
+    // Preferred: the native index (exact counts with the desktop app).
+    const backend = await this.indexBackend().catch(() => null);
+    if (backend) {
+      const result = await backend.search(query, { limit, offset: request?.offset ?? 0, tag: request?.tag }).catch(() => null);
+      if (result !== null) {
+        return {
+          backend: 'native',
+          results: result.hits.map((hit) => ({ path: hit.path, title: hit.title, tags: [], match: 'fts', excerpt: hit.snippet })),
+          total: result.total,
+        };
+      }
+    }
     const vault = this.vaultService();
     if (!vault.cache() || vault.cache().path !== vault.root) await vault.reindex();
-    return { results: await vault.search(request?.query, Math.min(Math.max(request?.limit ?? 30, 1), 100)) };
+    const results = await vault.search(query, limit);
+    return { backend: 'local', results, total: results.length };
+  }
+
+  /** Tag cloud counts (plan §7 vaultTags). */
+  async vaultTags() {
+    await this.ready;
+    const backend = await this.indexBackend().catch(() => null);
+    if (backend) {
+      const tags = await backend.tags().catch(() => null);
+      if (tags !== null) return { backend: 'native', tags };
+    }
+    const vault = this.vaultService();
+    if (!vault.cache() || vault.cache().path !== vault.root) await vault.reindex();
+    const local = await import('./vault-index.js').then((mod) => new mod.LocalVaultIndex(vault));
+    return { backend: 'local', tags: await local.tags() };
   }
 
   async vaultGraph() {
     await this.ready;
     const vault = this.vaultService();
     if (!vault.cache() || vault.cache().path !== vault.root) await vault.reindex();
-    return vault.graph();
+    return stripUndefined(vault.graph());
   }
 
   async vaultBacklinks(request) {
     await this.ready;
     const p = typeof request === 'string' ? request : request?.path;
     const vault = this.vaultService();
-    return { backlinks: vault.backlinks(p) };
+    const record = vault.cache()?.files?.[p];
+    const title = record?.title;
+    const backend = await this.indexBackend().catch(() => null);
+    if (backend) {
+      const links = await backend.backlinks(p, title).catch(() => null);
+      if (links !== null) return { backend: 'native', backlinks: links };
+    }
+    return { backend: 'local', backlinks: vault.backlinks(p, title) };
   }
 
   async vaultWrite(request) {
@@ -1322,6 +1410,7 @@ export class DropletsService extends TypertRemoteService {
     'inboxMoveToLibrary', 'inboxMoveToTrash', 'inboxMarkDone',
     // vault
     'vaultStatus', 'vaultReindex', 'vaultTree', 'vaultRead', 'vaultSearch', 'vaultGraph', 'vaultBacklinks', 'vaultWrite',
+    'vaultList', 'vaultCreate', 'vaultCreateDir', 'vaultRename', 'vaultDuplicate', 'vaultDelete', 'vaultTags',
     // settings / companion
     'getSettings', 'saveSettings', 'getStorageInfo', 'getWorkspace', 'setWorkspace', 'openPath', 'clearData', 'setReadingContext', 'prepareChat',
   ];

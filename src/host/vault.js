@@ -15,8 +15,8 @@
  * lock so concurrent editors (agent tool vs. the panel editor) get a
  * structured conflict instead of a silent overwrite.
  */
-import { createHash } from 'node:crypto';
-import { lstat, mkdir, readFile, readdir, realpath, rename, writeFile } from 'node:fs/promises';
+import { createHash, randomUUID } from 'node:crypto';
+import { lstat, mkdir, readFile, readdir, realpath, rename, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 export const EXCLUDED_DIRS = new Set(['.obsidian', '.trash', '.stfolder', '.git']);
@@ -434,6 +434,301 @@ export class Vault {
     });
     return serialize(root);
   }
+
+  // ------------------------------------------------------------------
+  // P0 tree operations: lazy listing, create, rename(+links), duplicate,
+  // trash. Paths outside *.md files go through dir-safe normalization.
+  // ------------------------------------------------------------------
+
+  /** One real fs directory listing (empty dirs included, unlike tree()). */
+  async list(dir) {
+    const rel = normalizeVaultDir(dir);
+    await safeResolveDir(this.root, rel);
+    const full = path.join(this.root, rel);
+    const entries = await readdir(full, { withFileTypes: true }).catch((error) => {
+      if (error?.code === 'ENOENT') throw new VaultError('not_found', `目录不存在：${rel || '/'}`);
+      throw new VaultError('list_failed', `列目录失败：${error.message}`);
+    });
+    const files = this.cache()?.files ?? {};
+    const out = [];
+    for (const entry of entries) {
+      if (entry.name.startsWith('.') || EXCLUDED_DIRS.has(entry.name)) continue;
+      const childRel = rel === '' ? entry.name : `${rel}/${entry.name}`;
+      if (entry.isDirectory()) {
+        out.push({ kind: 'dir', name: entry.name, path: childRel, mtime: undefined });
+      } else if (entry.isFile() && entry.name.toLowerCase().endsWith('.md')) {
+        const record = files[childRel];
+        let mtime;
+        try {
+          mtime = (await stat(path.join(this.root, childRel))).mtimeMs;
+        } catch { mtime = record?.mtimeMs; }
+        out.push({ kind: 'file', name: entry.name, path: childRel, mtime, title: record?.title ?? entry.name.replace(/\.md$/i, '') });
+      }
+    }
+    // Dirs first (name order), then files (caller picks the sort key).
+    out.sort((a, b) => (a.kind === b.kind ? a.name.localeCompare(b.name) : a.kind === 'dir' ? -1 : 1));
+    return { dir: rel, entries: out };
+  }
+
+  /** New note with the native frontmatter shape (id/title/created). */
+  async createNote(dir, title, options = {}) {
+    const cleanTitle = sanitizeNoteTitle(title);
+    const rel = normalizeVaultDir(dir) + (normalizeVaultDir(dir) === '' ? '' : '/') + cleanTitle + '.md';
+    const id = randomUUID();
+    const created = new Date().toISOString();
+    const template = options.template ?? `---\nid: ${id}\ntitle: ${cleanTitle}\ncreated: ${created}\n---\n\n# ${cleanTitle}\n\n`;
+    const result = await this.write(rel, template, { expectedSha: null, createOnly: true });
+    if (result.conflict) throw new VaultError('exists', `笔记已存在：${rel}`);
+    return { path: result.path, id, title: cleanTitle };
+  }
+
+  async createDir(dir) {
+    const rel = normalizeVaultDir(dir);
+    if (rel === '') throw new VaultError('invalid_path', '目录名不能为空');
+    await safeResolveDir(this.root, rel);
+    await mkdir(path.join(this.root, rel), { recursive: false }).catch((error) => {
+      if (error?.code === 'EEXIST') throw new VaultError('exists', `目录已存在：${rel}`);
+      if (error?.code === 'ENOENT') throw new VaultError('not_found', `父目录不存在：${rel}`);
+      throw error;
+    });
+    return { dir: rel };
+  }
+
+  /**
+   * Rename/move one note, optionally rewriting every `[[old]]` link in the
+   * vault. Affected files are backed up into .trash before any rewrite so a
+   * mid-way failure rolls back cleanly (plan §10).
+   */
+  async renameNote(from, to, { updateLinks = true } = {}) {
+    const fromRel = normalizeVaultPath(from);
+    const toRel = normalizeVaultPath(to);
+    if (fromRel === toRel) return { path: toRel, updatedLinks: 0 };
+    const fromAbs = await safeResolve(this.root, fromRel);
+    const toAbs = await safeResolve(this.root, toRel);
+    if (fromAbs === toAbs) throw new VaultError('exists', `目标已存在：${toRel}`);
+    await stat(toAbs).then(() => { throw new VaultError('exists', `目标已存在：${toRel}`); }).catch((error) => {
+      if (error instanceof VaultError) throw error;
+      if (error?.code !== 'ENOENT') throw error;
+    });
+    await mkdir(path.dirname(toAbs), { recursive: true });
+    await rename(fromAbs, toAbs);
+
+    // Update cache key, then rewrite links across the vault.
+    const cache = this.cache();
+    let updatedLinks = 0;
+    if (cache) {
+      const record = cache.files[fromRel];
+      if (record) {
+        delete cache.files[fromRel];
+        const text = await readFile(toAbs, 'utf8');
+        cache.files[toRel] = recordOf(toRel, text, record.mtimeMs, record.size);
+      }
+    }
+    if (updateLinks) {
+      const oldStem = path.basename(fromRel, '.md');
+      const newStem = path.basename(toRel, '.md');
+      const pattern = new RegExp(`\\[\\[\\s*${escapeRegExp(oldStem)}(\\s*(?:\\|[^\\]\\n]*)?)\\]\\]`, 'g');
+      const sources = [];
+      for (const [rel, record] of Object.entries(this.cache()?.files ?? {})) {
+        if (rel === toRel) continue;
+        if ((record?.links ?? []).some((target) => target === oldStem)) sources.push(rel);
+      }
+      if (sources.length > 0) {
+        const backupDir = await this.trashBackup(sources, `rename-${Date.now().toString(36)}`);
+        try {
+          for (const rel of sources) {
+            const text = await this.readRaw(rel);
+            // '[[new$1]]' as a literal replacement string: the $1 group ref is
+            // resolved by String.replace, so newStem must not pass through
+            // another replace pass (a '$' inside a title would break it).
+            const next = text.replace(pattern, '[[' + newStem.split('$').join('$$') + '$1]]');
+            if (next !== text) {
+              const write = await this.write(rel, next, { expectedSha: undefined });
+              if (!write.conflict) {
+                updatedLinks += 1;
+                const record = this.cache()?.files?.[rel];
+                if (record) record.links = record.links.map((target) => (target === oldStem ? newStem : target));
+              }
+            }
+          }
+        } catch (error) {
+          // Rollback: restore backups over the rewritten files, move the note back.
+          await this.restoreBackup(backupDir, sources).catch(() => {});
+          await rename(toAbs, fromAbs).catch(() => {});
+          throw error;
+        }
+      }
+    }
+    this.cacheHolder.touch();
+    return { path: toRel, updatedLinks };
+  }
+
+  /** 「x 副本」递增命名复制。 */
+  async duplicate(rel) {
+    const fromRel = normalizeVaultPath(rel);
+    const text = await this.readRaw(fromRel);
+    const dir = path.dirname(fromRel);
+    const stem = path.basename(fromRel, '.md');
+    let candidate = dir === '.' ? `${stem} 副本.md` : `${dir}/${stem} 副本.md`;
+    let counter = 2;
+    while (await stat(path.join(this.root, candidate)).then(() => true).catch(() => false)) {
+      candidate = (dir === '.' ? '' : dir + '/') + `${stem} 副本 ${counter}.md`;
+      counter += 1;
+    }
+    const result = await this.write(candidate, text, { expectedSha: null, createOnly: true });
+    if (result.conflict) throw new VaultError('exists', `笔记已存在：${candidate}`);
+    return { path: result.path };
+  }
+
+  /**
+   * Move one note (or a whole folder) into .trash behind a staging commit —
+   * the same shape the Droplets desktop app's trash uses, so entries stay
+   * recoverable there.
+   */
+  async trash(target) {
+    const isNote = target.toLowerCase().endsWith('.md');
+    const rel = isNote ? normalizeVaultPath(target) : normalizeVaultDir(target);
+    if (rel === '') throw new VaultError('invalid_path', '不能删除 vault 根目录');
+    const sourceAbs = isNote ? await safeResolve(this.root, rel) : await safeResolveDir(this.root, rel);
+    const sourcePath = path.join(this.root, rel);
+    const trashRoot = path.join(this.root, '.trash');
+    await mkdir(trashRoot, { recursive: true });
+    const staging = path.join(trashRoot, `.staging-${Date.now().toString(36)}-${randomUUID()}`);
+    await mkdir(staging, { recursive: true });
+
+    const { sizeBytes, fileCount } = isNote
+      ? await statsOf(sourceAbs)
+      : await statsOfDir(sourcePath);
+    const title = isNote
+      ? this.cache()?.files?.[rel]?.title ?? path.basename(rel, '.md')
+      : path.basename(rel);
+    const meta = {
+      id: randomUUID(),
+      originalRelPath: isNote ? `vault/${rel}` : `vault/${rel}/`,
+      deletedFrom: 'vault',
+      entryKind: isNote ? 'file' : 'directory',
+      sizeBytes,
+      fileCount,
+      deletedAt: new Date().toISOString(),
+      title,
+    };
+
+    const payloadPath = path.join(staging, 'payload');
+    let moved = false;
+    try {
+      await rename(sourcePath, payloadPath);
+      moved = true;
+      await writeFile(path.join(staging, 'trash-meta.json'), JSON.stringify(meta, null, 2), 'utf8');
+      const commitPath = path.join(trashRoot, meta.id);
+      await rename(staging, commitPath);
+    } catch (error) {
+      if (moved) await rename(payloadPath, sourcePath).catch(() => {});
+      await rm(staging, { recursive: true, force: true }).catch(() => {});
+      throw error;
+    }
+
+    // Drop the cache records under the removed path.
+    const cache = this.cache();
+    if (cache) {
+      const prefix = isNote ? `${rel}` : `${rel}/`;
+      for (const key of Object.keys(cache.files)) {
+        if (key === prefix || key.startsWith(prefix)) delete cache.files[key];
+      }
+      this.cacheHolder.touch();
+    }
+    return { trashed: true, trashId: meta.id, title };
+  }
+
+  /** Best-effort pre-rewrite backup of the files a rename will touch. */
+  async trashBackup(rels, tag) {
+    const backupDir = path.join(this.root, '.trash', `.rewrite-backup-${tag}`);
+    await mkdir(backupDir, { recursive: true });
+    for (const rel of rels) {
+      const text = await this.readRaw(rel).catch(() => null);
+      if (text === null) continue;
+      const target = path.join(backupDir, rel.replaceAll('/', '__'));
+      await writeFile(target, text, 'utf8');
+    }
+    return { dir: backupDir, rels };
+  }
+
+  async restoreBackup(backup, rels) {
+    for (const rel of rels) {
+      const file = path.join(backup.dir, rel.replaceAll('/', '__'));
+      const text = await readFile(file, 'utf8').catch(() => null);
+      if (text === null) continue;
+      await this.write(rel, text, { expectedSha: undefined });
+    }
+    await rm(backup.dir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+function escapeRegExp(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** Sanitize a user-typed note title into one safe path segment. */
+function sanitizeNoteTitle(title) {
+  const clean = String(title ?? '').trim().replace(/[\\/:]/g, '-').replace(/^\.+/, '').slice(0, 120);
+  if (clean === '') throw new VaultError('invalid_path', '标题不能为空');
+  return clean;
+}
+
+/** Normalize a directory path (no .md requirement, same exclusions). */
+function normalizeVaultDir(input) {
+  if (input === undefined || input === null || input === '') return '';
+  let cleaned = String(input).replace(/\\/g, '/').trim().replace(/\/+$/, '');
+  if (cleaned.startsWith('/')) cleaned = cleaned.slice(1);
+  if (cleaned === '') return '';
+  const segments = [];
+  for (const segment of cleaned.split('/')) {
+    if (segment === '' || segment === '.') continue;
+    if (segment === '..') throw new VaultError('path_escape', '不允许 .. 路径段');
+    if (EXCLUDED_DIRS.has(segment) || segment.startsWith('.')) throw new VaultError('excluded_path', '该目录不在索引范围内');
+    segments.push(segment);
+  }
+  return segments.join('/');
+}
+
+/** Resolve a dir path with the same symlink/escape guards as files. */
+async function safeResolveDir(root, rel) {
+  if (rel === '') return path.resolve(root);
+  const segments = rel.split('/');
+  const realRoot = await realpath(path.resolve(root)).catch(() => path.resolve(root));
+  let current = realRoot;
+  for (const segment of segments) {
+    current = path.join(current, segment);
+    const info = await lstat(current).catch(() => null);
+    if (info === null) continue; // being created
+    if (info.isSymbolicLink()) throw new VaultError('symlink_rejected', '不允许符号链接：' + segment);
+  }
+  const realTarget = await realpath(path.resolve(realRoot, rel)).catch(() => path.resolve(realRoot, rel));
+  const relToRoot = path.relative(realRoot, realTarget);
+  if (relToRoot.startsWith('..') || path.isAbsolute(relToRoot)) throw new VaultError('path_escape', '路径越界：' + rel);
+  return realTarget;
+}
+
+async function statsOf(absolute) {
+  const info = await stat(absolute);
+  return { sizeBytes: info.size, fileCount: 1 };
+}
+
+async function statsOfDir(absolute) {
+  let sizeBytes = 0;
+  let fileCount = 0;
+  const walk = async (dir) => {
+    for (const entry of await readdir(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) await walk(full);
+      else if (entry.isFile()) {
+        const info = await stat(full);
+        sizeBytes += info.size;
+        fileCount += 1;
+      }
+    }
+  };
+  await walk(absolute).catch(() => {});
+  return { sizeBytes, fileCount };
 }
 
 function excerptAround(text, needle, radius = 60) {

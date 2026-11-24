@@ -6138,14 +6138,14 @@ var require_util = __commonJS({
         }
         const port = url.port != null ? url.port : url.protocol === "https:" ? 443 : 80;
         let origin = url.origin != null ? url.origin : `${url.protocol || ""}//${url.hostname || ""}:${port}`;
-        let path4 = url.path != null ? url.path : `${url.pathname || ""}${url.search || ""}`;
+        let path5 = url.path != null ? url.path : `${url.pathname || ""}${url.search || ""}`;
         if (origin[origin.length - 1] === "/") {
           origin = origin.slice(0, origin.length - 1);
         }
-        if (path4 && path4[0] !== "/") {
-          path4 = `/${path4}`;
+        if (path5 && path5[0] !== "/") {
+          path5 = `/${path5}`;
         }
-        return new URL(`${origin}${path4}`);
+        return new URL(`${origin}${path5}`);
       }
       if (!isHttpOrHttpsPrefixed(url.origin || url.protocol)) {
         throw new InvalidArgumentError("Invalid URL protocol: the URL must start with `http:` or `https:`.");
@@ -6980,9 +6980,9 @@ var require_diagnostics = __commonJS({
         "undici:client:sendHeaders",
         (evt) => {
           const {
-            request: { method, path: path4, origin }
+            request: { method, path: path5, origin }
           } = evt;
-          debugLog("sending request to %s %s%s", method, origin, path4);
+          debugLog("sending request to %s %s%s", method, origin, path5);
         }
       );
     }
@@ -7000,14 +7000,14 @@ var require_diagnostics = __commonJS({
         "undici:request:headers",
         (evt) => {
           const {
-            request: { method, path: path4, origin },
+            request: { method, path: path5, origin },
             response: { statusCode }
           } = evt;
           debugLog(
             "received response to %s %s%s - HTTP %d",
             method,
             origin,
-            path4,
+            path5,
             statusCode
           );
         }
@@ -7016,23 +7016,23 @@ var require_diagnostics = __commonJS({
         "undici:request:trailers",
         (evt) => {
           const {
-            request: { method, path: path4, origin }
+            request: { method, path: path5, origin }
           } = evt;
-          debugLog("trailers received from %s %s%s", method, origin, path4);
+          debugLog("trailers received from %s %s%s", method, origin, path5);
         }
       );
       diagnosticsChannel.subscribe(
         "undici:request:error",
         (evt) => {
           const {
-            request: { method, path: path4, origin },
+            request: { method, path: path5, origin },
             error
           } = evt;
           debugLog(
             "request to %s %s%s errored - %s",
             method,
             origin,
-            path4,
+            path5,
             error.message
           );
         }
@@ -7147,7 +7147,7 @@ var require_request = __commonJS({
     var kHandler = /* @__PURE__ */ Symbol("handler");
     var Request2 = class {
       constructor(origin, {
-        path: path4,
+        path: path5,
         method,
         body,
         headers,
@@ -7164,11 +7164,11 @@ var require_request = __commonJS({
         maxRedirections,
         typeOfService
       }, handler) {
-        if (typeof path4 !== "string") {
+        if (typeof path5 !== "string") {
           throw new InvalidArgumentError("path must be a string");
-        } else if (path4[0] !== "/" && !(path4.startsWith("http://") || path4.startsWith("https://")) && method !== "CONNECT") {
+        } else if (path5[0] !== "/" && !(path5.startsWith("http://") || path5.startsWith("https://")) && method !== "CONNECT") {
           throw new InvalidArgumentError("path must be an absolute URL or start with a slash");
-        } else if (invalidPathRegex.test(path4)) {
+        } else if (invalidPathRegex.test(path5)) {
           throw new InvalidArgumentError("invalid request path");
         }
         if (typeof method !== "string") {
@@ -7243,7 +7243,7 @@ var require_request = __commonJS({
         this.completed = false;
         this.aborted = false;
         this.upgrade = upgrade || null;
-        this.path = query ? serializePathWithQuery(path4, query) : path4;
+        this.path = query ? serializePathWithQuery(path5, query) : path5;
         this.origin = origin;
         this.protocol = getProtocolFromUrlString(origin);
         this.idempotent = idempotent == null ? method === "HEAD" || method === "GET" : idempotent;
@@ -12487,7 +12487,7 @@ var require_client_h1 = __commonJS({
       }
     }
     function writeH1(client, request) {
-      const { method, path: path4, host, upgrade, blocking, reset } = request;
+      const { method, path: path5, host, upgrade, blocking, reset } = request;
       let { body, headers, contentLength } = request;
       const expectsPayload = method === "PUT" || method === "POST" || method === "PATCH" || method === "QUERY" || method === "PROPFIND" || method === "PROPPATCH";
       if (util.isFormDataLike(body)) {
@@ -12563,7 +12563,7 @@ var require_client_h1 = __commonJS({
         socket[kBlocking] = true;
       }
       setTypeOfService(socket, request);
-      let header = `${method} ${path4} HTTP/1.1\r
+      let header = `${method} ${path5} HTTP/1.1\r
 `;
       if (typeof host === "string") {
         header += `host: ${host}\r
@@ -13240,7 +13240,7 @@ var require_client_h2 = __commonJS({
       const headersTimeout = request.headersTimeout ?? client[kHeadersTimeout];
       const bodyTimeout = request.bodyTimeout ?? client[kBodyTimeout];
       const session = client[kHTTP2Session];
-      const { method, path: path4, host, upgrade, expectContinue, signal, protocol, headers: reqHeaders } = request;
+      const { method, path: path5, host, upgrade, expectContinue, signal, protocol, headers: reqHeaders } = request;
       let { body } = request;
       if (upgrade != null && upgrade !== "websocket") {
         util.errorRequest(client, request, new InvalidArgumentError(`Custom upgrade "${upgrade}" not supported over HTTP/2`));
@@ -13309,7 +13309,7 @@ var require_client_h2 = __commonJS({
           }
           headers[HTTP2_HEADER_METHOD] = "CONNECT";
           headers[HTTP2_HEADER_PROTOCOL] = "websocket";
-          headers[HTTP2_HEADER_PATH] = path4;
+          headers[HTTP2_HEADER_PATH] = path5;
           if (protocol === "ws:" || protocol === "wss:") {
             headers[HTTP2_HEADER_SCHEME] = protocol === "ws:" ? "http" : "https";
           } else {
@@ -13361,7 +13361,7 @@ var require_client_h2 = __commonJS({
         stream.setTimeout(headersTimeout);
         return true;
       }
-      headers[HTTP2_HEADER_PATH] = path4;
+      headers[HTTP2_HEADER_PATH] = path5;
       headers[HTTP2_HEADER_SCHEME] = protocol === "http:" ? "http" : "https";
       const expectsPayload = method === "PUT" || method === "POST" || method === "PATCH";
       if (body && typeof body.read === "function") {
@@ -15717,10 +15717,10 @@ var require_proxy_agent = __commonJS({
         };
         const {
           origin,
-          path: path4 = "/",
+          path: path5 = "/",
           headers = {}
         } = opts;
-        opts.path = origin + path4;
+        opts.path = origin + path5;
         if (!("host" in headers) && !("Host" in headers)) {
           const { host } = new URL(origin);
           headers.host = host;
@@ -17880,20 +17880,20 @@ var require_mock_utils = __commonJS({
       }
       return normalizedQp;
     }
-    function safeUrl2(path4) {
-      if (typeof path4 !== "string") {
-        return path4;
+    function safeUrl2(path5) {
+      if (typeof path5 !== "string") {
+        return path5;
       }
-      const pathSegments = path4.split("?", 3);
+      const pathSegments = path5.split("?", 3);
       if (pathSegments.length !== 2) {
-        return path4;
+        return path5;
       }
       const qp = new URLSearchParams(pathSegments.pop());
       qp.sort();
       return [...pathSegments, qp.toString()].join("?");
     }
-    function matchKey(mockDispatch2, { path: path4, method, body, headers }) {
-      const pathMatch = matchValue(mockDispatch2.path, path4);
+    function matchKey(mockDispatch2, { path: path5, method, body, headers }) {
+      const pathMatch = matchValue(mockDispatch2.path, path5);
       const methodMatch = matchValue(mockDispatch2.method, method);
       const bodyMatch = typeof mockDispatch2.body !== "undefined" ? matchValue(mockDispatch2.body, body) : true;
       const headersMatch = matchHeaders(mockDispatch2, headers);
@@ -17918,8 +17918,8 @@ var require_mock_utils = __commonJS({
       const basePath = key.query ? serializePathWithQuery(key.path, key.query) : key.path;
       const resolvedPath = typeof basePath === "string" ? safeUrl2(basePath) : basePath;
       const resolvedPathWithoutTrailingSlash = removeTrailingSlash(resolvedPath);
-      let matchedMockDispatches = mockDispatches.filter(({ consumed }) => !consumed).filter(({ path: path4, ignoreTrailingSlash }) => {
-        return ignoreTrailingSlash ? matchValue(removeTrailingSlash(safeUrl2(path4)), resolvedPathWithoutTrailingSlash) : matchValue(safeUrl2(path4), resolvedPath);
+      let matchedMockDispatches = mockDispatches.filter(({ consumed }) => !consumed).filter(({ path: path5, ignoreTrailingSlash }) => {
+        return ignoreTrailingSlash ? matchValue(removeTrailingSlash(safeUrl2(path5)), resolvedPathWithoutTrailingSlash) : matchValue(safeUrl2(path5), resolvedPath);
       });
       if (matchedMockDispatches.length === 0) {
         throw new MockNotMatchedError(`Mock dispatch not matched for path '${resolvedPath}'`);
@@ -17958,19 +17958,19 @@ var require_mock_utils = __commonJS({
         mockDispatches.splice(index, 1);
       }
     }
-    function removeTrailingSlash(path4) {
-      while (path4.endsWith("/")) {
-        path4 = path4.slice(0, -1);
+    function removeTrailingSlash(path5) {
+      while (path5.endsWith("/")) {
+        path5 = path5.slice(0, -1);
       }
-      if (path4.length === 0) {
-        path4 = "/";
+      if (path5.length === 0) {
+        path5 = "/";
       }
-      return path4;
+      return path5;
     }
     function buildKey(opts) {
-      const { path: path4, method, body, headers, query } = opts;
+      const { path: path5, method, body, headers, query } = opts;
       return {
-        path: path4,
+        path: path5,
         method,
         body,
         headers,
@@ -18660,10 +18660,10 @@ var require_pending_interceptors_formatter = __commonJS({
       }
       format(pendingInterceptors) {
         const withPrettyHeaders = pendingInterceptors.map(
-          ({ method, path: path4, data: { statusCode }, persist, times, timesInvoked, origin }) => ({
+          ({ method, path: path5, data: { statusCode }, persist, times, timesInvoked, origin }) => ({
             Method: method,
             Origin: origin,
-            Path: path4,
+            Path: path5,
             "Status code": statusCode,
             Persistent: persist ? PERSISTENT : NOT_PERSISTENT,
             Invocations: timesInvoked,
@@ -18745,9 +18745,9 @@ var require_mock_agent = __commonJS({
         const acceptNonStandardSearchParameters = this[kMockAgentAcceptsNonStandardSearchParameters];
         const dispatchOpts = { ...opts };
         if (acceptNonStandardSearchParameters && dispatchOpts.path) {
-          const [path4, searchParams] = dispatchOpts.path.split("?");
+          const [path5, searchParams] = dispatchOpts.path.split("?");
           const normalizedSearchParams = normalizeSearchParams(searchParams, acceptNonStandardSearchParameters);
-          dispatchOpts.path = `${path4}?${normalizedSearchParams}`;
+          dispatchOpts.path = `${path5}?${normalizedSearchParams}`;
         }
         return this[kAgent].dispatch(dispatchOpts, handler);
       }
@@ -19148,12 +19148,12 @@ var require_snapshot_recorder = __commonJS({
        * @return {Promise<void>} - Resolves when snapshots are loaded
        */
       async loadSnapshots(filePath) {
-        const path4 = filePath || this.#snapshotPath;
-        if (!path4) {
+        const path5 = filePath || this.#snapshotPath;
+        if (!path5) {
           throw new InvalidArgumentError("Snapshot path is required");
         }
         try {
-          const data = await readFile8(resolve2(path4), "utf8");
+          const data = await readFile8(resolve2(path5), "utf8");
           const parsed = JSON.parse(data);
           if (Array.isArray(parsed)) {
             this.#snapshots.clear();
@@ -19167,7 +19167,7 @@ var require_snapshot_recorder = __commonJS({
           if (error.code === "ENOENT") {
             this.#snapshots.clear();
           } else {
-            throw new UndiciError(`Failed to load snapshots from ${path4}`, { cause: error });
+            throw new UndiciError(`Failed to load snapshots from ${path5}`, { cause: error });
           }
         }
       }
@@ -19178,11 +19178,11 @@ var require_snapshot_recorder = __commonJS({
        * @returns {Promise<void>} - Resolves when snapshots are saved
        */
       async saveSnapshots(filePath) {
-        const path4 = filePath || this.#snapshotPath;
-        if (!path4) {
+        const path5 = filePath || this.#snapshotPath;
+        if (!path5) {
           throw new InvalidArgumentError("Snapshot path is required");
         }
-        const resolvedPath = resolve2(path4);
+        const resolvedPath = resolve2(path5);
         await mkdir8(dirname5(resolvedPath), { recursive: true });
         const data = Array.from(this.#snapshots.entries()).map(([hash, snapshot]) => ({
           hash,
@@ -19823,15 +19823,15 @@ var require_redirect_handler = __commonJS({
           receivedAt: Date.now()
         });
         const { origin, pathname, search } = util.parseURL(new URL(this.location, this.opts.origin && new URL(this.opts.path, this.opts.origin)));
-        const path4 = search ? `${pathname}${search}` : pathname;
-        const redirectUrlString = `${origin}${path4}`;
+        const path5 = search ? `${pathname}${search}` : pathname;
+        const redirectUrlString = `${origin}${path5}`;
         for (const historyUrl of this.history) {
           if (historyUrl.toString() === redirectUrlString) {
             throw new InvalidArgumentError(`Redirect loop detected. Cannot redirect to ${origin}. This typically happens when using a Client or Pool with cross-origin redirects. Use an Agent for cross-origin redirects.`);
           }
         }
         this.opts.headers = cleanRequestHeaders(this.opts.headers, statusCode === 303, this.opts.origin !== origin);
-        this.opts.path = path4;
+        this.opts.path = path5;
         this.opts.origin = origin;
         this.opts.query = null;
       }
@@ -21648,10 +21648,10 @@ var require_cache_handler = __commonJS({
       }
       return locationUrl.pathname + locationUrl.search;
     }
-    function deleteCachedUri(store, cacheKey, path4) {
+    function deleteCachedUri(store, cacheKey, path5) {
       deleteCachedValue(store, {
         ...cacheKey,
-        path: path4
+        path: path5
       });
       for (let i2 = 0; i2 < util.safeHTTPMethods.length; i2++) {
         const method = util.safeHTTPMethods[i2];
@@ -21659,7 +21659,7 @@ var require_cache_handler = __commonJS({
           deleteCachedValue(store, {
             ...cacheKey,
             method,
-            path: path4
+            path: path5
           });
         }
       }
@@ -21670,9 +21670,9 @@ var require_cache_handler = __commonJS({
       }
       const values = Array.isArray(headerValue) ? headerValue : [headerValue];
       for (let i2 = 0; i2 < values.length; i2++) {
-        const path4 = getSameOriginPath(cacheKey, values[i2]);
-        if (path4 !== void 0) {
-          deleteCachedUri(store, cacheKey, path4);
+        const path5 = getSameOriginPath(cacheKey, values[i2]);
+        if (path5 !== void 0) {
+          deleteCachedUri(store, cacheKey, path5);
         }
       }
     }
@@ -27160,11 +27160,11 @@ var require_fetch = __commonJS({
       function dispatch({ body }) {
         const url = requestCurrentURL(request);
         const agent = fetchParams.controller.dispatcher;
-        const path4 = url.pathname + url.search;
+        const path5 = url.pathname + url.search;
         const hasTrailingQuestionMark = url.search.length === 0 && url.href[url.href.length - url.hash.length - 1] === "?";
         return new Promise((resolve2, reject) => agent.dispatch(
           {
-            path: hasTrailingQuestionMark ? `${path4}?` : path4,
+            path: hasTrailingQuestionMark ? `${path5}?` : path5,
             origin: url.origin,
             method: request.method,
             body: agent.isMockActive ? request.body && (request.body.source || request.body.stream) : body,
@@ -28111,9 +28111,9 @@ var require_util4 = __commonJS({
         }
       }
     }
-    function validateCookiePath(path4) {
-      for (let i2 = 0; i2 < path4.length; ++i2) {
-        const code = path4.charCodeAt(i2);
+    function validateCookiePath(path5) {
+      for (let i2 = 0; i2 < path5.length; ++i2) {
+        const code = path5.charCodeAt(i2);
         if (code < 32 || // exclude CTLs (0-31)
         code > 126 || // exclude DEL and non-ascii
         code === 59) {
@@ -31549,11 +31549,11 @@ var require_undici = __commonJS({
           if (typeof opts.path !== "string") {
             throw new InvalidArgumentError("invalid opts.path");
           }
-          let path4 = opts.path;
+          let path5 = opts.path;
           if (!opts.path.startsWith("/")) {
-            path4 = `/${path4}`;
+            path5 = `/${path5}`;
           }
-          url = new URL(util.parseOrigin(url).origin + path4);
+          url = new URL(util.parseOrigin(url).origin + path5);
         } else {
           if (!opts) {
             opts = typeof url === "object" ? url : {};
@@ -32097,33 +32097,33 @@ function findContrastColor(baseColor, fixedColor) {
   return cachedValue;
 }
 function makePathFromDrawOPS(data) {
-  const path4 = new Path2D();
+  const path5 = new Path2D();
   if (!data) {
-    return path4;
+    return path5;
   }
   for (let i2 = 0, ii = data.length; i2 < ii; ) {
     switch (data[i2++]) {
       case DrawOPS.moveTo:
-        path4.moveTo(data[i2++], data[i2++]);
+        path5.moveTo(data[i2++], data[i2++]);
         break;
       case DrawOPS.lineTo:
-        path4.lineTo(data[i2++], data[i2++]);
+        path5.lineTo(data[i2++], data[i2++]);
         break;
       case DrawOPS.curveTo:
-        path4.bezierCurveTo(data[i2++], data[i2++], data[i2++], data[i2++], data[i2++], data[i2++]);
+        path5.bezierCurveTo(data[i2++], data[i2++], data[i2++], data[i2++], data[i2++], data[i2++]);
         break;
       case DrawOPS.quadraticCurveTo:
-        path4.quadraticCurveTo(data[i2++], data[i2++], data[i2++], data[i2++]);
+        path5.quadraticCurveTo(data[i2++], data[i2++], data[i2++], data[i2++]);
         break;
       case DrawOPS.closePath:
-        path4.closePath();
+        path5.closePath();
         break;
       default:
         warn(`Unrecognized drawing path operator: ${data[i2 - 1]}`);
         break;
     }
   }
-  return path4;
+  return path5;
 }
 async function fetchData(url, type = "text") {
   if (isValidFetchUrl(url, document.baseURI)) {
@@ -45927,7 +45927,7 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
         Util.singularValueDecompose2dScale(this.baseTransform, scale);
         return [matrixScaleX * scale[0], matrixScaleY * scale[1]];
       }
-      drawPattern(owner, path4, useEOFill = false, [n, m], opIdx) {
+      drawPattern(owner, path5, useEOFill = false, [n, m], opIdx) {
         const [x0, y0, x1, y1] = this.bbox;
         const dependencyTracker = owner.dependencyTracker;
         if (dependencyTracker) {
@@ -45936,9 +45936,9 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
         try {
           owner.save();
           if (useEOFill) {
-            owner.ctx.clip(path4, "evenodd");
+            owner.ctx.clip(path5, "evenodd");
           } else {
-            owner.ctx.clip(path4);
+            owner.ctx.clip(path5);
           }
           owner.ctx.setTransform(...this.patternBaseMatrix);
           owner.ctx.translate(n * this.xstep, m * this.ystep);
@@ -47102,15 +47102,15 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
         if (hasInnerCutout && maskX0 === layerOffsetX && maskY0 === layerOffsetY && maskX1 === layerOffsetX + layerWidth && maskY1 === layerOffsetY + layerHeight) {
           return;
         }
-        const path4 = new Path2D();
-        path4.rect(layerOffsetX, layerOffsetY, layerWidth, layerHeight);
+        const path5 = new Path2D();
+        path5.rect(layerOffsetX, layerOffsetY, layerWidth, layerHeight);
         if (hasInnerCutout) {
-          path4.rect(maskX0, maskY0, maskX1 - maskX0, maskY1 - maskY0);
+          path5.rect(maskX0, maskY0, maskX1 - maskX0, maskY1 - maskY0);
         }
         layerCtx.save();
         layerCtx.globalAlpha = alpha / 255;
         layerCtx.setTransform(1, 0, 0, 1, 0, 0);
-        layerCtx.clip(path4, "evenodd");
+        layerCtx.clip(path5, "evenodd");
         layerCtx.globalCompositeOperation = "destination-in";
         layerCtx.fillStyle = "#000000";
         layerCtx.fillRect(layerOffsetX, layerOffsetY, layerWidth, layerHeight);
@@ -47187,25 +47187,25 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
         this._cachedScaleForStroking[0] = -1;
       }
       constructPath(opIdx, op, data, minMax) {
-        let path4 = this._pathCache.get(opIdx);
+        let path5 = this._pathCache.get(opIdx);
         if (!minMax) {
-          if (!path4) {
-            path4 = new Path2D();
-            this._pathCache.set(opIdx, path4);
+          if (!path5) {
+            path5 = new Path2D();
+            this._pathCache.set(opIdx, path5);
           }
           if (op !== OPS.stroke && op !== OPS.closeStroke) {
             this.current.tilingPatternDims = null;
           }
-          this[op](opIdx, path4);
+          this[op](opIdx, path5);
           return;
         }
         if (this.dependencyTracker !== null) {
           const outerExtraSize = op === OPS.stroke ? this.current.lineWidth / 2 : 0;
           this.dependencyTracker.resetBBox(opIdx).recordBBox(opIdx, this.ctx, minMax[0] - outerExtraSize, minMax[2] + outerExtraSize, minMax[1] - outerExtraSize, minMax[3] + outerExtraSize).recordDependencies(opIdx, ["transform"]);
         }
-        if (!path4) {
-          path4 = makePathFromDrawOPS(data[0]);
-          this._pathCache.set(opIdx, path4);
+        if (!path5) {
+          path5 = makePathFromDrawOPS(data[0]);
+          this._pathCache.set(opIdx, path5);
         }
         Util.axialAlignedBoundingBox(minMax, getCurrentTransform(this.ctx), this.current.minMax);
         const tilingDims = this.current.tilingPatternDims;
@@ -47217,13 +47217,13 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
             this.current.fillColor.updatePatternDims(clippedBBox, tilingDims);
           }
         }
-        this[op](opIdx, path4);
+        this[op](opIdx, path5);
         this._pathStartIdx = opIdx;
       }
       closePath(opIdx) {
         this.ctx.closePath();
       }
-      stroke(opIdx, path4, consumePath = true) {
+      stroke(opIdx, path5, consumePath = true) {
         const started = consumePath && this.#beginKnockoutElement(this.current.strokeAlpha);
         const ctx = this.ctx;
         const strokeColor = this.current.strokeColor;
@@ -47235,26 +47235,26 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
             ctx.strokeStyle = strokeColor.getPattern(ctx, this, getCurrentTransformInverse(ctx), PathType.STROKE, opIdx);
             if (baseTransform) {
               const newPath = new Path2D();
-              newPath.addPath(path4, ctx.getTransform().invertSelf().multiplySelf(baseTransform));
-              path4 = newPath;
+              newPath.addPath(path5, ctx.getTransform().invertSelf().multiplySelf(baseTransform));
+              path5 = newPath;
             }
-            this.rescaleAndStroke(path4, false);
+            this.rescaleAndStroke(path5, false);
             ctx.restore();
           } else {
-            this.rescaleAndStroke(path4, true);
+            this.rescaleAndStroke(path5, true);
           }
         }
         this.dependencyTracker?.recordDependencies(opIdx, Dependencies.stroke);
         if (consumePath) {
-          this.consumePath(opIdx, path4, this.current.getClippedPathBoundingBox(PathType.STROKE, getCurrentTransform(this.ctx)));
+          this.consumePath(opIdx, path5, this.current.getClippedPathBoundingBox(PathType.STROKE, getCurrentTransform(this.ctx)));
         }
         ctx.globalAlpha = this.current.fillAlpha;
         this.#endKnockoutElement(started);
       }
-      closeStroke(opIdx, path4) {
-        this.stroke(opIdx, path4);
+      closeStroke(opIdx, path5) {
+        this.stroke(opIdx, path5);
       }
-      fill(opIdx, path4, consumePath = true) {
+      fill(opIdx, path5, consumePath = true) {
         const started = consumePath && this.#beginKnockoutElement(this.current.fillAlpha);
         const ctx = this.ctx;
         const fillColor = this.current.fillColor;
@@ -47272,10 +47272,10 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
             } = this;
             this.pendingClip = null;
             this.pendingEOFill = false;
-            fillColor.drawPattern(this, path4, pendingEOFill, tileIdx, opIdx);
+            fillColor.drawPattern(this, path5, pendingEOFill, tileIdx, opIdx);
             this.pendingClip = pendingClip;
             if (consumePath) {
-              this.consumePath(opIdx, path4, intersect);
+              this.consumePath(opIdx, path5, intersect);
             }
             this.current.tilingPatternDims = null;
             this.#endKnockoutElement(started);
@@ -47287,17 +47287,17 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
           ctx.fillStyle = fillColor.getPattern(ctx, this, getCurrentTransformInverse(ctx), PathType.FILL, opIdx);
           if (baseTransform) {
             const newPath = new Path2D();
-            newPath.addPath(path4, ctx.getTransform().invertSelf().multiplySelf(baseTransform));
-            path4 = newPath;
+            newPath.addPath(path5, ctx.getTransform().invertSelf().multiplySelf(baseTransform));
+            path5 = newPath;
           }
           needRestore = true;
         }
         if (this.contentVisible && intersect !== null) {
           if (this.pendingEOFill) {
-            ctx.fill(path4, "evenodd");
+            ctx.fill(path5, "evenodd");
             this.pendingEOFill = false;
           } else {
-            ctx.fill(path4);
+            ctx.fill(path5);
           }
         }
         if (needRestore) {
@@ -47305,38 +47305,38 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
           this.dependencyTracker?.restore(opIdx);
         }
         if (consumePath) {
-          this.consumePath(opIdx, path4, intersect);
+          this.consumePath(opIdx, path5, intersect);
         }
         this.#endKnockoutElement(started);
       }
-      eoFill(opIdx, path4) {
+      eoFill(opIdx, path5) {
         this.pendingEOFill = true;
-        this.fill(opIdx, path4);
+        this.fill(opIdx, path5);
       }
-      fillStroke(opIdx, path4) {
+      fillStroke(opIdx, path5) {
         const started = this.#beginKnockoutElement(Math.min(this.current.fillAlpha, this.current.strokeAlpha));
-        this.fill(opIdx, path4, false);
-        this.stroke(opIdx, path4, false);
-        this.consumePath(opIdx, path4);
+        this.fill(opIdx, path5, false);
+        this.stroke(opIdx, path5, false);
+        this.consumePath(opIdx, path5);
         this.#endKnockoutElement(started);
       }
-      eoFillStroke(opIdx, path4) {
+      eoFillStroke(opIdx, path5) {
         this.pendingEOFill = true;
-        this.fillStroke(opIdx, path4);
+        this.fillStroke(opIdx, path5);
       }
-      closeFillStroke(opIdx, path4) {
-        this.fillStroke(opIdx, path4);
+      closeFillStroke(opIdx, path5) {
+        this.fillStroke(opIdx, path5);
       }
-      closeEOFillStroke(opIdx, path4) {
+      closeEOFillStroke(opIdx, path5) {
         this.pendingEOFill = true;
-        this.fillStroke(opIdx, path4);
+        this.fillStroke(opIdx, path5);
       }
-      endPath(opIdx, path4) {
-        this.consumePath(opIdx, path4);
+      endPath(opIdx, path5) {
+        this.consumePath(opIdx, path5);
       }
-      rawFillPath(opIdx, path4) {
+      rawFillPath(opIdx, path5) {
         const started = this.#beginKnockoutElement(this.current.fillAlpha);
-        this.ctx.fill(path4);
+        this.ctx.fill(path5);
         this.dependencyTracker?.recordDependencies(opIdx, Dependencies.rawFillPath).recordOperation(opIdx);
         this.#endKnockoutElement(started);
       }
@@ -47375,12 +47375,12 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
             x: x2,
             y,
             fontSize,
-            path: path4
+            path: path5
           } of paths) {
-            if (!path4) {
+            if (!path5) {
               continue;
             }
-            newPath.addPath(path4, new DOMMatrix(transform).preMultiplySelf(invTransf).translate(x2, y).scale(fontSize, -fontSize));
+            newPath.addPath(path5, new DOMMatrix(transform).preMultiplySelf(invTransf).translate(x2, y).scale(fontSize, -fontSize));
           }
           ctx.clip(newPath);
         }
@@ -47468,9 +47468,9 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
         this.moveText(opIdx, 0, this.current.leading);
         this.dependencyTracker?.recordIncrementalData("moveText", this.dependencyTracker.getSimpleIndex("leading") ?? opIdx);
       }
-      #getScaledPath(path4, currentTransform, transform) {
+      #getScaledPath(path5, currentTransform, transform) {
         const newPath = new Path2D();
-        newPath.addPath(path4, new DOMMatrix(transform).invertSelf().multiplySelf(currentTransform));
+        newPath.addPath(path5, new DOMMatrix(transform).invertSelf().multiplySelf(currentTransform));
         return newPath;
       }
       paintChar(opIdx, character, x2, y, patternFillTransform, patternStrokeTransform) {
@@ -47483,11 +47483,11 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
         const isAddToPathSet = !!(textRenderingMode & TextRenderingMode.ADD_TO_PATH_FLAG);
         const patternFill = current.patternFill && !font.missingFile;
         const patternStroke = current.patternStroke && !font.missingFile;
-        let path4;
+        let path5;
         if ((font.disableFontFace || isAddToPathSet || patternFill || patternStroke) && !font.missingFile) {
-          path4 = font.getPathGenerator(this.commonObjs, character);
+          path5 = font.getPathGenerator(this.commonObjs, character);
         }
-        if (path4 && (font.disableFontFace || patternFill || patternStroke)) {
+        if (path5 && (font.disableFontFace || patternFill || patternStroke)) {
           ctx.save();
           ctx.translate(x2, y);
           ctx.scale(fontSize, -fontSize);
@@ -47497,10 +47497,10 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
             if (patternFillTransform) {
               currentTransform = ctx.getTransform();
               ctx.setTransform(...patternFillTransform);
-              const scaledPath = this.#getScaledPath(path4, currentTransform, patternFillTransform);
+              const scaledPath = this.#getScaledPath(path5, currentTransform, patternFillTransform);
               ctx.fill(scaledPath);
             } else {
-              ctx.fill(path4);
+              ctx.fill(path5);
             }
           }
           if (fillStrokeMode === TextRenderingMode.STROKE || fillStrokeMode === TextRenderingMode.FILL_STROKE) {
@@ -47517,10 +47517,10 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
               const transf = Util.transform([a, b, c, d, 0, 0], invPatternTransform);
               Util.singularValueDecompose2dScale(transf, XY);
               ctx.lineWidth *= Math.max(XY[0], XY[1]) / fontSize;
-              ctx.stroke(this.#getScaledPath(path4, currentTransform, patternStrokeTransform));
+              ctx.stroke(this.#getScaledPath(path5, currentTransform, patternStrokeTransform));
             } else {
               ctx.lineWidth /= fontSize;
-              ctx.stroke(path4);
+              ctx.stroke(path5);
             }
           }
           ctx.restore();
@@ -47543,7 +47543,7 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
             x: x2,
             y,
             fontSize,
-            path: path4
+            path: path5
           });
           this.dependencyTracker?.recordCharacterBBox(opIdx, ctx, font, fontSize, x2, y);
         }
@@ -47954,9 +47954,9 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
             const [x0, y0, x1, y1] = group.bbox;
             clip.rect(x0, y0, x1 - x0, y1 - y0);
             if (group.matrix) {
-              const path4 = new Path2D();
-              path4.addPath(clip, new DOMMatrix(group.matrix));
-              clip = path4;
+              const path5 = new Path2D();
+              path5.addPath(clip, new DOMMatrix(group.matrix));
+              clip = path5;
             }
             currentCtx.clip(clip);
           }
@@ -48015,9 +48015,9 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
           const [x0, y0, x1, y1] = group.bbox;
           clip.rect(x0, y0, x1 - x0, y1 - y0);
           if (group.matrix) {
-            const path4 = new Path2D();
-            path4.addPath(clip, new DOMMatrix(group.matrix));
-            clip = path4;
+            const path5 = new Path2D();
+            path5.addPath(clip, new DOMMatrix(group.matrix));
+            clip = path5;
           }
           groupCtx.clip(clip);
         }
@@ -48552,7 +48552,7 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
       }
       endCompat(opIdx) {
       }
-      consumePath(opIdx, path4, clipBox) {
+      consumePath(opIdx, path5, clipBox) {
         const isEmpty = this.current.isEmptyClip();
         if (this.pendingClip) {
           this.current.updateClipFromPath();
@@ -48564,9 +48564,9 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
         if (this.pendingClip) {
           if (!isEmpty) {
             if (this.pendingClip === EO_CLIP) {
-              ctx.clip(path4, "evenodd");
+              ctx.clip(path5, "evenodd");
             } else {
-              ctx.clip(path4);
+              ctx.clip(path5);
             }
           }
           this.pendingClip = null;
@@ -48635,7 +48635,7 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
         }
         return this._cachedScaleForStroking;
       }
-      rescaleAndStroke(path4, saveRestore) {
+      rescaleAndStroke(path5, saveRestore) {
         const {
           ctx,
           current: {
@@ -48645,7 +48645,7 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
         const [scaleX, scaleY] = this.getScaleForStroking();
         if (scaleX === scaleY) {
           ctx.lineWidth = (lineWidth || 1) * scaleX;
-          ctx.stroke(path4);
+          ctx.stroke(path5);
           return;
         }
         const SCALE_MATRIX = _CanvasGraphics.#SCALE_MATRIX ??= new DOMMatrix();
@@ -48657,7 +48657,7 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
         SCALE_MATRIX.a = 1 / scaleX;
         SCALE_MATRIX.d = 1 / scaleY;
         const newPath = new Path2D();
-        newPath.addPath(path4, SCALE_MATRIX);
+        newPath.addPath(path5, SCALE_MATRIX);
         if (dashes.length > 0) {
           const scale = Math.max(scaleX, scaleY);
           ctx.setLineDash(dashes.map((x2) => x2 / scale));
@@ -49338,9 +49338,9 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
         return rule;
       }
       getPathGenerator(objs, character) {
-        let path4 = this.#compiledPaths.get(character);
-        if (path4) {
-          return path4;
+        let path5 = this.#compiledPaths.get(character);
+        if (path5) {
+          return path5;
         }
         const objId = `${this.loadedName}_path_${character}`;
         let cmds;
@@ -49349,12 +49349,12 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
         } catch (ex) {
           warn(`getPathGenerator - ignoring character: "${ex}".`);
         }
-        path4 = makePathFromDrawOPS(cmds?.path);
+        path5 = makePathFromDrawOPS(cmds?.path);
         if (!this.fontExtraProperties) {
           objs.delete(objId);
         }
-        this.#compiledPaths.set(character, path4);
-        return path4;
+        this.#compiledPaths.set(character, path5);
+        return path5;
       }
       get black() {
         return this.#fontData.black;
@@ -50120,12 +50120,12 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
         } = stream._source;
         this._isStreamingSupported = !disableStream;
         const fs = process.getBuiltinModule("fs/promises");
-        fs.lstat(url).then((stat6) => {
+        fs.lstat(url).then((stat7) => {
           const readableStream = getReadableStream(url);
           this._reader = readableStream.getReader();
           const {
             size
-          } = stat6;
+          } = stat7;
           this._contentLength = size;
           this._isRangeSupported = !disableRange && size > 2 * rangeChunkSize;
           if (!this._isStreamingSupported && this._isRangeSupported) {
@@ -61638,11 +61638,11 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
     };
     ContourDrawOutline = class extends InkDrawOutline {
       toSVGPath() {
-        let path4 = super.toSVGPath();
-        if (!path4.endsWith("Z")) {
-          path4 += "Z";
+        let path5 = super.toSVGPath();
+        if (!path5.endsWith("Z")) {
+          path5 += "Z";
         }
-        return path4;
+        return path5;
       }
     };
     es_uint8_array_from_base64_namespaceFn();
@@ -64342,7 +64342,7 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
           }
           const drawLayer = textLayerData.drawLayer;
           let div = textLayerData.selectionDiv;
-          let path4 = textLayerData.path;
+          let path5 = textLayerData.path;
           if (!div) {
             const clipPathId = `clip_selection_${_DrawLayer.#selectionId++}`;
             div = document.createElement("div");
@@ -64361,18 +64361,18 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
             const clipPath = _DrawLayer._svgFactory.createElement("clipPath");
             clipPath.setAttribute("id", clipPathId);
             clipPath.setAttribute("clipPathUnits", "objectBoundingBox");
-            path4 = _DrawLayer._svgFactory.createElement("path");
-            clipPath.append(path4);
+            path5 = _DrawLayer._svgFactory.createElement("path");
+            clipPath.append(path5);
             svg.append(clipPath);
             div.append(svg);
-            textLayerData.path = path4;
+            textLayerData.path = path5;
             textLayerData.selectionDiv = div;
           }
           if (drawLayer.#parent && div.parentNode !== drawLayer.#parent) {
             drawLayer.#parent.append(div);
             this.#selections.add(div);
           }
-          path4.setAttribute("d", boxes.join(" "));
+          path5.setAttribute("d", boxes.join(" "));
         }
       }
       static get _svgFactory() {
@@ -64419,13 +64419,13 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
         const root = this.#createSVG();
         const defs = _DrawLayer._svgFactory.createElement("defs");
         root.append(defs);
-        const path4 = _DrawLayer._svgFactory.createElement("path");
-        defs.append(path4);
+        const path5 = _DrawLayer._svgFactory.createElement("path");
+        defs.append(path5);
         const pathId = `path_${id}`;
-        path4.setAttribute("id", pathId);
-        path4.setAttribute("vector-effect", "non-scaling-stroke");
+        path5.setAttribute("id", pathId);
+        path5.setAttribute("vector-effect", "non-scaling-stroke");
         if (isPathUpdatable) {
-          this.#toUpdate.set(id, path4);
+          this.#toUpdate.set(id, path5);
         }
         const clipPathId = hasClip ? this.#createClipPath(defs, pathId) : null;
         const use = _DrawLayer._svgFactory.createElement("use");
@@ -64443,11 +64443,11 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
         const root = this.#createSVG();
         const defs = _DrawLayer._svgFactory.createElement("defs");
         root.append(defs);
-        const path4 = _DrawLayer._svgFactory.createElement("path");
-        defs.append(path4);
+        const path5 = _DrawLayer._svgFactory.createElement("path");
+        defs.append(path5);
         const pathId = `path_${id}`;
-        path4.setAttribute("id", pathId);
-        path4.setAttribute("vector-effect", "non-scaling-stroke");
+        path5.setAttribute("id", pathId);
+        path5.setAttribute("vector-effect", "non-scaling-stroke");
         let maskId;
         if (mustRemoveSelfIntersections) {
           const mask = _DrawLayer._svgFactory.createElement("mask");
@@ -64494,7 +64494,7 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
           root,
           bbox,
           rootClass,
-          path: path4
+          path: path5
         } = properties;
         const element = typeof elementOrId === "number" ? this.#mapping.get(elementOrId) : elementOrId;
         if (!element) {
@@ -64514,10 +64514,10 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
             classList.toggle(className, value);
           }
         }
-        if (path4) {
+        if (path5) {
           const defs = element.firstElementChild;
           const pathElement = defs.firstElementChild;
-          this.#updateProperties(pathElement, path4);
+          this.#updateProperties(pathElement, path5);
         }
       }
       updateParent(id, layer) {
@@ -65178,9 +65178,9 @@ function lookupRect(arr, fallback) {
 function lookupNormalRect(arr, fallback) {
   return isNumberArray(arr, 4) ? Util2.normalizeRect(arr) : fallback;
 }
-function parseXFAPath(path4) {
+function parseXFAPath(path5) {
   const positionPattern = /^(.+)\[(\d+)\]$/;
-  return path4.split(".").map((component) => {
+  return path5.split(".").map((component) => {
     const m = component.match(positionPattern);
     return m ? {
       name: m[1],
@@ -67828,8 +67828,8 @@ function compilePatternInfo(ir) {
   }
   return buffer;
 }
-function compileFontPathInfo(path4) {
-  return path4.slice().buffer;
+function compileFontPathInfo(path5) {
+  return path5.slice().buffer;
 }
 function getFloat214(view, offset) {
   return view.getInt16(offset) / 16384;
@@ -70062,7 +70062,7 @@ function getFamilyName(str) {
 function generateFont({
   alias,
   local,
-  path: path4,
+  path: path5,
   fallback,
   style,
   ultimate
@@ -70080,7 +70080,7 @@ function generateFont({
   if (alias) {
     const substitution = substitutionMap.get(alias);
     const aliasAppend = append || getStyleToAppend(style);
-    Object.assign(result, generateFont(substitution, src, localFontPath, useFallback && !fallback, usePath && !path4, aliasAppend));
+    Object.assign(result, generateFont(substitution, src, localFontPath, useFallback && !fallback, usePath && !path5, aliasAppend));
   }
   if (style) {
     result.style = style;
@@ -70092,11 +70092,11 @@ function generateFont({
     const fallbackInfo = substitutionMap.get(fallback);
     const {
       ultimate: fallbackUltimate
-    } = generateFont(fallbackInfo, src, localFontPath, useFallback, usePath && !path4, append);
+    } = generateFont(fallbackInfo, src, localFontPath, useFallback, usePath && !path5, append);
     result.ultimate ||= fallbackUltimate;
   }
-  if (usePath && path4 && localFontPath) {
-    src.push(`url(${localFontPath}${path4})`);
+  if (usePath && path5 && localFontPath) {
+    src.push(`url(${localFontPath}${path5})`);
   }
   return result;
 }
@@ -72576,13 +72576,13 @@ function writeXFADataForAcroform(str, changes) {
       continue;
     }
     const {
-      path: path4,
+      path: path5,
       value
     } = xfa;
-    if (!path4 || value === null) {
+    if (!path5 || value === null) {
       continue;
     }
-    const nodePath = parseXFAPath(path4);
+    const nodePath = parseXFAPath(path5);
     let node = xml.documentElement.searchNode(nodePath, 0);
     if (!node && nodePath.length > 1) {
       node = xml.documentElement.searchNode([nodePath.at(-1)], 0);
@@ -72590,7 +72590,7 @@ function writeXFADataForAcroform(str, changes) {
     if (node) {
       node.childNodes = Array.isArray(value) ? value.map((val) => new SimpleDOMNode("value", val)) : [new SimpleDOMNode("#text", value)];
     } else {
-      warn2(`Node not found for path: ${path4}`);
+      warn2(`Node not found for path: ${path5}`);
     }
   }
   const buffer = [];
@@ -93298,7 +93298,7 @@ var init_pdf_worker = __esm({
         if (this.#compiledGlyphs.has(glyphId) && this.#compiledCharCodes.has(charCode)) {
           return null;
         }
-        const path4 = this.#compiledGlyphs.getOrInsertComputed(glyphId, () => {
+        const path5 = this.#compiledGlyphs.getOrInsertComputed(glyphId, () => {
           try {
             return this.compileGlyph(this.glyphs[glyphId], glyphId);
           } catch (ex) {
@@ -93306,10 +93306,10 @@ var init_pdf_worker = __esm({
           }
         });
         this.#compiledCharCodes.add(charCode);
-        if (path4 instanceof Error) {
-          throw path4;
+        if (path5 instanceof Error) {
+          throw path5;
         }
-        return compileFontPathInfo(path4);
+        return compileFontPathInfo(path5);
       }
       compileGlyph(code, glyphId) {
         if (!code?.length || code[0] === 14) {
@@ -112885,12 +112885,12 @@ var init_pdf_worker = __esm({
       get isXFAObjectArray() {
         return false;
       }
-      createNodes(path4) {
+      createNodes(path5) {
         let root = this, node = null;
         for (const {
           name: name2,
           index
-        } of path4) {
+        } of path5) {
           for (let i2 = 0, ii = isFinite(index) ? index : 0; i2 <= ii; i2++) {
             const nsId = root[$namespaceId] === NS_DATASETS ? -1 : root[$namespaceId];
             node = new XmlObject(nsId, name2);
@@ -122558,10 +122558,10 @@ var init_pdf_worker = __esm({
         });
         data.defaultFieldValue = this._decodeFormValue(defaultFieldValue);
         if (fieldValue === void 0 && annotationGlobals.xfaDatasets) {
-          const path4 = this._title.str;
-          if (path4) {
+          const path5 = this._title.str;
+          if (path5) {
             this._hasValueFromXFA = true;
-            data.fieldValue = fieldValue = annotationGlobals.xfaDatasets.getValue(path4);
+            data.fieldValue = fieldValue = annotationGlobals.xfaDatasets.getValue(path5);
           }
         }
         if (fieldValue === void 0 && data.defaultFieldValue !== null) {
@@ -122643,23 +122643,23 @@ var init_pdf_worker = __esm({
         }
         const [width, height] = rotation === 0 || rotation === 180 ? [this.width, this.height] : [this.height, this.width];
         const borderWidth = this.borderColor ? this.borderStyle.width || (this._noBorderEntries ? 1 : 0) : 0;
-        let path4;
+        let path5;
         if (isCircle) {
           const r = (Math.min(width, height) - borderWidth) / 2;
           const k = r * (4 / 3) * Math.tan(Math.PI / 8);
           const cx = width / 2;
           const cy = height / 2;
           const p = (x2, y) => `${core_utils_numberToString(x2)} ${core_utils_numberToString(y)}`;
-          path4 = `${p(cx + r, cy)} m ${p(cx + r, cy + k)} ${p(cx + k, cy + r)} ${p(cx, cy + r)} c ${p(cx - k, cy + r)} ${p(cx - r, cy + k)} ${p(cx - r, cy)} c ${p(cx - r, cy - k)} ${p(cx - k, cy - r)} ${p(cx, cy - r)} c ${p(cx + k, cy - r)} ${p(cx + r, cy - k)} ${p(cx + r, cy)} c h`;
+          path5 = `${p(cx + r, cy)} m ${p(cx + r, cy + k)} ${p(cx + k, cy + r)} ${p(cx, cy + r)} c ${p(cx - k, cy + r)} ${p(cx - r, cy + k)} ${p(cx - r, cy)} c ${p(cx - r, cy - k)} ${p(cx - k, cy - r)} ${p(cx, cy - r)} c ${p(cx + k, cy - r)} ${p(cx + r, cy - k)} ${p(cx + r, cy)} c h`;
         } else {
-          path4 = `0 0 ${width} ${height} re`;
+          path5 = `0 0 ${width} ${height} re`;
         }
         let str = "";
         if (this.backgroundColor) {
-          str = `${getPdfColor(this.backgroundColor, true)} ${path4} f `;
+          str = `${getPdfColor(this.backgroundColor, true)} ${path5} f `;
         }
         if (borderWidth > 0) {
-          str += `${borderWidth} w ${getPdfColor(this.borderColor, false)} ${path4} S `;
+          str += `${borderWidth} w ${getPdfColor(this.borderColor, false)} ${path5} S `;
         }
         return str;
       }
@@ -125364,11 +125364,11 @@ var init_pdf_worker = __esm({
           this.node = parser.node;
         }
       }
-      getValue(path4) {
-        if (!this.node || !path4) {
+      getValue(path5) {
+        if (!this.node || !path5) {
           return "";
         }
-        const node = this.node.searchNode(parseXFAPath(path4), 0);
+        const node = this.node.searchNode(parseXFAPath(path5), 0);
         if (!node) {
           return "";
         }
@@ -132562,9 +132562,178 @@ var init_pdf_worker = __esm({
   }
 });
 
-// src/host/index.js
+// src/host/vault-index.js
+var vault_index_exports = {};
+__export(vault_index_exports, {
+  LocalVaultIndex: () => LocalVaultIndex,
+  NativeVaultIndex: () => NativeVaultIndex,
+  createVaultIndex: () => createVaultIndex
+});
 import path3 from "node:path";
-import { mkdir as mkdir7, readdir as readdir4, readFile as readFile7, rename as rename6, stat as stat5, writeFile as writeFile7 } from "node:fs/promises";
+function relOfIndexPath(indexPath) {
+  const clean = String(indexPath ?? "");
+  return clean.startsWith(PATH_PREFIX) ? clean.slice(PATH_PREFIX.length) : clean;
+}
+function relOfDocId(docId) {
+  return typeof docId === "string" && docId.startsWith(DOC_PREFIX) ? docId.slice(DOC_PREFIX.length) : docId;
+}
+function linkTargetsFor(rel, title) {
+  const stem = path3.basename(rel, ".md");
+  const targets = /* @__PURE__ */ new Set([stem]);
+  if (title && title !== stem) targets.add(title);
+  return [...targets];
+}
+function ftsQuote(text2) {
+  return '"' + String(text2).replace(/"/g, '""') + '"';
+}
+function normalizeMtime(raw) {
+  const value = Number(raw ?? 0);
+  return value > 1e14 ? Math.round(value / 1e3) : Math.round(value);
+}
+async function createVaultIndex(vault, workspaceRoot, logger) {
+  if (workspaceRoot) {
+    const native = new NativeVaultIndex(path3.join(workspaceRoot, "state", "index.sqlite"), logger);
+    if (await native.available()) return native;
+  }
+  return new LocalVaultIndex(vault);
+}
+var DOC_PREFIX, PATH_PREFIX, NativeVaultIndex, LocalVaultIndex;
+var init_vault_index = __esm({
+  "src/host/vault-index.js"() {
+    DOC_PREFIX = "vault:";
+    PATH_PREFIX = "vault/";
+    NativeVaultIndex = class {
+      constructor(dbPath, logger) {
+        this.dbPath = dbPath;
+        this.logger = logger;
+        this.db = null;
+        this.failed = false;
+      }
+      async available() {
+        if (this.failed) return false;
+        if (this.db !== null) return true;
+        try {
+          const { DatabaseSync } = await import("node:sqlite");
+          this.db = new DatabaseSync(this.dbPath, { readOnly: true });
+          this.db.exec("PRAGMA busy_timeout = 5000");
+          this.db.prepare("SELECT path FROM content_index LIMIT 1").get();
+          return true;
+        } catch (error) {
+          this.failed = true;
+          this.logger?.info?.("droplets: native vault index unavailable: %s", String(error?.message ?? error));
+          return false;
+        }
+      }
+      async search(query, { limit = 30, offset = 0, tag } = {}) {
+        if (!await this.available()) return { hits: [], total: 0 };
+        const needle = String(query ?? "").trim();
+        if (needle === "" && !tag) return { hits: [], total: 0 };
+        const cap = Math.min(Math.max(limit, 1), 100);
+        const skip = Math.max(offset, 0);
+        if (needle.length < 3) {
+          const like = "%" + needle.replace(/[%_]/g, "\\$&") + "%";
+          const sql = `SELECT ci.path, ci.title, ci.mtime,
+        substr(cf.body, max(1, instr(lower(cf.body), lower(?)) - 40), 120) AS snippet
+        FROM content_index ci JOIN content_fts cf ON cf.path = ci.path
+        WHERE (cf.title LIKE ? ESCAPE '\\' OR cf.body LIKE ? ESCAPE '\\' OR cf.path LIKE ? ESCAPE '\\')${tag ? " AND ci.path IN (SELECT doc_id FROM doc_tags WHERE tag = ?)" : ""}
+        ORDER BY ci.mtime DESC LIMIT ? OFFSET ?`;
+          const params = [needle, like, like, like];
+          if (tag) params.push(tag);
+          params.push(cap, skip);
+          const rows2 = this.db.prepare(sql).all(...params);
+          const totalRow = this.db.prepare(
+            `SELECT COUNT(*) AS c FROM content_index ci JOIN content_fts cf ON cf.path = ci.path
+         WHERE (cf.title LIKE ? ESCAPE '\\' OR cf.body LIKE ? ESCAPE '\\' OR cf.path LIKE ? ESCAPE '\\')${tag ? " AND ci.path IN (SELECT doc_id FROM doc_tags WHERE tag = ?)" : ""}`
+          ).all(...tag ? [like, like, like, tag] : [like, like, like]);
+          return { hits: rows2.map((row) => ({ path: relOfIndexPath(row.path), title: row.title || path3.basename(row.path), snippet: row.snippet || "", mtime: normalizeMtime(row.mtime) })), total: totalRow[0]?.c ?? 0 };
+        }
+        const match = ftsQuote(needle);
+        const tagClause = tag ? " AND ci.path IN (SELECT doc_id FROM doc_tags WHERE tag = ?)" : "";
+        const rows = this.db.prepare(
+          `SELECT ci.path, ci.title, ci.mtime,
+        snippet(content_fts, 1, '\xAB', '\xBB', '\u2026', 12) AS snippet
+        FROM content_index ci JOIN content_fts ON content_fts.path = ci.path
+        WHERE content_fts MATCH ?${tagClause}
+        ORDER BY rank LIMIT ? OFFSET ?`
+        ).all(...tag ? [match, tag, cap, skip] : [match, cap, skip]);
+        const total = this.db.prepare(
+          `SELECT COUNT(*) AS c FROM content_index ci JOIN content_fts ON content_fts.path = ci.path
+       WHERE content_fts MATCH ?${tagClause}`
+        ).all(...tag ? [match, tag] : [match]);
+        return { hits: rows.map((row) => ({ path: relOfIndexPath(row.path), title: row.title || path3.basename(row.path), snippet: row.snippet || "", mtime: normalizeMtime(row.mtime) })), total: total[0]?.c ?? 0 };
+      }
+      /** wiki_links stores bare targets; resolve against the note's stem/title. */
+      async backlinks(rel, title) {
+        if (!await this.available()) return [];
+        const normalized = relOfDocId(rel);
+        const targets = linkTargetsFor(normalized, title);
+        const rows = this.db.prepare(
+          `SELECT ci.path, ci.title FROM wiki_links l
+       JOIN content_index ci ON ci.id = l.source_doc_id
+       WHERE l.target IN (${targets.map(() => "?").join(",")})
+       ORDER BY ci.mtime DESC LIMIT 100`
+        ).all(...targets);
+        const seen = /* @__PURE__ */ new Set();
+        const out = [];
+        for (const row of rows) {
+          const sourceRel = relOfDocId(row.path ?? row.source_doc_id);
+          if (sourceRel === normalized || seen.has(sourceRel)) continue;
+          seen.add(sourceRel);
+          out.push({ path: sourceRel, title: row.title || path3.basename(sourceRel) });
+        }
+        return out;
+      }
+      async tags() {
+        if (!await this.available()) return [];
+        return this.db.prepare("SELECT tag, COUNT(*) AS count FROM doc_tags GROUP BY tag ORDER BY count DESC, tag").all().map((row) => ({ tag: row.tag, count: row.count }));
+      }
+      /** Used by the service to verify index freshness vs disk (delta repair).
+       * content_index stores times in microseconds → normalize to ms. */
+      async docsMeta() {
+        if (!await this.available()) return [];
+        return this.db.prepare(
+          "SELECT path, mtime, size FROM content_index WHERE path LIKE 'vault/%'"
+        ).all().map((row) => {
+          const raw = Number(row.mtime ?? 0);
+          const mtime = raw > 1e14 ? Math.round(raw / 1e3) : Math.round(raw);
+          return { path: relOfIndexPath(row.path), mtime, size: row.size ?? 0 };
+        });
+      }
+    };
+    LocalVaultIndex = class {
+      constructor(vault) {
+        this.vault = vault;
+      }
+      async available() {
+        return true;
+      }
+      async search(query, { limit = 30 } = {}) {
+        const results = await this.vault.search(query, limit);
+        return { hits: results.map((hit) => ({ path: hit.path, title: hit.title, snippet: hit.excerpt ?? "", mtime: this.vault.cache()?.files?.[hit.path]?.mtimeMs ?? 0 })), total: results.length };
+      }
+      async backlinks(rel, title) {
+        return this.vault.backlinks(rel, title);
+      }
+      async tags() {
+        const files = this.vault.cache()?.files ?? {};
+        const counts = /* @__PURE__ */ new Map();
+        for (const record of Object.values(files)) {
+          for (const tag of record?.tags ?? []) {
+            counts.set(tag, (counts.get(tag) ?? 0) + 1);
+          }
+        }
+        return [...counts.entries()].map(([tag, count]) => ({ tag, count })).sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag));
+      }
+      async docsMeta() {
+        return Object.entries(this.vault.cache()?.files ?? {}).map(([rel, record]) => ({ path: rel, mtime: record.mtimeMs, size: record.size }));
+      }
+    };
+  }
+});
+
+// src/host/index.js
+import path4 from "node:path";
+import { mkdir as mkdir7, readdir as readdir4, readFile as readFile7, rename as rename6, stat as stat6, writeFile as writeFile7 } from "node:fs/promises";
 import { join as join4, resolve, sep as sep2 } from "node:path";
 import { TypertRemoteService, Remote } from "@deepseek-ai/dsh-typert-protocol";
 import { defineTool as defineTool2 } from "@deepseek-ai/dsh-tools";
@@ -132578,8 +132747,8 @@ import { resolveDshHome } from "@deepseek-ai/dsh-home-paths";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 var BodyStore = class {
-  constructor(path4, maxBodies = 300) {
-    this.path = path4;
+  constructor(path5, maxBodies = 300) {
+    this.path = path5;
     this.maxBodies = maxBodies;
     this.bodies = /* @__PURE__ */ new Map();
     this.loaded = false;
@@ -136330,16 +136499,16 @@ var MatcherView = class {
    * @returns {string|undefined}
    */
   getCurrentTag() {
-    const path4 = this._matcher.path;
-    return path4.length > 0 ? path4[path4.length - 1].tag : void 0;
+    const path5 = this._matcher.path;
+    return path5.length > 0 ? path5[path5.length - 1].tag : void 0;
   }
   /**
    * Get current namespace.
    * @returns {string|undefined}
    */
   getCurrentNamespace() {
-    const path4 = this._matcher.path;
-    return path4.length > 0 ? path4[path4.length - 1].namespace : void 0;
+    const path5 = this._matcher.path;
+    return path5.length > 0 ? path5[path5.length - 1].namespace : void 0;
   }
   /**
    * Get current node's attribute value.
@@ -136347,9 +136516,9 @@ var MatcherView = class {
    * @returns {*}
    */
   getAttrValue(attrName) {
-    const path4 = this._matcher.path;
-    if (path4.length === 0) return void 0;
-    return path4[path4.length - 1].values?.[attrName];
+    const path5 = this._matcher.path;
+    if (path5.length === 0) return void 0;
+    return path5[path5.length - 1].values?.[attrName];
   }
   /**
    * Check if current node has an attribute.
@@ -136357,9 +136526,9 @@ var MatcherView = class {
    * @returns {boolean}
    */
   hasAttr(attrName) {
-    const path4 = this._matcher.path;
-    if (path4.length === 0) return false;
-    const current = path4[path4.length - 1];
+    const path5 = this._matcher.path;
+    if (path5.length === 0) return false;
+    const current = path5[path5.length - 1];
     return current.values !== void 0 && attrName in current.values;
   }
   /**
@@ -136385,18 +136554,18 @@ var MatcherView = class {
    * @returns {number}
    */
   getPosition() {
-    const path4 = this._matcher.path;
-    if (path4.length === 0) return -1;
-    return path4[path4.length - 1].position ?? 0;
+    const path5 = this._matcher.path;
+    if (path5.length === 0) return -1;
+    return path5[path5.length - 1].position ?? 0;
   }
   /**
    * Get current node's repeat counter (occurrence count of this tag name).
    * @returns {number}
    */
   getCounter() {
-    const path4 = this._matcher.path;
-    if (path4.length === 0) return -1;
-    return path4[path4.length - 1].counter ?? 0;
+    const path5 = this._matcher.path;
+    if (path5.length === 0) return -1;
+    return path5[path5.length - 1].counter ?? 0;
   }
   /**
    * Get current node's sibling index (alias for getPosition).
@@ -139532,8 +139701,8 @@ async function extractEpub(body) {
 }
 
 // src/host/vault.js
-import { createHash as createHash4 } from "node:crypto";
-import { lstat, mkdir as mkdir6, readFile as readFile6, readdir as readdir3, realpath, rename as rename5, writeFile as writeFile6 } from "node:fs/promises";
+import { createHash as createHash4, randomUUID as randomUUID2 } from "node:crypto";
+import { lstat, mkdir as mkdir6, readFile as readFile6, readdir as readdir3, realpath, rename as rename5, rm as rm6, stat as stat5, writeFile as writeFile6 } from "node:fs/promises";
 import path2 from "node:path";
 var EXCLUDED_DIRS = /* @__PURE__ */ new Set([".obsidian", ".trash", ".stfolder", ".git"]);
 var PARA_FOLDERS = ["0-Inbox", "1-Projects", "2-Areas", "3-Resources", "4-Archives"];
@@ -139912,7 +140081,287 @@ var Vault = class {
     });
     return serialize(root);
   }
+  // ------------------------------------------------------------------
+  // P0 tree operations: lazy listing, create, rename(+links), duplicate,
+  // trash. Paths outside *.md files go through dir-safe normalization.
+  // ------------------------------------------------------------------
+  /** One real fs directory listing (empty dirs included, unlike tree()). */
+  async list(dir) {
+    const rel = normalizeVaultDir(dir);
+    await safeResolveDir(this.root, rel);
+    const full = path2.join(this.root, rel);
+    const entries = await readdir3(full, { withFileTypes: true }).catch((error) => {
+      if (error?.code === "ENOENT") throw new VaultError("not_found", `\u76EE\u5F55\u4E0D\u5B58\u5728\uFF1A${rel || "/"}`);
+      throw new VaultError("list_failed", `\u5217\u76EE\u5F55\u5931\u8D25\uFF1A${error.message}`);
+    });
+    const files = this.cache()?.files ?? {};
+    const out = [];
+    for (const entry of entries) {
+      if (entry.name.startsWith(".") || EXCLUDED_DIRS.has(entry.name)) continue;
+      const childRel = rel === "" ? entry.name : `${rel}/${entry.name}`;
+      if (entry.isDirectory()) {
+        out.push({ kind: "dir", name: entry.name, path: childRel, mtime: void 0 });
+      } else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) {
+        const record = files[childRel];
+        let mtime;
+        try {
+          mtime = (await stat5(path2.join(this.root, childRel))).mtimeMs;
+        } catch {
+          mtime = record?.mtimeMs;
+        }
+        out.push({ kind: "file", name: entry.name, path: childRel, mtime, title: record?.title ?? entry.name.replace(/\.md$/i, "") });
+      }
+    }
+    out.sort((a, b) => a.kind === b.kind ? a.name.localeCompare(b.name) : a.kind === "dir" ? -1 : 1);
+    return { dir: rel, entries: out };
+  }
+  /** New note with the native frontmatter shape (id/title/created). */
+  async createNote(dir, title, options = {}) {
+    const cleanTitle = sanitizeNoteTitle(title);
+    const rel = normalizeVaultDir(dir) + (normalizeVaultDir(dir) === "" ? "" : "/") + cleanTitle + ".md";
+    const id = randomUUID2();
+    const created = (/* @__PURE__ */ new Date()).toISOString();
+    const template = options.template ?? `---
+id: ${id}
+title: ${cleanTitle}
+created: ${created}
+---
+
+# ${cleanTitle}
+
+`;
+    const result = await this.write(rel, template, { expectedSha: null, createOnly: true });
+    if (result.conflict) throw new VaultError("exists", `\u7B14\u8BB0\u5DF2\u5B58\u5728\uFF1A${rel}`);
+    return { path: result.path, id, title: cleanTitle };
+  }
+  async createDir(dir) {
+    const rel = normalizeVaultDir(dir);
+    if (rel === "") throw new VaultError("invalid_path", "\u76EE\u5F55\u540D\u4E0D\u80FD\u4E3A\u7A7A");
+    await safeResolveDir(this.root, rel);
+    await mkdir6(path2.join(this.root, rel), { recursive: false }).catch((error) => {
+      if (error?.code === "EEXIST") throw new VaultError("exists", `\u76EE\u5F55\u5DF2\u5B58\u5728\uFF1A${rel}`);
+      if (error?.code === "ENOENT") throw new VaultError("not_found", `\u7236\u76EE\u5F55\u4E0D\u5B58\u5728\uFF1A${rel}`);
+      throw error;
+    });
+    return { dir: rel };
+  }
+  /**
+   * Rename/move one note, optionally rewriting every `[[old]]` link in the
+   * vault. Affected files are backed up into .trash before any rewrite so a
+   * mid-way failure rolls back cleanly (plan §10).
+   */
+  async renameNote(from, to, { updateLinks = true } = {}) {
+    const fromRel = normalizeVaultPath(from);
+    const toRel = normalizeVaultPath(to);
+    if (fromRel === toRel) return { path: toRel, updatedLinks: 0 };
+    const fromAbs = await safeResolve(this.root, fromRel);
+    const toAbs = await safeResolve(this.root, toRel);
+    if (fromAbs === toAbs) throw new VaultError("exists", `\u76EE\u6807\u5DF2\u5B58\u5728\uFF1A${toRel}`);
+    await stat5(toAbs).then(() => {
+      throw new VaultError("exists", `\u76EE\u6807\u5DF2\u5B58\u5728\uFF1A${toRel}`);
+    }).catch((error) => {
+      if (error instanceof VaultError) throw error;
+      if (error?.code !== "ENOENT") throw error;
+    });
+    await mkdir6(path2.dirname(toAbs), { recursive: true });
+    await rename5(fromAbs, toAbs);
+    const cache = this.cache();
+    let updatedLinks = 0;
+    if (cache) {
+      const record = cache.files[fromRel];
+      if (record) {
+        delete cache.files[fromRel];
+        const text2 = await readFile6(toAbs, "utf8");
+        cache.files[toRel] = recordOf(toRel, text2, record.mtimeMs, record.size);
+      }
+    }
+    if (updateLinks) {
+      const oldStem = path2.basename(fromRel, ".md");
+      const newStem = path2.basename(toRel, ".md");
+      const pattern = new RegExp(`\\[\\[\\s*${escapeRegExp(oldStem)}(\\s*(?:\\|[^\\]\\n]*)?)\\]\\]`, "g");
+      const sources = [];
+      for (const [rel, record] of Object.entries(this.cache()?.files ?? {})) {
+        if (rel === toRel) continue;
+        if ((record?.links ?? []).some((target) => target === oldStem)) sources.push(rel);
+      }
+      if (sources.length > 0) {
+        const backupDir = await this.trashBackup(sources, `rename-${Date.now().toString(36)}`);
+        try {
+          for (const rel of sources) {
+            const text2 = await this.readRaw(rel);
+            const next = text2.replace(pattern, "[[" + newStem.split("$").join("$$") + "$1]]");
+            if (next !== text2) {
+              const write = await this.write(rel, next, { expectedSha: void 0 });
+              if (!write.conflict) {
+                updatedLinks += 1;
+                const record = this.cache()?.files?.[rel];
+                if (record) record.links = record.links.map((target) => target === oldStem ? newStem : target);
+              }
+            }
+          }
+        } catch (error) {
+          await this.restoreBackup(backupDir, sources).catch(() => {
+          });
+          await rename5(toAbs, fromAbs).catch(() => {
+          });
+          throw error;
+        }
+      }
+    }
+    this.cacheHolder.touch();
+    return { path: toRel, updatedLinks };
+  }
+  /** 「x 副本」递增命名复制。 */
+  async duplicate(rel) {
+    const fromRel = normalizeVaultPath(rel);
+    const text2 = await this.readRaw(fromRel);
+    const dir = path2.dirname(fromRel);
+    const stem = path2.basename(fromRel, ".md");
+    let candidate = dir === "." ? `${stem} \u526F\u672C.md` : `${dir}/${stem} \u526F\u672C.md`;
+    let counter = 2;
+    while (await stat5(path2.join(this.root, candidate)).then(() => true).catch(() => false)) {
+      candidate = (dir === "." ? "" : dir + "/") + `${stem} \u526F\u672C ${counter}.md`;
+      counter += 1;
+    }
+    const result = await this.write(candidate, text2, { expectedSha: null, createOnly: true });
+    if (result.conflict) throw new VaultError("exists", `\u7B14\u8BB0\u5DF2\u5B58\u5728\uFF1A${candidate}`);
+    return { path: result.path };
+  }
+  /**
+   * Move one note (or a whole folder) into .trash behind a staging commit —
+   * the same shape the Droplets desktop app's trash uses, so entries stay
+   * recoverable there.
+   */
+  async trash(target) {
+    const isNote = target.toLowerCase().endsWith(".md");
+    const rel = isNote ? normalizeVaultPath(target) : normalizeVaultDir(target);
+    if (rel === "") throw new VaultError("invalid_path", "\u4E0D\u80FD\u5220\u9664 vault \u6839\u76EE\u5F55");
+    const sourceAbs = isNote ? await safeResolve(this.root, rel) : await safeResolveDir(this.root, rel);
+    const sourcePath = path2.join(this.root, rel);
+    const trashRoot = path2.join(this.root, ".trash");
+    await mkdir6(trashRoot, { recursive: true });
+    const staging = path2.join(trashRoot, `.staging-${Date.now().toString(36)}-${randomUUID2()}`);
+    await mkdir6(staging, { recursive: true });
+    const { sizeBytes, fileCount } = isNote ? await statsOf(sourceAbs) : await statsOfDir(sourcePath);
+    const title = isNote ? this.cache()?.files?.[rel]?.title ?? path2.basename(rel, ".md") : path2.basename(rel);
+    const meta = {
+      id: randomUUID2(),
+      originalRelPath: isNote ? `vault/${rel}` : `vault/${rel}/`,
+      deletedFrom: "vault",
+      entryKind: isNote ? "file" : "directory",
+      sizeBytes,
+      fileCount,
+      deletedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      title
+    };
+    const payloadPath = path2.join(staging, "payload");
+    let moved = false;
+    try {
+      await rename5(sourcePath, payloadPath);
+      moved = true;
+      await writeFile6(path2.join(staging, "trash-meta.json"), JSON.stringify(meta, null, 2), "utf8");
+      const commitPath = path2.join(trashRoot, meta.id);
+      await rename5(staging, commitPath);
+    } catch (error) {
+      if (moved) await rename5(payloadPath, sourcePath).catch(() => {
+      });
+      await rm6(staging, { recursive: true, force: true }).catch(() => {
+      });
+      throw error;
+    }
+    const cache = this.cache();
+    if (cache) {
+      const prefix = isNote ? `${rel}` : `${rel}/`;
+      for (const key of Object.keys(cache.files)) {
+        if (key === prefix || key.startsWith(prefix)) delete cache.files[key];
+      }
+      this.cacheHolder.touch();
+    }
+    return { trashed: true, trashId: meta.id, title };
+  }
+  /** Best-effort pre-rewrite backup of the files a rename will touch. */
+  async trashBackup(rels, tag) {
+    const backupDir = path2.join(this.root, ".trash", `.rewrite-backup-${tag}`);
+    await mkdir6(backupDir, { recursive: true });
+    for (const rel of rels) {
+      const text2 = await this.readRaw(rel).catch(() => null);
+      if (text2 === null) continue;
+      const target = path2.join(backupDir, rel.replaceAll("/", "__"));
+      await writeFile6(target, text2, "utf8");
+    }
+    return { dir: backupDir, rels };
+  }
+  async restoreBackup(backup, rels) {
+    for (const rel of rels) {
+      const file = path2.join(backup.dir, rel.replaceAll("/", "__"));
+      const text2 = await readFile6(file, "utf8").catch(() => null);
+      if (text2 === null) continue;
+      await this.write(rel, text2, { expectedSha: void 0 });
+    }
+    await rm6(backup.dir, { recursive: true, force: true }).catch(() => {
+    });
+  }
 };
+function escapeRegExp(text2) {
+  return text2.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+function sanitizeNoteTitle(title) {
+  const clean = String(title ?? "").trim().replace(/[\\/:]/g, "-").replace(/^\.+/, "").slice(0, 120);
+  if (clean === "") throw new VaultError("invalid_path", "\u6807\u9898\u4E0D\u80FD\u4E3A\u7A7A");
+  return clean;
+}
+function normalizeVaultDir(input) {
+  if (input === void 0 || input === null || input === "") return "";
+  let cleaned = String(input).replace(/\\/g, "/").trim().replace(/\/+$/, "");
+  if (cleaned.startsWith("/")) cleaned = cleaned.slice(1);
+  if (cleaned === "") return "";
+  const segments = [];
+  for (const segment of cleaned.split("/")) {
+    if (segment === "" || segment === ".") continue;
+    if (segment === "..") throw new VaultError("path_escape", "\u4E0D\u5141\u8BB8 .. \u8DEF\u5F84\u6BB5");
+    if (EXCLUDED_DIRS.has(segment) || segment.startsWith(".")) throw new VaultError("excluded_path", "\u8BE5\u76EE\u5F55\u4E0D\u5728\u7D22\u5F15\u8303\u56F4\u5185");
+    segments.push(segment);
+  }
+  return segments.join("/");
+}
+async function safeResolveDir(root, rel) {
+  if (rel === "") return path2.resolve(root);
+  const segments = rel.split("/");
+  const realRoot = await realpath(path2.resolve(root)).catch(() => path2.resolve(root));
+  let current = realRoot;
+  for (const segment of segments) {
+    current = path2.join(current, segment);
+    const info3 = await lstat(current).catch(() => null);
+    if (info3 === null) continue;
+    if (info3.isSymbolicLink()) throw new VaultError("symlink_rejected", "\u4E0D\u5141\u8BB8\u7B26\u53F7\u94FE\u63A5\uFF1A" + segment);
+  }
+  const realTarget = await realpath(path2.resolve(realRoot, rel)).catch(() => path2.resolve(realRoot, rel));
+  const relToRoot = path2.relative(realRoot, realTarget);
+  if (relToRoot.startsWith("..") || path2.isAbsolute(relToRoot)) throw new VaultError("path_escape", "\u8DEF\u5F84\u8D8A\u754C\uFF1A" + rel);
+  return realTarget;
+}
+async function statsOf(absolute) {
+  const info3 = await stat5(absolute);
+  return { sizeBytes: info3.size, fileCount: 1 };
+}
+async function statsOfDir(absolute) {
+  let sizeBytes = 0;
+  let fileCount = 0;
+  const walk = async (dir) => {
+    for (const entry of await readdir3(dir, { withFileTypes: true })) {
+      const full = path2.join(dir, entry.name);
+      if (entry.isDirectory()) await walk(full);
+      else if (entry.isFile()) {
+        const info3 = await stat5(full);
+        sizeBytes += info3.size;
+        fileCount += 1;
+      }
+    }
+  };
+  await walk(absolute).catch(() => {
+  });
+  return { sizeBytes, fileCount };
+}
 function excerptAround(text2, needle, radius = 60) {
   const at = text2.toLowerCase().indexOf(needle);
   if (at === -1) return excerptOf2(text2, 140);
@@ -139932,6 +140381,9 @@ async function ensureDefaultVault(root) {
     await mkdir6(path2.join(root, folder), { recursive: true });
   }
 }
+
+// src/host/index.js
+init_vault_index();
 
 // src/host/context.js
 var MAX_CONTEXTS = 200;
@@ -140231,8 +140683,8 @@ var Config2 = {
       }
       if (issues.length > 0) return { issues };
       const result = {};
-      if (typeof value.workspacePath === "string" && value.workspacePath.trim() !== "") result.workspacePath = path3.resolve(value.workspacePath.trim());
-      if (typeof value.vaultPath === "string" && value.vaultPath.trim() !== "") result.vaultPath = path3.resolve(value.vaultPath.trim());
+      if (typeof value.workspacePath === "string" && value.workspacePath.trim() !== "") result.workspacePath = path4.resolve(value.workspacePath.trim());
+      if (typeof value.vaultPath === "string" && value.vaultPath.trim() !== "") result.vaultPath = path4.resolve(value.vaultPath.trim());
       if (typeof value.refreshInterval === "number") result.refreshInterval = Math.max(6e4, Math.floor(value.refreshInterval));
       if (typeof value.maxBodies === "number") result.maxBodies = Math.floor(value.maxBodies);
       if (typeof value.enableTranslation === "boolean") result.enableTranslation = value.enableTranslation;
@@ -140265,7 +140717,7 @@ var DropletsService = class extends TypertRemoteService {
             this.inbox = this.createInbox();
           }
         } else if (pointer !== this.workspacePath) {
-          const probe = await stat5(join4(pointer, "state", "app.sqlite")).catch(() => null);
+          const probe = await stat6(join4(pointer, "state", "app.sqlite")).catch(() => null);
           if (probe) {
             this.workspacePath = pointer;
             this.sharedWorkspace = true;
@@ -140354,8 +140806,21 @@ var DropletsService = class extends TypertRemoteService {
         touch: () => this.store.touch()
       };
       this.vaultInstance = new Vault(root, holder, this.ctx.logger);
+      this.vaultIndexPromise = createVaultIndex(this.vaultInstance, this.sharedWorkspace && this.store?.root ? this.store.root : null, this.ctx.logger);
+      this.vaultIndex = null;
+      void this.vaultIndexPromise.then((backend) => {
+        this.vaultIndex = backend;
+      }).catch(() => {
+        this.vaultIndex = null;
+      });
     }
     return this.vaultInstance;
+  }
+  /** The picked index backend (resolves once per vault root). */
+  async indexBackend() {
+    this.vaultService();
+    if (this.vaultIndex !== null) return this.vaultIndex;
+    return this.vaultIndexPromise ?? Promise.resolve(null);
   }
   async ensureVault(seed = true) {
     const root = this.vaultRoot();
@@ -141055,23 +141520,89 @@ var DropletsService = class extends TypertRemoteService {
     const p = typeof request === "string" ? request : request?.path;
     return this.vaultService().read(p);
   }
+  /** Lazy directory listing for the tree panel (plan §7 vaultList). */
+  async vaultList(request) {
+    await this.ready;
+    const dir = typeof request === "string" ? request : request?.dir;
+    return stripUndefined(await this.vaultService().list(dir ?? ""));
+  }
+  async vaultCreate(request) {
+    await this.ready;
+    await this.ensureVault();
+    return stripUndefined(await this.vaultService().createNote(request?.dir ?? "", request?.title, { template: request?.template }));
+  }
+  async vaultCreateDir(request) {
+    await this.ready;
+    await this.ensureVault();
+    return stripUndefined(await this.vaultService().createDir(request?.dir));
+  }
+  async vaultRename(request) {
+    await this.ready;
+    const from = typeof request === "string" ? request : request?.from;
+    return stripUndefined(await this.vaultService().renameNote(from, request?.to, { updateLinks: request?.updateLinks !== false }));
+  }
+  async vaultDuplicate(request) {
+    await this.ready;
+    const p = typeof request === "string" ? request : request?.path;
+    return stripUndefined(await this.vaultService().duplicate(p));
+  }
+  /** vaultDelete → .trash（Droplets 回收站可恢复）。 */
+  async vaultDelete(request) {
+    await this.ready;
+    const p = typeof request === "string" ? request : request?.path;
+    return stripUndefined(await this.vaultService().trash(p));
+  }
   async vaultSearch(request) {
     await this.ready;
+    const query = typeof request === "string" ? request : request?.query;
+    const limit = Math.min(Math.max(request?.limit ?? 30, 1), 100);
+    const backend = await this.indexBackend().catch(() => null);
+    if (backend) {
+      const result = await backend.search(query, { limit, offset: request?.offset ?? 0, tag: request?.tag }).catch(() => null);
+      if (result !== null) {
+        return {
+          backend: "native",
+          results: result.hits.map((hit) => ({ path: hit.path, title: hit.title, tags: [], match: "fts", excerpt: hit.snippet })),
+          total: result.total
+        };
+      }
+    }
     const vault = this.vaultService();
     if (!vault.cache() || vault.cache().path !== vault.root) await vault.reindex();
-    return { results: await vault.search(request?.query, Math.min(Math.max(request?.limit ?? 30, 1), 100)) };
+    const results = await vault.search(query, limit);
+    return { backend: "local", results, total: results.length };
+  }
+  /** Tag cloud counts (plan §7 vaultTags). */
+  async vaultTags() {
+    await this.ready;
+    const backend = await this.indexBackend().catch(() => null);
+    if (backend) {
+      const tags = await backend.tags().catch(() => null);
+      if (tags !== null) return { backend: "native", tags };
+    }
+    const vault = this.vaultService();
+    if (!vault.cache() || vault.cache().path !== vault.root) await vault.reindex();
+    const local = await Promise.resolve().then(() => (init_vault_index(), vault_index_exports)).then((mod) => new mod.LocalVaultIndex(vault));
+    return { backend: "local", tags: await local.tags() };
   }
   async vaultGraph() {
     await this.ready;
     const vault = this.vaultService();
     if (!vault.cache() || vault.cache().path !== vault.root) await vault.reindex();
-    return vault.graph();
+    return stripUndefined(vault.graph());
   }
   async vaultBacklinks(request) {
     await this.ready;
     const p = typeof request === "string" ? request : request?.path;
     const vault = this.vaultService();
-    return { backlinks: vault.backlinks(p) };
+    const record = vault.cache()?.files?.[p];
+    const title = record?.title;
+    const backend = await this.indexBackend().catch(() => null);
+    if (backend) {
+      const links = await backend.backlinks(p, title).catch(() => null);
+      if (links !== null) return { backend: "native", backlinks: links };
+    }
+    return { backend: "local", backlinks: vault.backlinks(p, title) };
   }
   async vaultWrite(request) {
     await this.ready;
@@ -141142,10 +141673,10 @@ var DropletsService = class extends TypertRemoteService {
     const requested = String(request?.path ?? "").trim();
     let target = null;
     if (requested !== "") {
-      const resolved = path3.resolve(requested);
+      const resolved = path4.resolve(requested);
       const checks = await Promise.all([
-        stat5(join4(resolved, "state", "app.sqlite")).catch(() => null),
-        stat5(join4(resolved, "droplets.json")).catch(() => null)
+        stat6(join4(resolved, "state", "app.sqlite")).catch(() => null),
+        stat6(join4(resolved, "droplets.json")).catch(() => null)
       ]);
       if (!checks[0] && !checks[1]) {
         throw new Error("droplets\uFF1A\u8FD9\u4E2A\u76EE\u5F55\u4E0D\u50CF Droplets \u5DE5\u4F5C\u533A\uFF08\u7F3A\u5C11 state/app.sqlite \u6216 droplets.json\uFF09");
@@ -141183,7 +141714,7 @@ var DropletsService = class extends TypertRemoteService {
       const directory2 = [];
       const probe2 = async (relPath, label, kind) => {
         const full = join4(root, relPath);
-        const info3 = await stat5(full).catch(() => null);
+        const info3 = await stat6(full).catch(() => null);
         directory2.push({
           path: relPath,
           label,
@@ -141229,7 +141760,7 @@ var DropletsService = class extends TypertRemoteService {
     const directory = [];
     const probe = async (relPath, label, kind) => {
       const full = join4(root, relPath);
-      const info3 = await stat5(full).catch(() => null);
+      const info3 = await stat6(full).catch(() => null);
       directory.push({
         path: relPath,
         label,
@@ -141250,14 +141781,14 @@ var DropletsService = class extends TypertRemoteService {
     let entryBytes = 0;
     let entryFiles = 0;
     try {
-      documentBytes = (await stat5(this.store.path)).size;
+      documentBytes = (await stat6(this.store.path)).size;
     } catch {
     }
     try {
       for (const name2 of await readdir4(entryDir)) {
         if (!name2.endsWith(".json")) continue;
         entryFiles += 1;
-        entryBytes += (await stat5(join4(entryDir, name2))).size;
+        entryBytes += (await stat6(join4(entryDir, name2))).size;
       }
     } catch {
     }
@@ -141396,6 +141927,13 @@ var DropletsService = class extends TypertRemoteService {
     "vaultGraph",
     "vaultBacklinks",
     "vaultWrite",
+    "vaultList",
+    "vaultCreate",
+    "vaultCreateDir",
+    "vaultRename",
+    "vaultDuplicate",
+    "vaultDelete",
+    "vaultTags",
     // settings / companion
     "getSettings",
     "saveSettings",

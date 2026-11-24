@@ -1827,3 +1827,121 @@
   content-visibility: auto;
   contain-intrinsic-size: auto 72px;
 }
+
+/* ---- vault2: Obsidian workbench P0 (tree 240 │ tabs+read+AuxRail) ---- */
+.dpl-vault2 { display: flex; flex: 1; min-width: 0; min-height: 0; position: relative; }
+.dpl-vault2-tree { width: 240px; flex: none; min-height: 0; border-right: 1px solid var(--dpl-border); display: flex; flex-direction: column; }
+.dpl-vault2-treeactions { display: flex; align-items: center; gap: 2px; }
+.dpl-vault2-treeactions .dpl-icon-btn { width: 22px; height: 22px; }
+
+.dpl-vault2-filter {
+  display: flex; align-items: center; gap: 6px;
+  margin: 0 8px 6px; padding: 4px 8px;
+  border: 1px solid var(--dpl-border); border-radius: 7px;
+  color: var(--dpl-faint); flex: none;
+}
+.dpl-vault2-filter input { flex: 1; min-width: 0; border: none; background: transparent; padding: 0; min-height: 20px; }
+.dpl-vault2-filter button { border: none; background: transparent; color: var(--dpl-faint); cursor: pointer; display: grid; place-items: center; padding: 0; }
+
+.dpl-vault2-treescroll { flex: 1; min-height: 0; overflow: auto; padding: 0 4px 8px; }
+.dpl-vault2-treeroot { display: flex; flex-direction: column; }
+.dpl-vault2-sortrow { display: flex; align-items: center; gap: 4px; padding: 0 8px 6px; }
+.dpl-vault2-sortbtn { border: none; background: transparent; border-radius: 999px; padding: 2px 8px; font-size: 11px; color: var(--dpl-faint); cursor: pointer; }
+.dpl-vault2-sortbtn.is-active { background: var(--dpl-accent-soft); color: var(--dpl-accent); }
+
+.dpl-vault2-row { position: relative; display: flex; align-items: center; border-radius: 6px; min-height: 26px; }
+.dpl-vault2-row:hover { background: var(--dpl-bg-hover); }
+.dpl-vault2-row.is-active { background: color-mix(in srgb, var(--dpl-accent) 9%, transparent); }
+.dpl-vault2-row .dpl-vault2-rowactions { position: absolute; right: 4px; display: none; align-items: center; gap: 1px; background: var(--dpl-bg); border-radius: 6px; padding: 1px; }
+.dpl-vault2-row:hover .dpl-vault2-rowactions { display: flex; }
+.dpl-vault2-rowactions button { display: grid; place-items: center; width: 20px; height: 20px; border: none; background: transparent; border-radius: 4px; color: var(--dpl-faint); cursor: pointer; }
+.dpl-vault2-rowactions button:hover { background: var(--dpl-bg-active); color: var(--dpl-fg); }
+
+.dpl-vault2-dir, .dpl-vault2-file {
+  display: flex; align-items: center; gap: 5px; width: 100%;
+  border: none; background: transparent; text-align: left;
+  padding: 3px 6px 3px 8px; border-radius: 6px;
+  color: var(--dpl-fg); font-size: 12.5px; cursor: pointer; min-width: 0;
+}
+.dpl-vault2-dir { color: var(--dpl-muted); font-weight: 500; }
+.dpl-vault2-chevron { display: grid; place-items: center; width: 14px; flex: none; color: var(--dpl-faint); }
+.dpl-vault2-dir svg:first-of-type { flex: none; }
+.dpl-vault2-file svg { flex: none; color: var(--dpl-faint); }
+.dpl-vault2-file.is-active { color: var(--dpl-accent); font-weight: 500; }
+.dpl-vault2-filedir { margin-left: auto; font-size: 10.5px; color: var(--dpl-faint); flex: none; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dpl-vault2-filemtime { margin-left: auto; font-size: 10.5px; color: var(--dpl-faint); flex: none; }
+.dpl-vault2-children { padding-left: 14px; }
+.dpl-vault2-loading { display: flex; justify-content: center; padding: 6px; color: var(--dpl-faint); }
+.dpl-vault2-flatlist { display: flex; flex-direction: column; }
+.dpl-vault2-treefoot { display: flex; gap: 6px; padding: 6px 8px; border-top: 1px solid var(--dpl-border); flex: none; }
+.dpl-vault2-footbtn { display: inline-flex; align-items: center; gap: 4px; border: none; background: transparent; border-radius: 6px; padding: 3px 6px; font-size: 11.5px; color: var(--dpl-faint); cursor: pointer; }
+.dpl-vault2-footbtn:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }
+
+.dpl-vault2-sidepane { flex: none; max-height: 38%; border-top: 1px solid var(--dpl-border); display: flex; flex-direction: column; min-height: 0; }
+.dpl-vault2-sidetabs { display: flex; gap: 2px; padding: 6px 8px 0; }
+.dpl-vault2-sidetabs button { border: none; background: transparent; border-radius: 6px 6px 0 0; padding: 3px 10px; font-size: 11.5px; color: var(--dpl-faint); cursor: pointer; }
+.dpl-vault2-sidetabs button.is-active { background: var(--dpl-bg-2); color: var(--dpl-fg); font-weight: 600; }
+.dpl-vault2-sidebody { flex: 1; min-height: 60px; overflow: auto; padding: 6px 8px; display: flex; flex-direction: column; gap: 2px; }
+.dpl-vault2-backlink { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; border: none; background: transparent; text-align: left; padding: 4px 6px; border-radius: 6px; font-size: 12px; color: var(--dpl-fg); cursor: pointer; width: 100%; }
+.dpl-vault2-backlink:hover { background: var(--dpl-bg-hover); }
+.dpl-vault2-backlink .dpl-vault2-filedir { margin: 0; max-width: 100%; }
+.dpl-vault2-tags { flex-direction: row; flex-wrap: wrap; gap: 4px; }
+.dpl-vault2-tags button { border: none; background: var(--dpl-bg-2); border-radius: 999px; padding: 2px 8px; font-size: 11px; color: var(--dpl-muted); cursor: pointer; }
+.dpl-vault2-tags button:hover { background: var(--dpl-bg-active); color: var(--dpl-fg); }
+.dpl-vault2-tags button span { color: var(--dpl-faint); margin-left: 2px; }
+
+.dpl-vault2-main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.dpl-vault2-tabstrip { display: flex; align-items: center; gap: 2px; height: 36px; flex: none; padding: 0 8px; border-bottom: 1px solid var(--dpl-border); overflow-x: auto; scrollbar-width: none; }
+.dpl-vault2-tabspring { flex: 1; }
+.dpl-vault2-tab {
+  display: flex; align-items: center; gap: 5px; max-width: 180px; min-width: 0;
+  padding: 3px 6px 3px 9px; border-radius: 7px; font-size: 12px; color: var(--dpl-muted); cursor: pointer; flex: none;
+}
+.dpl-vault2-tab:hover { background: var(--dpl-bg-hover); }
+.dpl-vault2-tab.is-active { background: var(--dpl-bg-active); color: var(--dpl-fg); font-weight: 500; }
+.dpl-vault2-tab.is-dirty .dpl-vault2-tabclose { color: transparent; position: relative; }
+.dpl-vault2-tab.is-dirty .dpl-vault2-tabclose::before { content: ''; position: absolute; width: 6px; height: 6px; border-radius: 50%; background: var(--dpl-accent); }
+.dpl-vault2-tabclose { display: grid; place-items: center; width: 16px; height: 16px; border: none; background: transparent; border-radius: 4px; color: var(--dpl-faint); cursor: pointer; flex: none; }
+.dpl-vault2-tabclose:hover { background: var(--dpl-bg-active); color: var(--dpl-fg); }
+.dpl-icon-btn.is-toggled { color: var(--dpl-accent); background: color-mix(in srgb, var(--dpl-accent) 12%, transparent); }
+
+.dpl-vault2-searchbar { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-bottom: 1px solid var(--dpl-border); flex: none; color: var(--dpl-faint); }
+.dpl-vault2-searchbar input { flex: 1; min-width: 0; }
+.dpl-vault2-searchcount { font-size: 11.5px; color: var(--dpl-faint); flex: none; }
+.dpl-vault2-searchresults { flex: 1; min-height: 0; overflow: auto; padding: 10px 16px; display: flex; flex-direction: column; gap: 4px; }
+.dpl-vault2-hit { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; border: none; background: transparent; text-align: left; padding: 8px 10px; border-radius: 8px; cursor: pointer; color: var(--dpl-fg); }
+.dpl-vault2-hit:hover { background: var(--dpl-bg-hover); }
+.dpl-vault2-hit strong { font-size: 13px; }
+.dpl-vault2-hit p { margin: 0; font-size: 12px; color: var(--dpl-muted); }
+
+.dpl-vault2-content { flex: 1; min-height: 0; display: flex; position: relative; }
+.dpl-vault2-note { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.dpl-vault2-notehead { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 24px 0; }
+.dpl-vault2-notehead h1 { margin: 0; font-size: 19px; font-weight: 650; }
+.dpl-vault2-noteactions { display: flex; gap: 4px; flex: none; }
+.dpl-vault2-notemeta { padding: 2px 24px 10px; font-size: 12px; color: var(--dpl-faint); border-bottom: 1px solid var(--dpl-border); }
+.dpl-vault2-readerscroll { flex: 1; min-height: 0; overflow: auto; }
+.dpl-vault2-body { max-width: 720px; margin: 0 auto; padding: 18px 28px 48px; font-size: 15px; line-height: 1.75; }
+.dpl-vault2-bodyend { height: 40px; }
+.dpl-vault2-editor { flex: 1; min-height: 0; resize: none; border: none; outline: none; padding: 16px 28px; font-family: var(--dsw-alias-font-mono, ui-monospace, 'SF Mono', monospace); font-size: 13px; line-height: 1.7; background: var(--dpl-bg); color: var(--dpl-fg); border-radius: 0; }
+.dpl-vault2-editor:focus { border: none; }
+.dpl-vault2-readerempty { flex: 1; }
+
+.dpl-vault2-statusbar { display: flex; align-items: center; gap: 14px; height: 24px; flex: none; padding: 0 12px; border-top: 1px solid var(--dpl-border); font-size: 11px; color: var(--dpl-faint); }
+.dpl-vault2-statuslink { border: none; background: transparent; padding: 0; font-size: 11px; color: var(--dpl-faint); cursor: pointer; }
+.dpl-vault2-statuslink:hover { color: var(--dpl-accent); }
+.dpl-vault2-statusnotice, .dpl-vault2-statuserror { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; }
+.dpl-vault2-statusnotice { color: #1e9e6a; }
+.dpl-vault2-statuserror { color: var(--dpl-danger); }
+.dpl-vault2-statusnotice button, .dpl-vault2-statuserror button { border: none; background: transparent; color: inherit; cursor: pointer; padding: 0; display: grid; place-items: center; }
+
+.dpl-vault2-graphhead { position: absolute; top: 8px; left: 12px; right: 12px; display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--dpl-muted); z-index: 2; }
+
+.dpl-vault2-scrim { position: absolute; inset: 0; z-index: 60; display: flex; justify-content: center; align-items: flex-start; padding-top: 48px; background: rgba(15, 23, 42, 0.24); }
+.dpl-vault2-quick { width: min(520px, 90%); border: 1px solid var(--dpl-border); border-radius: 12px; background: var(--dpl-bg); box-shadow: 0 18px 48px rgba(15, 23, 42, 0.3); overflow: hidden; }
+.dpl-vault2-quick > input { width: 100%; border: none; border-bottom: 1px solid var(--dpl-border); border-radius: 0; background: transparent; padding: 10px 14px; min-height: 38px; font-size: 14px; }
+.dpl-vault2-quick > input:focus { border-color: transparent; }
+.dpl-vault2-quicklist { max-height: 320px; overflow: auto; padding: 4px; }
+.dpl-vault2-quicklist button { display: flex; align-items: center; gap: 10px; width: 100%; border: none; background: transparent; text-align: left; padding: 7px 10px; border-radius: 7px; font-size: 13px; color: var(--dpl-fg); cursor: pointer; }
+.dpl-vault2-quicklist button:hover, .dpl-vault2-quicklist button.is-first { background: var(--dpl-bg-hover); }
+.dpl-vault2-empty { display: grid; place-items: center; padding: 16px; font-size: 12px; color: var(--dpl-faint); gap: 6px; }
