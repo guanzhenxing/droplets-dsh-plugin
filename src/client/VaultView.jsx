@@ -1,24 +1,32 @@
 import { useCallback, useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle } from 'react';
-import { ChevronDown, ChevronRight, FileText, Folder, FolderOpen, Loader2, RefreshCw, Search, Tag, X, GitBranch, CircleDot, Plus, FolderPlus, Pencil, Copy, Trash2, ArrowLeftRight, ArrowUp, Sparkles } from 'lucide-react';
+import {
+  ArrowLeftRight, ArrowUpDown, BookOpen, Check, ChevronDown, ChevronRight, ChevronsDownUp, CheckSquare, Code2, Eye,
+  FileText, Filter, Folder, FolderOpen, FolderPlus, HelpCircle, ImagePlus,
+  Link2, List, ListOrdered, Loader2, LocateFixed, Minus, Network, Plus, Quote,
+  SquareCode, Table, Tags, Undo2, Redo2, X, Search,
+} from 'lucide-react';
 import { t } from './i18n.js';
-import { MarkdownView, Modal } from './components.jsx';
-import { computeLayout } from './wiki-graph-layout.js';
 import { PanelCollapseButton } from './feed/PanelGroup.jsx';
 import { AuxRail } from './feed/AuxRail.jsx';
 import { formatWhen } from './feed/format.js';
-import { createVaultEditor, outlineOf, scrollToHeading, activeOutlineIndex } from './vault-editor.js';
+import { MarkdownView, Modal } from './components.jsx';
+import { computeLayout } from './wiki-graph-layout.js';
+import {
+  createVaultEditor, outlineOf, scrollToHeading, activeOutlineIndex, openSearchPanel,
+  wrapRange, toggleLinePrefixes, cycleHeading, insertAtCursor, insertTable, codeTransform,
+} from './vault-editor.js';
 
 /**
- * The vault space, P0 of the Obsidian workbench plan:
- * tree(240, lazy) │ tabs + read view + AuxRail + backlinks/tags pane.
- * Edit stays source-level (textarea + sha lock) until P1 lands CM6.
+ * The vault space, aligned 1:1 with the droplets desktop app (plan P1–P3):
+ * tree pane (笔记 header / 图谱·标签云 segmented / dot toolbar with hover
+ * actions / native context menus / 整库问 AI foot) │ tabs + breadcrumb bar
+ * (mode dropdown + … menu) + Vditor-order format toolbar + CM6 live/source
+ * editing + backlinks drawer + AuxRail.
  */
 
 const TABS_KEY = 'droplets.vault.tabs';
 const EXPANDED_KEY = 'droplets.vault.expanded';
-const SIDEPANE_KEY = 'droplets.vault.sidepane';
-// File index survives space switches: re-entering the vault must not re-walk.
-let fileIndexCache = null;
+let fileIndexCache = null; // survives space switches
 
 function loadJson(key, fallback) {
   try {
@@ -35,7 +43,6 @@ function saveJson(key, value) {
 export function ancestorsOf(path) {
   const segments = String(path ?? '').split('/');
   const dirs = [];
-  // 'a/b/c.md' → ['a', 'a/b']: every prefix strictly before the file itself.
   for (let i = 1; i <= segments.length - 1; i += 1) {
     dirs.push(segments.slice(0, i).join('/'));
   }
@@ -57,36 +64,115 @@ export function filterFiles(files, query, limit = 40) {
   return ranked.slice(0, limit).map((hit) => hit.file);
 }
 
+/** h2–h6 outline from markdown source (fence-aware; read view anchors). */
+function markdownHeadings(content) {
+  const out = [];
+  let inFence = false;
+  for (const line of String(content ?? '').split('\n')) {
+    if (/^\s*(```+|~~~+)/.test(line)) { inFence = !inFence; continue; }
+    if (inFence) continue;
+    const match = line.match(/^#{2,6}\s+(.+?)\s*#*$/);
+    if (match) out.push({ level: match[0].match(/^#+/)[0].length, text: match[1].trim() });
+  }
+  return out;
+}
+
+/** Highlight the «…» snippet markers from the FTS backend (escaped first). */
+function highlightSnippet(snippet) {
+  const escaped = String(snippet)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return escaped.replace(/«([^»]*)»/g, '<mark>$1</mark>');
+}
+
+function escapeHtml(text) {
+  return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/** Extract the subgraph within `depth` hops of `center` (plan P3a). */
+export function neighborhoodOf(graph, center, depth = 2, limit = 300) {
+  const adjacency = new Map();
+  for (const edge of graph.edges) {
+    if (!adjacency.has(edge.source)) adjacency.set(edge.source, []);
+    if (!adjacency.has(edge.target)) adjacency.set(edge.target, []);
+    adjacency.get(edge.source).push(edge.target);
+    adjacency.get(edge.target).push(edge.source);
+  }
+  const keep = new Set([center]);
+  let frontier = [center];
+  for (let hop = 0; hop < depth; hop += 1) {
+    const next = [];
+    for (const node of frontier) {
+      for (const neighbor of adjacency.get(node) ?? []) {
+        if (!keep.has(neighbor)) { keep.add(neighbor); next.push(neighbor); }
+      }
+    }
+    frontier = next;
+    if (keep.size >= limit) break;
+  }
+  return sliceGraph(graph, keep, limit);
+}
+
+/** Global slice keeping the most-connected nodes. */
+export function capByDegree(graph, limit = 300) {
+  const degree = new Map();
+  for (const edge of graph.edges) {
+    degree.set(edge.source, (degree.get(edge.source) ?? 0) + 1);
+    degree.set(edge.target, (degree.get(edge.target) ?? 0) + 1);
+  }
+  const ranked = graph.nodes.filter((node) => !node.dangling).sort((a, b) => (degree.get(b.id) ?? 0) - (degree.get(a.id) ?? 0));
+  const keep = new Set(ranked.slice(0, limit).map((node) => node.id));
+  return sliceGraph(graph, keep, limit);
+}
+
+function sliceGraph(graph, keep, limit) {
+  const nodes = graph.nodes.filter((node) => keep.has(node.id)).slice(0, limit);
+  const kept = new Set(nodes.map((node) => node.id));
+  const edges = graph.edges.filter((edge) => kept.has(edge.source) && kept.has(edge.target));
+  return { nodes, edges };
+}
+
+// ---------------------------------------------------------------------------
+
 export function VaultView({ api, onMaterial }) {
   const [tabs, setTabs] = useState(() => loadJson(TABS_KEY, []));
   const [activeTabId, setActiveTabId] = useState(() => loadJson(TABS_KEY + '.active', null));
   const [expanded, setExpanded] = useState(() => new Set(loadJson(EXPANDED_KEY, [])));
-  const [sidePane, setSidePane] = useState(() => loadJson(SIDEPANE_KEY, 'backlinks'));
+  const [leftMode, setLeftMode] = useState('tree'); // tree | graph | tags
+  const [backlinksOpen, setBacklinksOpen] = useState(false);
   const [sideData, setSideData] = useState({ backlinks: [], unlinked: [], tags: [] });
-  const [graph, setGraph] = useState(null);
+  const [graphData, setGraphData] = useState(null);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filter, setFilter] = useState('');
+  const [sortKey, setSortKey] = useState('name-asc');
+  const [autoReveal, setAutoReveal] = useState(true);
+  const [autoRevealRefState, setAutoRevealRefState] = useState(0);
+  const autoRevealRef = useRef(true);
+  const [clipboard, setClipboard] = useState(null); // { mode:'cut', path, name }
+  const [ctxMenu, setCtxMenu] = useState(null); // { x, y, kind, path, name }
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState(null);
-  const [quick, setQuick] = useState(null); // { query }
-  const [fileIndex, setFileIndex] = useState([]); // [{path, name}]
+  const [quick, setQuick] = useState(null);
+  const [palette, setPalette] = useState(null);
+  const [trash, setTrash] = useState(null);
   const [conflict, setConflict] = useState(null);
-  const [creating, setCreating] = useState(null); // { name, dir, kind: 'note'|'dir' }
-  const [renaming, setRenaming] = useState(null); // { path, name }
-  const [renamePreview, setRenamePreview] = useState(null); // inbound link count or null while counting
+  const [creating, setCreating] = useState(null);
+  const [renaming, setRenaming] = useState(null);
+  const [renamePreview, setRenamePreview] = useState(null);
+  const [moveTarget, setMoveTarget] = useState(null); // { path, name, dir }
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [stats, setStats] = useState({ files: 0 });
-  const [sortKey, setSortKey] = useState('name');
-  const [filter, setFilter] = useState('');
+  const [fileIndex, setFileIndex] = useState([]);
+  const [editOutline, setEditOutline] = useState(null);
+  const [, setEditorScrollTick] = useState(0);
   const readerRef = useRef(null);
-  const notePaneRef = useRef(null); // exposes jumpToHeading per view
+  const notePaneRef = useRef(null);
   const dirty = tabs.some((tab) => tab.dirty);
 
-  // Persist tab/expand/sidePane state (restored when the panel is unmounted).
   useEffect(() => { saveJson(TABS_KEY, tabs); }, [tabs]);
   useEffect(() => { saveJson(TABS_KEY + '.active', activeTabId); }, [activeTabId]);
   useEffect(() => { saveJson(EXPANDED_KEY, [...expanded]); }, [expanded]);
-  useEffect(() => { saveJson(SIDEPANE_KEY, sidePane); }, [sidePane]);
 
   const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? null;
 
@@ -95,15 +181,12 @@ export function VaultView({ api, onMaterial }) {
       const status = await api.vaultStatus();
       setStats({ files: status.files });
     } catch { /* surfaced elsewhere */ }
-    // Paint the cached index immediately (no await), then refresh in the
-    // background via ONE host-side walk — never a per-directory RPC storm,
-    // which used to starve the tree's own requests on first entry.
     if (fileIndexCache) setFileIndex(fileIndexCache);
     try {
       const files = await api.vaultIndexFiles();
       fileIndexCache = files;
       setFileIndex(files);
-    } catch { /* offline tolerated: search falls back to tree filter */ }
+    } catch { /* offline tolerated */ }
   }, [api]);
 
   useEffect(() => { void refreshIndex(); }, [refreshIndex]);
@@ -122,34 +205,33 @@ export function VaultView({ api, onMaterial }) {
         path,
         name: path.split('/').pop(),
         content: note.content,
-        draft: null, // null = clean, string = dirty buffer
+        draft: null,
         sha: note.sha,
         title: note.title,
         tags: note.tags ?? [],
         wordCount: note.wordCount ?? 0,
         savedAt: null,
       };
-      setTabs((current) => {
-        const base = forceNew && existing ? [...current] : current.filter((item) => item.path !== path || item.id === path);
-        return [...base.filter((item) => item.id !== tab.id), tab];
-      });
+      setTabs((current) => [...current.filter((item) => item.id !== tab.id), tab]);
       setActiveTabId(tab.id);
-      setGraph(null);
       setSearchResults(null);
-      // autoreveal: expand ancestors of the opened note
-      setExpanded((current) => {
-        const next = new Set(current);
-        for (const dir of ancestorsOf(path)) next.add(dir);
-        return next;
-      });
+      if (autoRevealRef.current) {
+        setExpanded((current) => {
+          const next = new Set(current);
+          for (const dir of ancestorsOf(path)) next.add(dir);
+          return next;
+        });
+      }
       onMaterial({ space: 'vault', path: note.path, title: note.title, content: note.content.slice(0, 60000) });
     } catch (cause) { setError(String(cause?.message ?? cause)); }
   }, [api, tabs, onMaterial]);
 
-  // First visit: restore the persisted active tab, else empty state.
+  // First visit: restore the persisted active tab.
+  const restoredOnce = useRef(false);
   useEffect(() => {
-    if (activeTab?.content !== undefined || tabs.length === 0) return;
-    const target = activeTab ?? tabs[0];
+    if (restoredOnce.current || tabs.length === 0) return;
+    restoredOnce.current = true;
+    const target = tabs.find((tab) => tab.id === activeTabId) ?? tabs[0];
     if (target?.path) void openPath(target.path);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tabs.length > 0]);
@@ -168,26 +250,12 @@ export function VaultView({ api, onMaterial }) {
     if (activeTab?.path) void loadSideData(activeTab.path);
   }, [activeTab?.path, loadSideData]);
 
-  /** Convert the first bare mention in a note into a real wikilink. */
-  const linkMention = useCallback(async (mention) => {
-    if (!activeTab) return;
-    try {
-      const note = await api.vaultRead(mention.path);
-      const stem = activeTab.path.split('/').pop().replace(/\.md$/i, '');
-      const text = note.content;
-      // First occurrence of the stem outside code/link contexts.
-      const pattern = new RegExp(`(^|[^\\[\\w])${stem.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}($|[^\\w])`);
-      const match = pattern.exec(text);
-      if (!match) { setNotice(`「${mention.title}」里没找到「${stem}」原文`); return; }
-      const at = match.index + match[1].length;
-      const next = text.slice(0, at) + `[[${stem}]]` + text.slice(at);
-      const write = await api.vaultWrite({ path: mention.path, content: next, expectedSha: note.sha });
-      if (write.conflict) { setNotice(`「${mention.title}」有冲突，未改写`); return; }
-      setNotice(`已在「${mention.title}」建立链接`);
-      await loadSideData(activeTab.path);
-    } catch (cause) { setNotice(String(cause?.message ?? cause)); }
-  }, [activeTab, api, loadSideData]);
-
+  useEffect(() => {
+    if (leftMode === 'tags' && sideData.tags.length === 0) {
+      void api.vaultTags().then((outcome) => setSideData((current) => ({ ...current, tags: outcome.tags ?? [] }))).catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leftMode]);
 
   const setDraft = useCallback((tabId, draft) => {
     setTabs((current) => current.map((tab) => (tab.id === tabId ? { ...tab, draft } : tab)));
@@ -196,8 +264,7 @@ export function VaultView({ api, onMaterial }) {
   const closeTab = useCallback(async (tabId) => {
     const tab = tabs.find((item) => item.id === tabId);
     if (tab?.dirty) {
-      const choice = window.confirm(`「${tab.name}」有未保存的修改。确定放弃并关闭吗？`);
-      if (!choice) return;
+      if (!window.confirm(`「${tab.name}」有未保存的修改。确定放弃并关闭吗？`)) return;
     }
     setTabs((current) => {
       const next = current.filter((item) => item.id !== tabId);
@@ -206,7 +273,8 @@ export function VaultView({ api, onMaterial }) {
     });
   }, [tabs, activeTabId]);
 
-  /** Debounced autosave of the active dirty tab (plan §4.4). */
+  const tabsRef = useRef(tabs);
+  useEffect(() => { tabsRef.current = tabs; }, [tabs]);
   const saveTimer = useRef(null);
   useEffect(() => {
     if (!activeTab?.dirty) return undefined;
@@ -233,14 +301,8 @@ export function VaultView({ api, onMaterial }) {
         savedAt: new Date().toLocaleTimeString('zh-Hans-CN', { hour: '2-digit', minute: '2-digit' }),
       } : item)));
       setConflict(null);
-    } catch (cause) {
-      setError(String(cause?.message ?? cause));
-    }
+    } catch (cause) { setError(String(cause?.message ?? cause)); }
   }, [api]);
-
-  // A ref mirror so timers/closures always see fresh tabs without re-binding.
-  const tabsRef = useRef(tabs);
-  useEffect(() => { tabsRef.current = tabs; }, [tabs]);
 
   const runSearch = useCallback(async () => {
     const query = searchQuery.trim();
@@ -248,18 +310,31 @@ export function VaultView({ api, onMaterial }) {
     try {
       const outcome = await api.vaultSearch({ query, limit: 50 });
       setSearchResults(outcome);
-      if (outcome.backend === 'local') {
-        onMaterial({
-          space: 'vault-search',
-          title: t('companion.askVaultTitle') + ' · ' + query,
-          matches: outcome.results.map((item) => ({ path: item.path, title: item.title, excerpt: item.excerpt })),
-          content: '',
-        }, { reveal: true });
-      }
     } catch (cause) { setError(String(cause?.message ?? cause)); }
-  }, [api, searchQuery, onMaterial]);
+  }, [api, searchQuery]);
 
-  // ------- create / rename / duplicate / trash -------
+  const loadGraph = useCallback(async () => {
+    if (graphData) return graphData;
+    const full = await api.vaultGraph();
+    const scoped = activeTab ? neighborhoodOf(full, activeTab.path, 2, 300) : capByDegree(full, 300);
+    setGraphData(scoped);
+    return scoped;
+  }, [api, graphData, activeTab?.path]);
+
+  const switchLeft = useCallback(async (mode) => {
+    setLeftMode((current) => (current === mode ? 'tree' : mode));
+    if (mode === 'graph') {
+      try { await loadGraph(); } catch (cause) { setError(String(cause?.message ?? cause)); }
+    }
+    if (mode === 'tags' && sideData.tags.length === 0) {
+      try {
+        const outcome = await api.vaultTags();
+        setSideData((current) => ({ ...current, tags: outcome.tags ?? [] }));
+      } catch { /* degrade */ }
+    }
+  }, [loadGraph, sideData.tags.length, api]);
+
+  // ------- create / rename / move / duplicate / trash / clipboard -------
 
   const submitCreate = useCallback(async () => {
     if (!creating) return;
@@ -268,28 +343,29 @@ export function VaultView({ api, onMaterial }) {
         await api.vaultCreateDir({ dir: creating.path });
       } else {
         const name = creating.name.trim() || '未命名';
-        const dir = creating.dir === '' ? '' : creating.dir;
-        const path = (dir === '' ? name : `${dir}/${name}`) + '.md';
-        await api.vaultWrite({ path, content: `---\ntitle: ${name}\ncreated: ${new Date().toISOString()}\n---\n\n# ${name}\n\n`, expectedSha: null, createOnly: true }).then(async (result) => {
-          if (result.conflict) { setNotice(`已存在：${path}`); return null; }
-          return path;
-        }).then((created) => { if (created) void openPath(created); });
+        const path = (creating.dir === '' ? name : `${creating.dir}/${name}`) + '.md';
+        const result = await api.vaultWrite({ path, content: `---\nid: ${crypto.randomUUID()}\ntitle: ${name}\ncreated: ${new Date().toISOString()}\n---\n\n# ${name}\n\n`, expectedSha: null, createOnly: true });
+        if (result.conflict) { setNotice(`已存在：${path}`); return; }
+        void openPath(path);
       }
       setCreating(null);
       await refreshIndex();
     } catch (cause) { setNotice(String(cause?.message ?? cause)); }
   }, [creating, api, refreshIndex, openPath]);
 
-  /** Open the rename dialog with an async preview of inbound links. */
   const startRename = useCallback((path) => {
     setRenaming({ path, name: path.split('/').pop() });
     setRenamePreview(null);
-    void (async () => {
-      try {
-        const outcome = await api.vaultBacklinks(path);
-        setRenamePreview((outcome.backlinks ?? []).length);
-      } catch { setRenamePreview(0); }
-    })();
+    if (path.toLowerCase().endsWith('.md')) {
+      void (async () => {
+        try {
+          const outcome = await api.vaultBacklinks(path);
+          setRenamePreview((outcome.backlinks ?? []).length);
+        } catch { setRenamePreview(0); }
+      })();
+    } else {
+      setRenamePreview(0);
+    }
   }, [api]);
 
   const submitRename = useCallback(async (nextPath) => {
@@ -298,12 +374,24 @@ export function VaultView({ api, onMaterial }) {
       const result = await api.vaultRename({ from: renaming.path, to: nextPath, updateLinks: true });
       setNotice(`已重命名${result.updatedLinks > 0 ? `，更新 ${result.updatedLinks} 处链接` : ''}`);
       setRenaming(null);
-      // Retarget any open tab of the old path.
       setTabs((current) => current.map((tab) => (tab.path === renaming.path ? { ...tab, path: result.path, name: result.path.split('/').pop(), id: result.path } : tab)));
       if (activeTabId === renaming.path) setActiveTabId(result.path);
       await refreshIndex();
     } catch (cause) { setNotice(String(cause?.message ?? cause)); }
   }, [renaming, api, refreshIndex, activeTabId]);
+
+  const submitMove = useCallback(async (dir) => {
+    if (!moveTarget) return;
+    const to = (dir === '' ? moveTarget.name : `${dir}/${moveTarget.name}`);
+    try {
+      const result = await api.vaultRename({ from: moveTarget.path, to, updateLinks: moveTarget.path.toLowerCase().endsWith('.md') });
+      setNotice(`已移动到 ${dir || '根目录'}${result.updatedLinks > 0 ? `，更新 ${result.updatedLinks} 处链接` : ''}`);
+      setMoveTarget(null);
+      setTabs((current) => current.map((tab) => (tab.path === moveTarget.path ? { ...tab, path: result.path, name: result.path.split('/').pop(), id: result.path } : tab)));
+      if (activeTabId === moveTarget.path) setActiveTabId(result.path);
+      await refreshIndex();
+    } catch (cause) { setNotice(String(cause?.message ?? cause)); }
+  }, [moveTarget, api, refreshIndex, activeTabId]);
 
   const trashPath = useCallback(async (path, name) => {
     if (!window.confirm(`把「${name}」移入回收站？可在 Droplets 回收站恢复。`)) return;
@@ -317,31 +405,135 @@ export function VaultView({ api, onMaterial }) {
 
   const duplicatePath = useCallback(async (path) => {
     try {
-      const result = await api.vaultDuplicate({ path });
+      if (path.toLowerCase().endsWith('.md')) {
+        const result = await api.vaultDuplicate({ path });
+        void openPath(result.path);
+      } else {
+        const dir = path.split('/').slice(0, -1).join('/');
+        await api.vaultCopyDirTo({ from: path, toDir: dir });
+      }
       setNotice('已创建副本');
       await refreshIndex();
-      void openPath(result.path);
     } catch (cause) { setNotice(String(cause?.message ?? cause)); }
   }, [api, refreshIndex, openPath]);
 
-  // ------- keyboard: ⌘P quick switcher, ⌘⇧F search, ⌘⇧P palette (plan §6) -------
+  const pasteInto = useCallback(async (dir) => {
+    if (!clipboard) return;
+    const name = clipboard.path.split('/').pop();
+    try {
+      if (clipboard.mode === 'cut') {
+        const to = (dir === '' ? name : `${dir}/${name}`);
+        const result = await api.vaultRename({ from: clipboard.path, to, updateLinks: clipboard.path.toLowerCase().endsWith('.md') });
+        setTabs((current) => current.map((tab) => (tab.path === clipboard.path ? { ...tab, path: result.path, name: result.path.split('/').pop(), id: result.path } : tab)));
+        if (activeTabId === clipboard.path) setActiveTabId(result.path);
+        setNotice('已粘贴（移动）');
+      } else if (clipboard.path.toLowerCase().endsWith('.md')) {
+        await api.vaultCopyTo({ from: clipboard.path, toDir: dir });
+        setNotice('已粘贴（复制）');
+      } else {
+        await api.vaultCopyDirTo({ from: clipboard.path, toDir: dir });
+        setNotice('已粘贴（复制文件夹）');
+      }
+      setClipboard(null);
+      await refreshIndex();
+    } catch (cause) { setNotice(String(cause?.message ?? cause)); }
+  }, [clipboard, api, refreshIndex, activeTabId]);
 
-  const [palette, setPalette] = useState(null); // { query }
+  /** Convert the first bare mention in a note into a real wikilink. */
+  const linkMention = useCallback(async (mention) => {
+    if (!activeTab) return;
+    try {
+      const note = await api.vaultRead(mention.path);
+      const stem = activeTab.path.split('/').pop().replace(/\.md$/i, '');
+      const text = note.content;
+      const pattern = new RegExp(`(^|[^\\[\\w])${stem.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|[^\\w])`);
+      const match = pattern.exec(text);
+      if (!match) { setNotice(`「${mention.title}」里没找到「${stem}」原文`); return; }
+      const at = match.index + match[1].length;
+      const next = text.slice(0, at) + `[[${stem}]]` + text.slice(at);
+      const write = await api.vaultWrite({ path: mention.path, content: next, expectedSha: note.sha });
+      if (write.conflict) { setNotice(`「${mention.title}」有冲突，未改写`); return; }
+      setNotice(`已在「${mention.title}」建立链接`);
+      await loadSideData(activeTab.path);
+    } catch (cause) { setNotice(String(cause?.message ?? cause)); }
+  }, [activeTab, api, loadSideData]);
+
+  /** Context-menu 问 AI（这篇）: open the companion with that note. */
+  const askAiNote = useCallback(async (path) => {
+    try {
+      const note = await api.vaultRead(path);
+      onMaterial({ space: 'vault', path: note.path, title: note.title, content: note.content.slice(0, 60000) }, { reveal: true });
+    } catch (cause) { setNotice(String(cause?.message ?? cause)); }
+  }, [api, onMaterial]);
+
+  /** 整库问 AI: native parity — a numbered library listing as the material. */
+  const askWholeLibrary = useCallback(() => {
+    const listing = (fileIndexCache ?? fileIndex).map((file, index) => `${index + 1}. ${file.path}`).join('\n');
+    onMaterial({ space: 'vault', title: '知识库整库问答', content: listing.slice(0, 300000) }, { reveal: true });
+  }, [fileIndex, onMaterial]);
+
+  const exportActive = useCallback(async (format) => {
+    if (!activeTab) { setNotice('先打开一篇笔记'); return; }
+    const text = activeTab.draft ?? activeTab.content;
+    const stem = activeTab.name.replace(/\.md$/i, '');
+    if (format === 'md') {
+      const blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `${stem}.md`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      setNotice('已导出 .md');
+      return;
+    }
+    const rendered = readerRef.current?.querySelector('.dpl-vault2-body');
+    if (!rendered) { setNotice('请切到阅读视图再导出'); return; }
+    const html = `<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>${escapeHtml(stem)}</title><style>body{max-width:720px;margin:40px auto;padding:0 24px;font:15px/1.75 -apple-system,'PingFang SC',sans-serif;color:#1a1a1a}h1,h2,h3{line-height:1.4}pre{background:#f5f5f5;padding:12px;border-radius:8px;overflow:auto}code{background:#f5f5f5;border-radius:4px;padding:1px 5px}img{max-width:100%}blockquote{border-left:3px solid #ddd;margin:0;padding:2px 14px;color:#555}table{border-collapse:collapse}th,td{border:1px solid #ddd;padding:5px 10px}@media print{body{margin:0}}</style></head><body>${rendered.innerHTML}</body></html>`;
+    if (format === 'pdf') {
+      const frame = document.createElement('iframe');
+      frame.style.position = 'fixed';
+      frame.style.right = '0';
+      frame.style.bottom = '0';
+      frame.style.width = '0';
+      frame.style.height = '0';
+      frame.style.border = '0';
+      document.body.appendChild(frame);
+      frame.srcdoc = html;
+      frame.onload = () => {
+        try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch { setNotice('打印面板不可用，请用导出 HTML'); }
+        setTimeout(() => frame.remove(), 60000);
+      };
+      setNotice('已打开打印面板（可选「存储为 PDF」）');
+      return;
+    }
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `${stem}.html`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setNotice('已导出 .html');
+  }, [activeTab]);
 
   const paletteActions = useMemo(() => ([
     { id: 'new-note', label: '新建笔记', run: () => setCreating({ kind: 'note', name: '', dir: activeTab ? ancestorsOf(activeTab.path)[0] ?? '' : '' }) },
     { id: 'new-folder', label: '新建文件夹', run: () => setCreating({ kind: 'dir', name: '', dir: activeTab ? ancestorsOf(activeTab.path)[0] ?? '' : '' }) },
     { id: 'search', label: '全库搜索', run: () => setSearchOpen(true) },
-    { id: 'graph', label: (graph ? '关闭图谱' : '打开图谱'), run: () => void toggleGraph() },
-    { id: 'backlinks', label: '查看反链', run: () => setSidePane('backlinks') },
-    { id: 'tags', label: '查看标签', run: () => setSidePane('tags') },
+    { id: 'graph', label: '图谱', run: () => void switchLeft('graph') },
+    { id: 'tags', label: '标签云', run: () => void switchLeft('tags') },
+    { id: 'backlinks', label: '反向链接', run: () => setBacklinksOpen(true) },
     { id: 'trash', label: '回收站（浏览与恢复）', run: () => void openTrash() },
-    { id: 'export-md', label: '导出当前笔记 (.md)', run: () => exportActive('md') },
-    { id: 'export-html', label: '导出当前笔记 (.html)', run: () => exportActive('html') },
+    { id: 'export-md', label: '导出当前笔记 (.md)', run: () => void exportActive('md') },
+    { id: 'export-html', label: '导出当前笔记 (.html)', run: () => void exportActive('html') },
     { id: 'reindex', label: '重扫索引', run: () => void api.vaultReindex().then(refreshIndex) },
     { id: 'close-tab', label: '关闭当前标签', run: () => { if (activeTabId) void closeTab(activeTabId); } },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  ]), [graph, activeTab, activeTabId]);
+  ]), [activeTab, activeTabId, graphData]);
+
+
+  // ------- keyboard: ⌘P / ⌘⇧F / ⌘⇧P -------
 
   useEffect(() => {
     const onKey = (event) => {
@@ -356,9 +548,47 @@ export function VaultView({ api, onMaterial }) {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // ------- trash browser + export (P3b) -------
+  const paletteResults = useMemo(
+    () => (palette && palette.query.trim() !== '' ? paletteActions.filter((action) => action.label.toLowerCase().includes(palette.query.trim().toLowerCase())) : paletteActions),
+    [palette, paletteActions],
+  );
 
-  const [trash, setTrash] = useState(null); // { entries }
+  const quickResults = useMemo(
+    () => (quick && quick.query.trim() !== '' ? filterFiles(fileIndex, quick.query, 20) : []),
+    [quick, fileIndex],
+  );
+
+  const filteredIndex = useMemo(
+    () => (filterOpen && filter.trim() !== '' ? filterFiles(fileIndex, filter, 30) : []),
+    [filterOpen, filter, fileIndex],
+  );
+
+  const graphLayout = useMemo(
+    () => (leftMode === 'graph' && graphData ? computeLayout(graphData, 640, 760) : null),
+    [leftMode, graphData],
+  );
+
+  const headings = useMemo(() => {
+    if (editOutline !== null) return editOutline;
+    return markdownHeadings(activeTab?.content ?? '');
+  }, [editOutline, activeTab?.content]);
+
+  const onVaultLink = useCallback((target) => {
+    const wanted = String(target).replace(/\.md$/i, '').replace(/^\.?\//, '').split('#')[0];
+    if (wanted === '') return;
+    const hit = fileIndex.find((file) => file.path === `${wanted}.md`)
+      ?? fileIndex.find((file) => file.path.replace(/\.md$/i, '').endsWith('/' + wanted) || file.path.replace(/\.md$/i, '') === wanted);
+    if (hit) void openPath(hit.path);
+    else {
+      const base = activeTab?.path ? activeTab.path.split('/').slice(0, -1).join('/') : '';
+      void openPath((base === '' ? '' : base + '/') + wanted + '.md');
+    }
+  }, [fileIndex, openPath, activeTab?.path]);
+
+  const resolveVaultImage = useCallback((src) => {
+    if (/^https?:/i.test(src ?? '')) return src;
+    return null; // attachments 走 P4 原件通道
+  }, []);
 
   const openTrash = useCallback(async () => {
     try {
@@ -376,70 +606,6 @@ export function VaultView({ api, onMaterial }) {
     } catch (cause) { setNotice(String(cause?.message ?? cause)); }
   }, [api, refreshIndex]);
 
-  const exportActive = useCallback(async (format) => {
-    if (!activeTab) { setNotice('先打开一篇笔记'); return; }
-    const text = activeTab.draft ?? activeTab.content;
-    const stem = activeTab.name.replace(/\.md$/i, '');
-    if (format === 'md') {
-      const blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = `${stem}.md`;
-      anchor.click();
-      URL.revokeObjectURL(url);
-      setNotice('已导出 .md');
-      return;
-    }
-    // html: inline the rendered body for a portable single file.
-    const rendered = readerRef.current?.querySelector('.dpl-vault2-body');
-    if (!rendered) { setNotice('请切到阅读视图再导出 HTML'); return; }
-    const html = `<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>${escapeHtml(stem)}</title><style>body{max-width:720px;margin:40px auto;padding:0 24px;font:15px/1.75 -apple-system,'PingFang SC',sans-serif;color:#1a1a1a}h1,h2,h3{line-height:1.4}pre{background:#f5f5f5;padding:12px;border-radius:8px;overflow:auto}code{background:#f5f5f5;border-radius:4px;padding:1px 5px}img{max-width:100%}blockquote{border-left:3px solid #ddd;margin:0;padding:2px 14px;color:#555}table{border-collapse:collapse}th,td{border:1px solid #ddd;padding:5px 10px}</style></head><body>${rendered.innerHTML}</body></html>`;
-    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `${stem}.html`;
-    anchor.click();
-    URL.revokeObjectURL(url);
-    setNotice('已导出 .html');
-  }, [activeTab]);
-
-  const paletteResults = useMemo(
-    () => (palette && palette.query.trim() !== '' ? paletteActions.filter((action) => action.label.toLowerCase().includes(palette.query.trim().toLowerCase())) : paletteActions),
-    [palette, paletteActions],
-  );
-
-  // ------- render -------
-
-  const activeDirty = Boolean(activeTab?.dirty);
-  // Outline source switching: null while reading (derive from content), the
-  // CM6 outline while the editor is mounted (live-updates as you type).
-  const [editOutline, setEditOutline] = useState(null);
-  const [, setEditorScrollTick] = useState(0);
-  useEffect(() => { setEditOutline(null); }, [activeTab?.id]);
-  const headings = useMemo(() => {
-    // Editing: outline comes from the CM6 document model (plan §5.2); read:
-    // from the markdown text (same levels h2–h6, fence-aware).
-    if (editOutline !== null) return editOutline;
-    return markdownHeadings(activeTab?.content ?? '');
-  }, [editOutline, activeTab?.content]);
-
-  const filteredIndex = useMemo(
-    () => (filter.trim() === '' ? [] : filterFiles(fileIndex, filter, 30)),
-    [filter, fileIndex],
-  );
-
-  const quickResults = useMemo(
-    () => (quick && quick.query.trim() !== '' ? filterFiles(fileIndex, quick.query, 20) : []),
-    [quick, fileIndex],
-  );
-
-  const graphLayout = useMemo(
-    () => (graph ? computeLayout(graph, 900, 620) : null),
-    [graph],
-  );
-
   const captured = useRef(false);
   const captureSelection = () => {
     if (captured.current) return;
@@ -450,31 +616,9 @@ export function VaultView({ api, onMaterial }) {
     onMaterial({ space: 'vault', path: activeTab.path, title: activeTab.title, selection, content: '' });
   };
 
-  /** Wikilink resolution shared by read view and editor popovers. */
-  const onVaultLink = useCallback((target) => {
-    const wanted = String(target).replace(/\.md$/i, '').replace(/^\.?\//, '').split('#')[0];
-    if (wanted === '') return;
-    const hit = fileIndex.find((file) => file.path === `${wanted}.md`)
-      ?? fileIndex.find((file) => file.path.replace(/\.md$/i, '').endsWith('/' + wanted) || file.path.replace(/\.md$/i, '') === wanted);
-    if (hit) void openPath(hit.path);
-    else {
-      const base = activeTab?.path ? activeTab.path.split('/').slice(0, -1).join('/') : '';
-      void openPath((base === '' ? '' : base + '/') + wanted + '.md');
-    }
-  }, [fileIndex, openPath, activeTab?.path]);
-
-  /** Resolve a relative image path in a note to a fetchable URL. */
-  const resolveVaultImage = useCallback((src) => {
-    if (!src || /^(https?:|data:|blob:)/i.test(src)) return /^https?:/i.test(src) ? src : (src.startsWith('/') ? src : null);
-    const baseDir = activeTab?.path ? activeTab.path.split('/').slice(0, -1).join('/') : '';
-    // vault.js 没有静态文件服务；attachments 与本目录图片先走占位（P3 接 vaultRead 原件通道）。
-    return null;
-  }, [activeTab?.path]);
-
   if (stats.files === 0 && fileIndex.length === 0) {
-    // First paint while the index warms up.
     return (
-      <div className="dpl-vault-empty">
+      <div className="dpl-vault2-empty">
         <Loader2 size={16} className="dpl-spin" />
         <p>{t('vault.noVault')}</p>
         <p className="dpl-hint">{t('vault.chooseVault')}</p>
@@ -485,29 +629,63 @@ export function VaultView({ api, onMaterial }) {
   return (
     <div className="dpl-vault2">
       <aside className="dpl-col dpl-vault2-tree">
-        <div className="dpl-ib-panehead">
-          <span className="dpl-ib-pansub">{t('vault.tree')}</span>
-          <div className="dpl-vault2-treeactions">
-            <button type="button" className="dpl-icon-btn" title="新建笔记" onClick={() => setCreating({ kind: 'note', name: '', dir: activeTab ? ancestorsOf(activeTab.path)[0] ?? '' : '' })}><Plus size={14} /></button>
-            <button type="button" className="dpl-icon-btn" title="新建文件夹" onClick={() => setCreating({ kind: 'dir', name: '', dir: activeTab ? ancestorsOf(activeTab.path)[0] ?? '' : '' })}><FolderPlus size={14} /></button>
-            <button type="button" className="dpl-icon-btn" title="重扫索引" onClick={() => void api.vaultReindex().then(refreshIndex)}><RefreshCw size={13} /></button>
-            <PanelCollapseButton />
+        <div className="dpl-vault2-treehead">
+          <span>笔记</span>
+          <PanelCollapseButton />
+        </div>
+        <div className="dpl-vault2-seg">
+          <button type="button" className={leftMode === 'graph' ? 'is-active' : ''} onClick={() => void switchLeft('graph')} data-testid="vault-graph-toggle">
+            <Network size={14} /> 图谱
+          </button>
+          <button type="button" className={leftMode === 'tags' ? 'is-active' : ''} onClick={() => void switchLeft('tags')} data-testid="vault-tags-toggle">
+            <Tags size={14} /> 标签云
+          </button>
+        </div>
+        <TreeToolbar
+          filterOpen={filterOpen}
+          onToggleFilter={() => setFilterOpen(!filterOpen)}
+          sortKey={sortKey}
+          onSort={(key) => { setSortKey(key); }}
+          autoReveal={autoReveal}
+          onToggleAutoReveal={() => { setAutoReveal(!autoReveal); autoRevealRef.current = !autoReveal; }}
+          onCollapseAll={() => setExpanded(new Set())}
+          onNewNote={() => setCreating({ kind: 'note', name: '', dir: activeTab ? ancestorsOf(activeTab.path)[0] ?? '' : '' })}
+          onNewFolder={() => setCreating({ kind: 'dir', name: '', dir: activeTab ? ancestorsOf(activeTab.path)[0] ?? '' : '' })}
+        />
+        {filterOpen ? (
+          <div className="dpl-vault2-filter">
+            <Search size={13} />
+            <input autoFocus placeholder="过滤文件名…" value={filter} onChange={(event) => setFilter(event.target.value)} onKeyDown={(event) => { if (event.key === 'Escape') setFilter(''); }} />
+            {filter !== '' ? <button type="button" onClick={() => setFilter('')} aria-label="清除过滤"><X size={12} /></button> : null}
           </div>
-        </div>
-        <div className="dpl-vault2-filter">
-          <Search size={13} />
-          <input placeholder="过滤文件名…" value={filter} onChange={(event) => setFilter(event.target.value)} />
-          {filter !== '' ? <button type="button" onClick={() => setFilter('')} aria-label="清除过滤"><X size={12} /></button> : null}
-        </div>
+        ) : null}
         <div className="dpl-vault2-treescroll">
-          {filter.trim() !== '' ? (
+          {leftMode === 'graph' ? (
+            graphData && graphLayout
+              ? <GraphPane graph={graphData} layout={graphLayout} onOpen={(path) => void openPath(path)} onClose={() => setLeftMode('tree')} />
+              : <div className="dpl-vault2-empty"><Loader2 size={14} className="dpl-spin" /></div>
+          ) : leftMode === 'tags' ? (
+            <div className="dpl-vault2-tags">
+              {sideData.tags.slice(0, 120).map((item) => (
+                <button
+                  key={item.tag} type="button"
+                  onClick={() => { setSearchOpen(true); setSearchQuery(item.tag); void api.vaultSearch({ query: item.tag, limit: 50, tag: item.tag }).then(setSearchResults).catch(() => {}); }}
+                >
+                  #{item.tag} <span>{item.count}</span>
+                </button>
+              ))}
+              {sideData.tags.length === 0 ? <div className="dpl-vault2-empty">暂无标签</div> : null}
+            </div>
+          ) : filterOpen && filter.trim() !== '' ? (
             <div className="dpl-vault2-flatlist">
               {filteredIndex.map((file) => (
-                <button key={file.path} type="button" className={'dpl-vault2-file' + (activeTab?.path === file.path ? ' is-active' : '')} onClick={() => void openPath(file.path)}>
-                  <FileText size={13} />
-                  <span className="dpl-truncate">{file.name.replace(/\.md$/i, '')}</span>
-                  <span className="dpl-vault2-filedir">{file.path.split('/').slice(0, -1).join('/')}</span>
-                </button>
+                <div key={file.path} className={'dpl-vault2-row' + (activeTab?.path === file.path ? ' is-active' : '')}>
+                  <button type="button" className="dpl-vault2-file" onClick={() => void openPath(file.path)}>
+                    <FileText size={13} />
+                    <span className="dpl-truncate">{file.name.replace(/\.md$/i, '')}</span>
+                    <span className="dpl-vault2-filedir">{file.path.split('/').slice(0, -1).join('/')}</span>
+                  </button>
+                </div>
               ))}
               {filteredIndex.length === 0 ? <div className="dpl-vault2-empty">无匹配文件</div> : null}
             </div>
@@ -519,64 +697,16 @@ export function VaultView({ api, onMaterial }) {
               activePath={activeTab?.path}
               sortKey={sortKey}
               onOpen={(path) => void openPath(path)}
-              onRename={(path) => { startRename(path); }}
-              onDuplicate={(path) => void duplicatePath(path)}
-              onTrash={trashPath}
-              onNewNote={(dir) => setCreating({ kind: 'note', name: '', dir })}
-              onNewDir={(dir) => setCreating({ kind: 'dir', name: '', dir })}
+              onContextMenu={(event, kind, path, name) => {
+                event.preventDefault();
+                setCtxMenu({ x: event.clientX, y: event.clientY, kind, path, name });
+              }}
             />
           )}
         </div>
-        <div className="dpl-vault2-sidepane">
-          <div className="dpl-vault2-sidetabs">
-            <button type="button" className={sidePane === 'backlinks' ? 'is-active' : ''} onClick={() => setSidePane('backlinks')}>反链</button>
-            <button type="button" className={sidePane === 'tags' ? 'is-active' : ''} onClick={() => setSidePane('tags')}>标签</button>
-          </div>
-          {sidePane === 'backlinks' ? (
-            <div className="dpl-vault2-sidebody">
-              {activeTab ? (
-                <>
-                  {sideData.backlinks.length > 0 ? sideData.backlinks.map((item) => (
-                    <button key={item.path} type="button" className="dpl-vault2-backlink" onClick={() => void openPath(item.path)}>
-                      <span className="dpl-truncate">{item.title}</span>
-                      <span className="dpl-vault2-filedir">{item.path}</span>
-                    </button>
-                  )) : <div className="dpl-vault2-empty">暂无反链</div>}
-                  {sideData.unlinked.length > 0 ? (
-                    <>
-                      <div className="dpl-vault2-unlinkedhead">未链接提及 · {sideData.unlinked.length}</div>
-                      {sideData.unlinked.map((item) => (
-                        <div key={item.path} className="dpl-vault2-unlinked">
-                          <button type="button" className="dpl-vault2-backlink" onClick={() => void openPath(item.path)}>
-                            <span className="dpl-truncate">{item.title}</span>
-                            <span className="dpl-vault2-filedir">{item.path}</span>
-                          </button>
-                          <button
-                            type="button" className="dpl-vault2-unlinkbtn" title={`在 ${item.title} 里加 [[链接]]`}
-                            onClick={() => void linkMention(item)}
-                          >
-                            <ArrowLeftRight size={12} />
-                          </button>
-                        </div>
-                      ))}
-                    </>
-                  ) : null}
-                </>
-              ) : <div className="dpl-vault2-empty">先打开一篇笔记</div>}
-            </div>
-          ) : (
-            <div className="dpl-vault2-sidebody dpl-vault2-tags">
-              {sideData.tags.slice(0, 80).map((item) => (
-                <button
-                  key={item.tag} type="button"
-                  onClick={() => { setSearchQuery(item.tag); setSearchOpen(true); void api.vaultSearch({ query: item.tag, limit: 50, tag: item.tag }).then(setSearchResults).catch(() => {}); }}
-                >
-                  #{item.tag} <span>{item.count}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <button type="button" className="dpl-vault2-askall" onClick={askWholeLibrary} data-testid="vault-ask-ai">
+          整库问 AI
+        </button>
       </aside>
 
       <section className="dpl-col dpl-vault2-main">
@@ -601,7 +731,6 @@ export function VaultView({ api, onMaterial }) {
           ))}
           <div className="dpl-vault2-tabspring" />
           <button type="button" className="dpl-icon-btn" title="全库搜索 (⌘⇧F)" onClick={() => setSearchOpen(!searchOpen)}><Search size={14} /></button>
-          <button type="button" className={'dpl-icon-btn' + (graph ? ' is-toggled' : '')} title="图谱" onClick={() => void toggleGraph()}><CircleDot size={14} /></button>
         </div>
 
         {searchOpen ? (
@@ -619,9 +748,7 @@ export function VaultView({ api, onMaterial }) {
         ) : null}
 
         <div className="dpl-vault2-content" onMouseUp={captureSelection}>
-          {graph ? (
-            <GraphPane graph={graph} layout={graphLayout} onOpen={(path) => { setGraph(null); void openPath(path); }} onClose={() => setGraph(null)} />
-          ) : searchResults ? (
+          {searchResults ? (
             <div className="dpl-vault2-searchresults">
               {searchResults.results.map((hit) => (
                 <button key={hit.path} type="button" className="dpl-vault2-hit" onClick={() => void openPath(hit.path)}>
@@ -647,23 +774,59 @@ export function VaultView({ api, onMaterial }) {
               resolveImage={resolveVaultImage}
               noteFiles={fileIndex}
               readerRef={readerRef}
+              backlinksOpen={backlinksOpen}
+              onToggleBacklinks={() => setBacklinksOpen(!backlinksOpen)}
+              onExport={(format) => void exportActive(format)}
             />
           ) : (
             <div className="dpl-vault2-empty dpl-vault2-readerempty">在左侧选择一篇笔记开始阅读</div>
           )}
+
+          {backlinksOpen && activeTab && !searchResults ? (
+            <div className="dpl-vault2-bldrawer" data-testid="backlinks-drawer">
+              <div className="dpl-vault2-bldrawhead">
+                <span>反向链接（{sideData.backlinks.length}）{sideData.unlinked.length > 0 ? ` · 未链接 ${sideData.unlinked.length}` : ''}</span>
+                <button type="button" className="dpl-icon-btn" onClick={() => setBacklinksOpen(false)} aria-label="关闭反向链接"><X size={13} /></button>
+              </div>
+              <div className="dpl-vault2-bldrawbody">
+                {sideData.backlinks.map((item) => (
+                  <button key={item.path} type="button" className="dpl-vault2-backlink" onClick={() => void openPath(item.path)}>
+                    <span className="dpl-truncate">{item.title}</span>
+                    <span className="dpl-vault2-filedir">{item.path}</span>
+                  </button>
+                ))}
+                {sideData.backlinks.length === 0 ? <div className="dpl-vault2-empty">暂无反链</div> : null}
+                {sideData.unlinked.length > 0 ? (
+                  <>
+                    <div className="dpl-vault2-unlinkedhead">未链接提及</div>
+                    {sideData.unlinked.map((item) => (
+                      <div key={item.path} className="dpl-vault2-unlinked">
+                        <button type="button" className="dpl-vault2-backlink" onClick={() => void openPath(item.path)}>
+                          <span className="dpl-truncate">{item.title}</span>
+                          <span className="dpl-vault2-filedir">{item.path}</span>
+                        </button>
+                        <button type="button" className="dpl-vault2-unlinkbtn" title={`在 ${item.title} 里加 [[链接]]`} onClick={() => void linkMention(item)}>
+                          <ArrowLeftRight size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div className="dpl-vault2-statusbar">
           <span>{activeTab ? `${activeTab.wordCount.toLocaleString()} 字` : `${stats.files} 篇笔记`}</span>
           <span>{activeTab?.dirty ? '未保存' : activeTab?.savedAt ? `已保存 ${activeTab.savedAt}` : ''}</span>
-          <button type="button" className="dpl-vault2-statuslink" onClick={() => setSidePane('backlinks')}>{sideData.backlinks.length} 反链</button>
+          <button type="button" className="dpl-vault2-statuslink" onClick={() => setBacklinksOpen(!backlinksOpen)}>{sideData.backlinks.length} 反链</button>
           {notice ? <span className="dpl-vault2-statusnotice">{notice}<button type="button" onClick={() => setNotice('')}><X size={11} /></button></span> : null}
           {error ? <span className="dpl-vault2-statuserror">{error}<button type="button" onClick={() => setError('')}><X size={11} /></button></span> : null}
         </div>
       </section>
 
-      {/* 右缘大纲：编辑与阅读三视图共用，跳转由 NoteReadPane 按视图分发 */}
-      {activeTab && !graph && !searchResults ? (
+      {activeTab && !searchResults ? (
         <AuxRail
           headings={headings}
           containerRef={readerRef}
@@ -688,11 +851,7 @@ export function VaultView({ api, onMaterial }) {
             />
             <div className="dpl-vault2-quicklist">
               {quickResults.map((file, index) => (
-                <button
-                  key={file.path} type="button"
-                  className={index === 0 ? 'is-first' : ''}
-                  onClick={() => { setQuick(null); void openPath(file.path); }}
-                >
+                <button key={file.path} type="button" className={index === 0 ? 'is-first' : ''} onClick={() => { setQuick(null); void openPath(file.path); }}>
                   <span className="dpl-truncate">{file.name.replace(/\.md$/i, '')}</span>
                   <span className="dpl-vault2-filedir">{file.path}</span>
                 </button>
@@ -716,11 +875,7 @@ export function VaultView({ api, onMaterial }) {
             />
             <div className="dpl-vault2-quicklist">
               {paletteResults.map((action, index) => (
-                <button
-                  key={action.id} type="button"
-                  className={index === 0 ? 'is-first' : ''}
-                  onClick={() => { setPalette(null); action.run(); }}
-                >
+                <button key={action.id} type="button" className={index === 0 ? 'is-first' : ''} onClick={() => { setPalette(null); action.run(); }}>
                   <span className="dpl-truncate">{action.label}</span>
                 </button>
               ))}
@@ -791,7 +946,7 @@ export function VaultView({ api, onMaterial }) {
         <Modal title="重命名（自动更新链接）" onClose={() => setRenaming(null)}>
           <div className="dpl-form-col">
             <div className="dpl-field">
-              <span>新路径</span>
+              <span>新名称</span>
               <input
                 autoFocus value={renaming.name}
                 onChange={(event) => setRenaming({ ...renaming, name: event.target.value })}
@@ -803,13 +958,11 @@ export function VaultView({ api, onMaterial }) {
                 }}
               />
             </div>
-            <p className="dpl-hint">
-              {renamePreview === null
-                ? '正在统计引用…'
-                : renamePreview > 0
-                  ? `将全库更新 ${renamePreview} 处指向它的 [[链接]]。`
-                  : '没有别的笔记引用它。'}
-            </p>
+            {renaming.path.toLowerCase().endsWith('.md') ? (
+              <p className="dpl-hint">
+                {renamePreview === null ? '正在统计引用…' : renamePreview > 0 ? `将全库更新 ${renamePreview} 处指向它的 [[链接]]。` : '没有别的笔记引用它。'}
+              </p>
+            ) : <p className="dpl-hint">将移动整个文件夹（其中的笔记链接保持不变）。</p>}
           </div>
           <div className="dpl-form-row dpl-end">
             <button type="button" className="dpl-btn" onClick={() => setRenaming(null)}>取消</button>
@@ -823,91 +976,194 @@ export function VaultView({ api, onMaterial }) {
           </div>
         </Modal>
       ) : null}
+
+      {moveTarget ? (
+        <Modal title="移动到…" onClose={() => setMoveTarget(null)}>
+          <div className="dpl-form-col">
+            <div className="dpl-field">
+              <span>目标文件夹（空 = vault 根）</span>
+              <input
+                autoFocus value={moveTarget.dir}
+                onChange={(event) => setMoveTarget({ ...moveTarget, dir: event.target.value })}
+                onKeyDown={(event) => { if (event.key === 'Enter') void submitMove(moveTarget.dir); }}
+              />
+            </div>
+            <p className="dpl-hint">移动 .md 会同步更新全库指向它的 [[链接]]。</p>
+          </div>
+          <div className="dpl-form-row dpl-end">
+            <button type="button" className="dpl-btn" onClick={() => setMoveTarget(null)}>取消</button>
+            <button type="button" className="dpl-btn is-primary" onClick={() => void submitMove(moveTarget.dir)}>移动</button>
+          </div>
+        </Modal>
+      ) : null}
+
+      {ctxMenu ? (
+        <VaultContextMenu
+          menu={ctxMenu}
+          clipboard={clipboard}
+          onClose={() => setCtxMenu(null)}
+          actions={{
+            openFile: (path) => void openPath(path),
+            toggleDir: (dir) => {
+              setExpanded((current) => {
+                const next = new Set(current);
+                if (next.has(dir)) next.delete(dir); else next.add(dir);
+                return next;
+              });
+            },
+            rename: (path) => startRename(path),
+            move: (path) => setMoveTarget({ path, name: path.split('/').pop(), dir: path.split('/').slice(0, -1).join('/') }),
+            cut: (path) => setClipboard({ mode: 'cut', path, name: path.split('/').pop() }),
+            duplicate: (path) => void duplicatePath(path),
+            copyAbs: (path) => { void api.vaultCopyPath({ path, relative: false }).then(() => setNotice('已复制路径')).catch((cause) => setNotice(String(cause?.message ?? cause))); },
+            copyRel: (path) => { void api.vaultCopyPath({ path, relative: true }).then(() => setNotice('已复制相对路径')).catch((cause) => setNotice(String(cause?.message ?? cause))); },
+            paste: (dir) => void pasteInto(dir),
+            reveal: (path) => { void api.vaultReveal({ path }).catch((cause) => setNotice(String(cause?.message ?? cause))); },
+            askAi: (path) => void askAiNote(path),
+            delete: trashPath,
+            newNote: (dir) => setCreating({ kind: 'note', name: '', dir }),
+            newFolder: (dir) => setCreating({ kind: 'dir', name: '', dir }),
+          }}
+        />
+      ) : null}
     </div>
   );
+}
 
-  async function toggleGraph() {
-    if (graph) { setGraph(null); return; }
-    try {
-      const full = await api.vaultGraph();
-      // Neighborhood view: with an open note, show it plus 2 hops (≤300 nodes);
-      // otherwise a degree-capped global slice. The full graph stays one click
-      // away via the command palette's data (plan §9 performance budget).
-      setGraph(activeTab ? neighborhoodOf(full, activeTab.path, 2, 300) : capByDegree(full, 300));
-    } catch (cause) { setError(String(cause?.message ?? cause)); }
+/** Native-parity tree context menu (file/folder groupings, paste on cut). */
+function VaultContextMenu({ menu, clipboard, onClose, actions }) {
+  useEffect(() => {
+    const close = () => onClose();
+    window.addEventListener('mousedown', close);
+    window.addEventListener('blur', close);
+    const onKey = (event) => { if (event.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('mousedown', close);
+      window.removeEventListener('blur', close);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [onClose]);
+  const act = (fn) => () => { onClose(); fn(); };
+  const t = menu;
+  const isFile = t.kind === 'file';
+  const items = [];
+  if (isFile) {
+    items.push(
+      { label: '打开', run: () => actions.openFile(t.path) },
+      { label: '重命名', run: () => actions.rename(t.path) },
+      { label: '移动到…', run: () => actions.move(t.path) },
+      { divider: true },
+      { label: '剪切', run: () => actions.cut(t.path) },
+      { label: '复制', run: () => actions.duplicate(t.path) },
+      { label: '复制路径', run: () => actions.copyAbs(t.path) },
+      { label: '复制相对路径', run: () => actions.copyRel(t.path) },
+      { divider: true },
+      { label: '在 Finder 中显示', run: () => actions.reveal(t.path) },
+      { label: '问 AI（这篇）', run: () => actions.askAi(t.path) },
+      { divider: true },
+      { label: '删除', danger: true, run: () => actions.delete(t.path, t.name) },
+    );
+  } else {
+    const isRoot = t.path === '';
+    items.push(
+      { label: '新建笔记', run: () => actions.newNote(t.path) },
+      { label: '新建文件夹', run: () => actions.newFolder(t.path) },
+    );
+    if (!isRoot) items.push({ label: '重命名', run: () => actions.rename(t.path) });
+    items.push({ divider: true });
+    if (!isRoot) items.push({ label: '剪切', run: () => actions.cut(t.path) });
+    if (!isRoot) items.push({ label: '复制', run: () => actions.duplicate(t.path) });
+    items.push({ label: '复制路径', run: () => actions.copyAbs(t.path) });
+    if (!isRoot) items.push({ label: '复制相对路径', run: () => actions.copyRel(t.path) });
+    if (clipboard?.mode === 'cut') items.push({ label: '粘贴', run: () => actions.paste(t.path) });
+    items.push({ divider: true });
+    items.push({ label: '在 Finder 中显示', run: () => actions.reveal(t.path) });
   }
+  return (
+    <div
+      className="dpl-vault2-ctxmenu"
+      style={{ left: Math.min(menu.x, window.innerWidth - 180), top: Math.min(menu.y, window.innerHeight - 320) }}
+      onMouseDown={(event) => event.stopPropagation()}
+      data-testid="vault-context-menu"
+    >
+      {items.map((item, index) => (item.divider
+        ? <div key={`d${index}`} className="dpl-vault2-ctxdivider" />
+        : (
+          <button
+            key={item.label} type="button"
+            className={'dpl-vault2-ctxitem' + (item.danger ? ' is-danger' : '')}
+            onClick={act(item.run)}
+          >
+            {item.label}
+          </button>
+        )))}
+    </div>
+  );
 }
 
-/** Extract the subgraph within `depth` hops of `center` (plan P3a). */
-export function neighborhoodOf(graph, center, depth = 2, limit = 300) {
-  const adjacency = new Map();
-  for (const edge of graph.edges) {
-    if (!adjacency.has(edge.source)) adjacency.set(edge.source, []);
-    if (!adjacency.has(edge.target)) adjacency.set(edge.target, []);
-    adjacency.get(edge.source).push(edge.target);
-    adjacency.get(edge.target).push(edge.source);
-  }
-  const keep = new Set([center]);
-  let frontier = [center];
-  for (let hop = 0; hop < depth; hop += 1) {
-    const next = [];
-    for (const node of frontier) {
-      for (const neighbor of adjacency.get(node) ?? []) {
-        if (!keep.has(neighbor)) { keep.add(neighbor); next.push(neighbor); }
-      }
-    }
-    frontier = next;
-    if (keep.size >= limit) break;
-  }
-  return sliceGraph(graph, keep, limit);
+/** Dot toolbar that reveals icon actions on hover (native tree toolbar). */
+function TreeToolbar({ filterOpen, onToggleFilter, sortKey, onSort, autoReveal, onToggleAutoReveal, onCollapseAll, onNewNote, onNewFolder }) {
+  const [sortMenu, setSortMenu] = useState(null);
+  const [help, setHelp] = useState(false);
+  const sortLabel = { 'name-asc': '名称 ↑', 'name-desc': '名称 ↓', 'mtime-desc': '时间 ↓', 'mtime-asc': '时间 ↑' }[sortKey] ?? '名称 ↑';
+  return (
+    <div className="dpl-vault2-tbrow" data-testid="vault-tree-toolbar">
+      <div className="dpl-vault2-tbdots"><span /><span /><span /><span /><span /></div>
+      <div className="dpl-vault2-tbactions" data-testid="vault-tree-toolbar-actions">
+        <button type="button" title="新建笔记" onClick={onNewNote} data-testid="vault-tb-new-note"><Plus size={13} /></button>
+        <button type="button" title="新建文件夹" onClick={onNewFolder} data-testid="vault-tb-new-folder"><FolderPlus size={13} /></button>
+        <button type="button" title="帮助" onClick={() => setHelp(!help)} data-testid="vault-tb-help"><HelpCircle size={13} /></button>
+        <button type="button" title="过滤" className={filterOpen ? 'is-on' : ''} onClick={onToggleFilter} data-testid="vault-tb-filter"><Filter size={13} /></button>
+        <div className="dpl-relative">
+          <button type="button" title={`排序：${sortLabel}`} onClick={() => setSortMenu(!sortMenu)} data-testid="vault-tb-sort"><ArrowUpDown size={13} /></button>
+          {sortMenu ? (
+            <PopMenu onClose={() => setSortMenu(null)}>
+              {['name-asc', 'name-desc', 'mtime-desc', 'mtime-asc'].map((mode) => (
+                <button key={mode} type="button" className="dpl-vault2-ctxitem" onClick={() => { onSort(mode); setSortMenu(null); }}>
+                  {sortLabel && mode === sortKey ? <Check size={12} /> : null}
+                  { { 'name-asc': '名称 ↑', 'name-desc': '名称 ↓', 'mtime-desc': '时间 ↓', 'mtime-asc': '时间 ↑' }[mode] }
+                </button>
+              ))}
+            </PopMenu>
+          ) : null}
+        </div>
+        <button type="button" title="自动定位打开的笔记" className={autoReveal ? 'is-on' : ''} onClick={onToggleAutoReveal} data-testid="vault-tb-autoreveal"><LocateFixed size={13} /></button>
+        <button type="button" title="全部折叠" onClick={onCollapseAll} data-testid="vault-tb-collapse-all"><ChevronsDownUp size={13} /></button>
+      </div>
+      {help ? (
+        <PopMenu onClose={() => setHelp(false)} wide>
+          <div className="dpl-vault2-helplist">
+            <span>⌘P 快速切换 · ⌘⇧F 全库搜索 · ⌘⇧P 命令面板 · ⌘E 切换视图 · 右键文件/文件夹有完整操作</span>
+          </div>
+        </PopMenu>
+      ) : null}
+    </div>
+  );
 }
 
-/** Global slice keeping the most-connected nodes. */
-export function capByDegree(graph, limit = 300) {
-  const degree = new Map();
-  for (const edge of graph.edges) {
-    degree.set(edge.source, (degree.get(edge.source) ?? 0) + 1);
-    degree.set(edge.target, (degree.get(edge.target) ?? 0) + 1);
-  }
-  const ranked = graph.nodes.filter((node) => !node.dangling).sort((a, b) => (degree.get(b.id) ?? 0) - (degree.get(a.id) ?? 0));
-  const keep = new Set(ranked.slice(0, limit).map((node) => node.id));
-  return sliceGraph(graph, keep, limit);
-}
-
-function sliceGraph(graph, keep, limit) {
-  const nodes = graph.nodes.filter((node) => keep.has(node.id)).slice(0, limit);
-  const kept = new Set(nodes.map((node) => node.id));
-  const edges = graph.edges.filter((edge) => kept.has(edge.source) && kept.has(edge.target));
-  return { nodes, edges };
-}
-
-/** Highlight the «…» snippet markers from the FTS backend (escaped first). */
-function highlightSnippet(snippet) {
-  const escaped = String(snippet)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  return escaped.replace(/«([^»]*)»/g, '<mark>$1</mark>');
-}
-
-function escapeHtml(text) {
-  return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-/** h2–h6 outline from markdown source (vault parses deeper than feed/inbox). */
-function markdownHeadings(content) {
-  const out = [];
-  let inFence = false;
-  for (const line of String(content ?? '').split('\n')) {
-    if (/^\s*(```+|~~~+)/.test(line)) { inFence = !inFence; continue; }
-    if (inFence) continue;
-    const match = line.match(/^#{2,6}\s+(.+?)\s*#*$/);
-    if (match) out.push({ level: match[0].match(/^#+/)[0].length, text: match[1].trim() });
-  }
-  return out;
+/** Small popover menu anchored to its wrapper (top-full right-0). */
+function PopMenu({ onClose, children, wide }) {
+  useEffect(() => {
+    const close = () => onClose();
+    window.addEventListener('mousedown', close);
+    const onKey = (event) => { if (event.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('mousedown', close);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [onClose]);
+  return (
+    <div className={'dpl-vault2-popmenu' + (wide ? ' is-wide' : '')} onMouseDown={(event) => event.stopPropagation()}>
+      {children}
+    </div>
+  );
 }
 
 /** Lazy tree: directories load on expand; state stays in the parent. */
-function TreePane({ api, expanded, setExpanded, activePath, sortKey, onOpen, onRename, onDuplicate, onTrash, onNewNote, onNewDir }) {
-  const [roots, setRoots] = useState(null); // entries at one level, keyed by dir
+function TreePane({ api, expanded, setExpanded, activePath, sortKey, onOpen, onContextMenu }) {
+  const [roots, setRoots] = useState(null);
   const load = useCallback(async (dir) => {
     const { entries } = await api.vaultList(dir);
     setRoots((current) => ({ ...current, [dir]: entries }));
@@ -925,89 +1181,96 @@ function TreePane({ api, expanded, setExpanded, activePath, sortKey, onOpen, onR
     if (!expanded.has(dir)) void load(dir);
   };
 
+  const sortEntries = (entries) => {
+    const dirs = entries.filter((entry) => entry.kind === 'dir').sort((a, b) => a.name.localeCompare(b.name, 'zh-Hans-CN'));
+    const files = entries.filter((entry) => entry.kind === 'file');
+    const sorted = [...files].sort((a, b) => {
+      switch (sortKey) {
+        case 'name-desc': return b.name.localeCompare(a.name, 'zh-Hans-CN');
+        case 'mtime-desc': return (b.mtime ?? 0) - (a.mtime ?? 0) || a.name.localeCompare(b.name);
+        case 'mtime-asc': return (a.mtime ?? 0) - (b.mtime ?? 0) || a.name.localeCompare(b.name);
+        default: return a.name.localeCompare(b.name, 'zh-Hans-CN');
+      }
+    });
+    return [...dirs, ...sorted];
+  };
+
   if (!roots || !roots['']) {
     return <div className="dpl-vault2-empty"><Loader2 size={14} className="dpl-spin" /> 加载中…</div>;
   }
 
-  const renderEntries = (entries, dir) => {
-    const dirs = entries.filter((entry) => entry.kind === 'dir');
-    const files = entries.filter((entry) => entry.kind === 'file');
-    const sort = (list, key) => (key === 'mtime'
-      ? [...list].sort((a, b) => (b.mtime ?? 0) - (a.mtime ?? 0))
-      : [...list].sort((a, b) => a.name.localeCompare(b.name, 'zh-Hans-CN')));
-    return (
-      <>
-        {sort(dirs, sortKey).map((entry) => (
+  const renderEntries = (entries) => (
+    <>
+      {sortEntries(entries).map((entry) => (
+        entry.kind === 'dir' ? (
           <div key={entry.path}>
-            <div className={'dpl-vault2-row' + (expanded.has(entry.path) ? ' is-open' : '')}>
+            <div
+              className={'dpl-vault2-row' + (expanded.has(entry.path) ? ' is-open' : '')}
+              onContextMenu={(event) => onContextMenu(event, 'folder', entry.path, entry.name)}
+            >
               <button type="button" className="dpl-vault2-dir" onClick={() => toggle(entry.path)}>
                 <span className="dpl-vault2-chevron">{expanded.has(entry.path) ? <ChevronDown size={12} /> : <ChevronRight size={12} />}</span>
                 {expanded.has(entry.path) ? <FolderOpen size={13} /> : <Folder size={13} />}
                 <span className="dpl-truncate">{entry.name}</span>
               </button>
-              <div className="dpl-vault2-rowactions">
-                <button type="button" title="新建笔记" onClick={(event) => { event.stopPropagation(); onNewNote(entry.path); }}><Plus size={12} /></button>
-                <button type="button" title="重命名" onClick={(event) => { event.stopPropagation(); onRename(entry.path); }}><Pencil size={11} /></button>
-                <button type="button" title="删除" onClick={(event) => { event.stopPropagation(); onTrash(entry.path, entry.name); }}><Trash2 size={11} /></button>
-              </div>
             </div>
             {expanded.has(entry.path) ? (
               <div className="dpl-vault2-children">
                 {roots[entry.path]
-                  ? renderEntries(roots[entry.path], entry.path)
+                  ? renderEntries(roots[entry.path])
                   : <div className="dpl-vault2-loading"><Loader2 size={11} className="dpl-spin" /></div>}
               </div>
             ) : null}
           </div>
-        ))}
-        {sort(files, sortKey).map((entry) => (
-          <div key={entry.path} className={'dpl-vault2-row' + (activePath === entry.path ? ' is-active' : '')}>
+        ) : (
+          <div
+            key={entry.path}
+            className={'dpl-vault2-row' + (activePath === entry.path ? ' is-active' : '')}
+            onContextMenu={(event) => onContextMenu(event, 'file', entry.path, entry.name)}
+          >
             <button type="button" className="dpl-vault2-file" onClick={() => onOpen(entry.path)}>
               <FileText size={13} />
               <span className="dpl-truncate">{entry.name.replace(/\.md$/i, '')}</span>
-              {sortKey === 'mtime' && entry.mtime ? <span className="dpl-vault2-filemtime">{formatWhen(entry.mtime)}</span> : null}
             </button>
-            <div className="dpl-vault2-rowactions">
-              <button type="button" title="重命名" onClick={(event) => { event.stopPropagation(); onRename(entry.path); }}><Pencil size={11} /></button>
-              <button type="button" title="创建副本" onClick={(event) => { event.stopPropagation(); onDuplicate(entry.path); }}><Copy size={11} /></button>
-              <button type="button" title="移入回收站" onClick={(event) => { event.stopPropagation(); onTrash(entry.path, entry.name); }}><Trash2 size={11} /></button>
-            </div>
           </div>
-        ))}
-      </>
-    );
-  };
+        )
+      ))}
+    </>
+  );
 
   return (
     <div className="dpl-vault2-treeroot">
-      <div className="dpl-vault2-sortrow">
-        <span className="dpl-ib-pansub">排序</span>
-        <button type="button" className={'dpl-vault2-sortbtn' + (sortKey === 'name' ? ' is-active' : '')} onClick={() => {}}>名称</button>
-        <button type="button" className={'dpl-vault2-sortbtn' + (sortKey === 'mtime' ? ' is-active' : '')} onClick={() => {}}>时间</button>
-      </div>
-      {renderEntries(roots[''], '')}
-      <div className="dpl-vault2-treefoot">
-        <button type="button" className="dpl-vault2-footbtn" onClick={() => onNewNote('')}><Plus size={12} /> 根笔记</button>
-        <button type="button" className="dpl-vault2-footbtn" onClick={() => onNewDir('')}><FolderPlus size={12} /> 根文件夹</button>
-      </div>
+      {renderEntries(roots[''])}
     </div>
   );
 }
 
-/** One tab: CM6 live/source editing + read view, outline anchored per view. */
-const NoteReadPane = forwardRef(function NoteReadPane({ tab, onDraft, onSave, onDiscard, onWikilink, onMaterial, onOutlineChange, onEditorScroll, resolveImage, noteFiles, readerRef }, forwardedRef) {
-  // view: read | live | source (droplets VaultEditorMode 口径；默认 read)
+const MODE_ITEMS = [
+  { id: 'source', label: '源码模式', Icon: SquareCode },
+  { id: 'live', label: '实时预览', Icon: Eye },
+  { id: 'read', label: '阅读视图', Icon: BookOpen },
+];
+
+/** One tab: breadcrumb bar (mode dropdown + … menu) + CM6/read + AuxRail hooks. */
+const NoteReadPane = forwardRef(function NoteReadPane({
+  tab, onDraft, onSave, onDiscard, onWikilink, onMaterial, onOutlineChange, onEditorScroll,
+  resolveImage, noteFiles, readerRef, backlinksOpen, onToggleBacklinks, onExport,
+}, forwardedRef) {
   const [view, setView] = useState('read');
   const [lineNumbers, setLineNumbers] = useState(true);
   const [wrap, setWrap] = useState(true);
+  const [toolbarVisible, setToolbarVisible] = useState(true);
+  const [modeMenu, setModeMenu] = useState(false);
+  const [moreMenu, setMoreMenu] = useState(false);
   const hostRef = useRef(null);
-  const editorRef = useRef(null); // { view, setDoc, setMode, ... }
+  const editorRef = useRef(null);
   const outlineRef = useRef([]);
 
   const dirty = tab.dirty !== null && tab.dirty !== undefined;
   const text = dirty ? tab.draft : tab.content;
+  const segments = tab.path.split('/');
+  const ModeIcon = view === 'source' ? SquareCode : view === 'live' ? Eye : BookOpen;
 
-  // Mount/unmount CM6 when entering an editing view.
   useEffect(() => {
     if (view === 'read' || !hostRef.current) {
       if (editorRef.current) { editorRef.current.destroy(); editorRef.current = null; }
@@ -1023,7 +1286,6 @@ const NoteReadPane = forwardRef(function NoteReadPane({ tab, onDraft, onSave, on
       noteFiles,
       onWikilink,
       onChange: (next) => {
-        // Outline updates first (cheap), then the debounced save upstream.
         outlineRef.current = outlineOf(editorRef.current?.view.state ?? editor.view.state);
         onOutlineChange(outlineRef.current);
         onEditorScroll();
@@ -1041,7 +1303,6 @@ const NoteReadPane = forwardRef(function NoteReadPane({ tab, onDraft, onSave, on
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view]);
 
-  // External doc replacement (reload / conflict re-read) while editing.
   useEffect(() => {
     if (editorRef.current && !dirty && editorRef.current.view.state.doc.toString() !== text) {
       editorRef.current.setDoc(text);
@@ -1051,19 +1312,11 @@ const NoteReadPane = forwardRef(function NoteReadPane({ tab, onDraft, onSave, on
 
   const setMode = (next) => {
     if (next === view) return;
-    if (next !== 'read' && dirty) {
-      // Carry the dirty buffer into the new editor instance.
-      setView(next);
-      // The mount effect reads `text` which already includes the dirty draft.
-      requestAnimationFrame(() => {
-        if (editorRef.current) editorRef.current.setDoc(text);
-      });
-      return;
-    }
+    setModeMenu(false);
     setView(next);
   };
 
-  // ⌘E cycles read → live → source → read (plan §4.1).
+  // ⌘E cycles read → live → source → read.
   useEffect(() => {
     const onKey = (event) => {
       if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'e') {
@@ -1075,7 +1328,6 @@ const NoteReadPane = forwardRef(function NoteReadPane({ tab, onDraft, onSave, on
     return () => window.removeEventListener('keydown', onKey);
   }, [view]);
 
-  /** AuxRail jump: read → DOM scroll; editing → CM6 document position. */
   const jumpTo = (index) => {
     if (view === 'read') {
       const heading = markdownHeadings(text)[index];
@@ -1095,38 +1347,140 @@ const NoteReadPane = forwardRef(function NoteReadPane({ tab, onDraft, onSave, on
 
   useImperativeHandle(forwardedRef, () => ({ jumpToHeading: jumpTo }), [jumpTo]);
 
+  const fmt = (Icon, title, run, extraClass = '') => (
+    <button
+      key={title} type="button" title={title}
+      className={'dpl-vault2-fmtbtn ' + extraClass}
+      onMouseDown={(event) => event.preventDefault()}
+      onClick={() => { if (editorRef.current) run(editorRef.current.view); }}
+    >
+      <Icon size={14} />
+    </button>
+  );
+
   return (
     <div className="dpl-vault2-note" data-view={view}>
-      <div className="dpl-vault2-notehead">
-        <h1>{tab.title}</h1>
-        <div className="dpl-vault2-noteactions">
-          <div className="dpl-vault2-viewswitch">
-            {(['read', 'live', 'source']).map((mode) => (
-              <button
-                key={mode} type="button"
-                className={view === mode ? 'is-active' : ''}
-                onClick={() => setMode(mode)}
-                title={mode === 'read' ? '阅读' : mode === 'live' ? '实时预览 (⌘E)' : '源码 (⌘E)'}
-              >
-                {mode === 'read' ? '阅读' : mode === 'live' ? '实时' : '源码'}
-              </button>
-            ))}
-          </div>
-          {view !== 'read' ? (
-            <>
-              <button type="button" className={'dpl-btn dpl-sm' + (lineNumbers ? ' is-on' : '')} onClick={() => { setLineNumbers(!lineNumbers); editorRef.current?.setLineNumbers(!lineNumbers); }}>行号</button>
-              <button type="button" className={'dpl-btn dpl-sm' + (wrap ? ' is-on' : '')} onClick={() => { setWrap(!wrap); editorRef.current?.setWrap(!wrap); }}>换行</button>
-            </>
-          ) : null}
+      <div className="dpl-vault2-crumbbar">
+        <div className="dpl-vault2-crumb">
+          {segments.map((segment, index) => (
+            <span key={index} className={index === segments.length - 1 ? 'is-last' : ''}>
+              {index > 0 ? <span className="dpl-vault2-crumbsep">/</span> : null}
+              {segment.replace(/\.md$/i, '')}
+            </span>
+          ))}
+        </div>
+        <div className="dpl-vault2-crumbright">
           {dirty ? (
             <>
               <button type="button" className="dpl-btn dpl-sm dpl-primary-solid" onClick={onSave}>保存</button>
-              <button type="button" className="dpl-btn dpl-sm" onClick={onDiscard}>放弃修改</button>
+              <button type="button" className="dpl-btn dpl-sm" onClick={onDiscard}>放弃</button>
             </>
           ) : null}
+          <div className="dpl-relative">
+            <button
+              type="button" className="dpl-vault2-crumbbtn" title="切换视图 (⌘E)"
+              onClick={() => { setModeMenu(!modeMenu); setMoreMenu(false); }}
+              data-testid="vault-mode"
+            >
+              <ModeIcon size={14} /> <ChevronDown size={12} />
+            </button>
+            {modeMenu ? (
+              <PopMenu onClose={() => setModeMenu(false)}>
+                {MODE_ITEMS.map(({ id, label, Icon }) => (
+                  <button key={id} type="button" className="dpl-vault2-ctxitem" onClick={() => setMode(id)} data-testid={`vault-mode-${id}`}>
+                    <Icon size={13} /> {label} {view === id ? <Check size={12} /> : null}
+                  </button>
+                ))}
+              </PopMenu>
+            ) : null}
+          </div>
+          <div className="dpl-relative">
+            <button
+              type="button" className="dpl-vault2-crumbbtn" title="更多"
+              onClick={() => { setMoreMenu(!moreMenu); setModeMenu(false); }}
+              data-testid="vault-more"
+            >
+              <MoreIcon />
+            </button>
+            {moreMenu ? (
+              <PopMenu onClose={() => setMoreMenu(false)}>
+                <button type="button" className="dpl-vault2-ctxitem" onClick={() => { setMoreMenu(false); onToggleBacklinks(); }} data-testid="backlinks-toggle">
+                  反向链接 {backlinksOpen ? <Check size={12} /> : null}
+                </button>
+                {view !== 'read' ? (
+                  <button type="button" className="dpl-vault2-ctxitem" onClick={() => { setMoreMenu(false); if (editorRef.current) openSearchPanel(editorRef.current.view); }} data-testid="vault-more-find">
+                    查找 / 替换
+                  </button>
+                ) : null}
+                <div className="dpl-vault2-ctxdivider" />
+                <button type="button" className="dpl-vault2-ctxitem" onClick={() => { setMoreMenu(false); onExport('pdf'); }} data-testid="vault-more-export-pdf">导出为 PDF…</button>
+                <button type="button" className="dpl-vault2-ctxitem" onClick={() => { setMoreMenu(false); onExport('html'); }} data-testid="vault-more-export-html">导出为 HTML…</button>
+                <div className="dpl-vault2-ctxdivider" />
+                <button type="button" className="dpl-vault2-ctxitem" onClick={() => setToolbarVisible(!toolbarVisible)} data-testid="vault-more-toolbar">
+                  格式工具栏 {toolbarVisible ? <Check size={12} /> : null}
+                </button>
+                {view !== 'read' ? (
+                  <>
+                    <button type="button" className="dpl-vault2-ctxitem" onClick={() => { setLineNumbers(!lineNumbers); editorRef.current?.setLineNumbers(!lineNumbers); }} data-testid="vault-more-line-numbers">
+                      行号 {lineNumbers ? <Check size={12} /> : null}
+                    </button>
+                    <button type="button" className="dpl-vault2-ctxitem" onClick={() => { setWrap(!wrap); editorRef.current?.setWrap(!wrap); }} data-testid="vault-more-wrap">
+                      自动换行 {wrap ? <Check size={12} /> : null}
+                    </button>
+                  </>
+                ) : null}
+              </PopMenu>
+            ) : null}
+          </div>
         </div>
       </div>
-      <div className="dpl-vault2-notemeta">{tab.path}{tab.tags.length > 0 ? ' · ' + tab.tags.map((tag) => '#' + tag).join(' ') : ''}{view === 'live' ? ' · 实时预览' : view === 'source' ? ' · 源码' : ''}</div>
+
+      {view !== 'read' && toolbarVisible ? (
+        <div className="dpl-vault2-fmtbar" data-testid="vault-format-toolbar">
+          {fmt(({ size }) => <span style={{ fontWeight: 700, fontSize: size - 1 }}>H</span>, '标题', cycleHeading)}
+          {fmt(({ size }) => <span style={{ fontWeight: 700 }}>B</span>, '粗体', (view2) => wrapRange(view2, '**'))}
+          {fmt(({ size }) => <span style={{ fontStyle: 'italic' }}>I</span>, '斜体', (view2) => wrapRange(view2, '*'))}
+          {fmt(({ size }) => <span style={{ textDecoration: 'line-through' }}>S</span>, '删除线', (view2) => wrapRange(view2, '~~'))}
+          {fmt(Link2, '链接', (view2) => {
+            const sel = view2.state.sliceDoc(view2.state.selection.main.from, view2.state.selection.main.to) || '文本';
+            insertAtCursor(view2, `[${sel}](url)`, (view2.state.selection.main.from) + sel.length + 3);
+          })}
+          {fmt(List, '无序列表', (view2) => toggleLinePrefixes(view2, '- '))}
+          {fmt(ListOrdered, '有序列表', (view2) => toggleLinePrefixes(view2, '1. '))}
+          {fmt(CheckSquare, '任务列表', (view2) => toggleLinePrefixes(view2, '- [ ] '))}
+          {fmt(Quote, '引用', (view2) => toggleLinePrefixes(view2, '> '))}
+          {fmt(Minus, '分隔线', (view2) => insertAtCursor(view2, '\n---\n'))}
+          {fmt(Code2, '代码', codeTransform)}
+          {fmt(Table, '表格', insertTable)}
+          {fmt(Undo2, '撤销', (view2) => view2.undo?.())}
+          {fmt(Redo2, '重做', (view2) => view2.redo?.())}
+          {fmt(ImagePlus, '图片', (view2) => insertAtCursor(view2, '![描述](attachments/图片.png)', 3))}
+          <div className="dpl-vault2-fmtmore">
+            <button type="button" className="dpl-vault2-fmtbtn" title="更多格式" onMouseDown={(event) => event.preventDefault()} onClick={(event) => event.currentTarget.nextElementSibling?.classList.toggle('is-open')}>
+              <MoreGlyph />
+            </button>
+            <div className="dpl-vault2-fmtmoremenu">
+              {[
+                { label: '高亮', run: (v) => wrapRange(v, '==') },
+                { label: '双链', run: (v) => wrapRange(v, '[[', ']]') },
+                { label: '嵌入', run: (v) => wrapRange(v, '![[' , ']]') },
+                { label: 'Callout', run: (v) => toggleLinePrefixes(v, '> [!NOTE] ') },
+                { label: '脚注', run: (v) => insertAtCursor(v, '[^1]', 1) },
+                { label: '注释', run: (v) => wrapRange(v, '%%') },
+              ].map((item) => (
+                <button
+                  key={item.label} type="button" className="dpl-vault2-ctxitem"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={(event) => { if (editorRef.current) item.run(editorRef.current.view); event.currentTarget.parentElement.classList.remove('is-open'); }}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {view === 'read' ? (
         <div ref={readerRef} className="dpl-vault2-readerscroll">
           <MarkdownView className="dpl-note-body dpl-vault2-body" markdown={text} onWikilink={onWikilink} />
@@ -1141,9 +1495,25 @@ const NoteReadPane = forwardRef(function NoteReadPane({ tab, onDraft, onSave, on
   );
 });
 
+function MoreIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <circle cx="5" cy="12" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="19" cy="12" r="1.6" />
+    </svg>
+  );
+}
+
+function MoreGlyph() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M4 7h16M4 12h16M4 17h16" />
+    </svg>
+  );
+}
+
 function GraphPane({ graph, layout, onOpen, onClose }) {
-  const width = 900;
-  const height = 620;
+  const width = 640;
+  const height = 760;
   const [hover, setHover] = useState(null);
   return (
     <div className="dpl-graph">

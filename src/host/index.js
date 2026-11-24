@@ -18,7 +18,8 @@ import { defineTool } from '@deepseek-ai/dsh-tools';
 import { DropletsStore, defaultVaultPath, entriesDir, storageDir } from './store.js';
 import { WorkspaceStore } from './workspace-store.js';
 import { WorkspaceInbox, stripUndefined } from './workspace-inbox.js';
-import { Vault, ensureDefaultVault } from './vault.js';
+import { Vault, ensureDefaultVault, safeResolve } from './vault.js';
+import { safeResolveDir as safeResolveDirShared } from './vault.js';
 import { createVaultIndex } from './vault-index.js';
 import { buildAskPrompt, buildReadingContext, storeContext } from './context.js';
 import { createToolDefinitions } from './tools.js';
@@ -1034,7 +1035,60 @@ export class DropletsService extends TypertRemoteService {
   async vaultRename(request) {
     await this.ready;
     const from = typeof request === 'string' ? request : request?.from;
+    // Folders ride the same RPC: no .md suffix → dir rename/move.
+    if (typeof from === 'string' && !from.toLowerCase().endsWith('.md')) {
+      return stripUndefined(await this.vaultService().renameDir(from, request?.to));
+    }
     return stripUndefined(await this.vaultService().renameNote(from, request?.to, { updateLinks: request?.updateLinks !== false }));
+  }
+
+  async vaultCopyTo(request) {
+    await this.ready;
+    return stripUndefined(await this.vaultService().copyTo(request?.from, request?.toDir ?? ''));
+  }
+
+  async vaultCopyDirTo(request) {
+    await this.ready;
+    return stripUndefined(await this.vaultService().copyDir(request?.from, request?.toDir ?? ''));
+  }
+
+  /** 树右键「在 Finder 中显示」（reveal & select）。 */
+  async vaultReveal(request) {
+    await this.ready;
+    const rel = typeof request === 'string' ? request : request?.path;
+    const vault = this.vaultService();
+    const target = rel.toLowerCase().endsWith('.md')
+      ? await safeResolve(vault.root, rel)
+      : await safeResolveDirShared(vault.root, rel);
+    const { execFile } = await import('node:child_process');
+    const cmd = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'explorer' : 'xdg-open';
+    const args = process.platform === 'darwin'
+      ? ['-R', target]
+      : process.platform === 'win32'
+        ? ['/select,', target]
+        : [target];
+    await new Promise((resolve, reject) => execFile(cmd, args, (error) => (error ? reject(error) : resolve())));
+    return { revealed: true };
+  }
+
+  /** 复制绝对/相对路径到系统剪贴板（pbcopy / clip / xclip|wl-copy）。 */
+  async vaultCopyPath(request) {
+    await this.ready;
+    const rel = typeof request === 'string' ? request : request?.path;
+    const vault = this.vaultService();
+    const absolute = join(vault.root, rel);
+    const text = request?.relative ? rel : absolute;
+    const { execFile } = await import('node:child_process');
+    const candidates = process.platform === 'darwin'
+      ? ['pbcopy']
+      : process.platform === 'win32'
+        ? ['clip']
+        : ['xclip', '-selection', 'clipboard'];
+    await new Promise((resolve, reject) => {
+      const child = execFile(candidates[0], candidates.slice(1), (error) => (error ? reject(error) : resolve()));
+      child.stdin?.end(text, 'utf8');
+    });
+    return { copied: text };
   }
 
   async vaultDuplicate(request) {
@@ -1465,7 +1519,7 @@ export class DropletsService extends TypertRemoteService {
     'inboxMoveToLibrary', 'inboxMoveToTrash', 'inboxMarkDone',
     // vault
     'vaultStatus', 'vaultReindex', 'vaultTree', 'vaultRead', 'vaultSearch', 'vaultGraph', 'vaultBacklinks', 'vaultWrite',
-    'vaultList', 'vaultIndexFiles', 'vaultCreate', 'vaultCreateDir', 'vaultRename', 'vaultDuplicate', 'vaultDelete', 'vaultTags', 'vaultTrashList', 'vaultTrashRestore',
+    'vaultList', 'vaultIndexFiles', 'vaultCreate', 'vaultCreateDir', 'vaultRename', 'vaultDuplicate', 'vaultDelete', 'vaultTags', 'vaultTrashList', 'vaultTrashRestore', 'vaultCopyTo', 'vaultCopyDirTo', 'vaultReveal', 'vaultCopyPath',
     // settings / companion
     'getSettings', 'saveSettings', 'getStorageInfo', 'getWorkspace', 'setWorkspace', 'openPath', 'clearData', 'setReadingContext', 'prepareChat',
   ];

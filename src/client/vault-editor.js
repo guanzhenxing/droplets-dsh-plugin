@@ -16,7 +16,7 @@
 import { EditorView, keymap, lineNumbers, drawSelection, ViewPlugin, Decoration, WidgetType } from '@codemirror/view';
 import { EditorState, Compartment, EditorSelection, RangeSetBuilder } from '@codemirror/state';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
-import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
+import { searchKeymap, highlightSelectionMatches, openSearchPanel } from '@codemirror/search';
 import { defaultHighlightStyle, syntaxHighlighting, bracketMatching } from '@codemirror/language';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { autocompletion, completeFromList } from '@codemirror/autocomplete';
@@ -373,4 +373,77 @@ export function createVaultEditor(parent, { doc = '', onChange, mode = 'live', l
   };
 }
 
-export { EditorView };
+export { EditorView, openSearchPanel };
+
+// ---------------------------------------------------------------------------
+// Format toolbar transforms (native Vditor toolbar parity, plan P1)
+// ---------------------------------------------------------------------------
+
+/** Wrap (or unwrap) the selection with before/after markers. */
+export function wrapRange(view, before, after = before) {
+  const { state } = view;
+  const { from, to } = state.selection.main;
+  const text = state.sliceDoc(from, to);
+  const wrapped = text.startsWith(before) && text.endsWith(after) && text.length >= before.length + after.length;
+  const inner = wrapped ? text.slice(before.length, text.length - after.length) : text;
+  const insert = wrapped ? inner : before + inner + after;
+  view.dispatch({
+    changes: { from, to, insert },
+    selection: { anchor: from + (wrapped ? 0 : before.length), head: from + (wrapped ? inner.length : before.length + inner.length) },
+  });
+}
+
+/** Toggle a line prefix across the selected lines (list/quote/task). */
+export function toggleLinePrefixes(view, prefix) {
+  const { state } = view;
+  const first = state.doc.lineAt(state.selection.main.from);
+  const last = state.doc.lineAt(state.selection.main.to);
+  const lines = [];
+  for (let n = first.number; n <= last.number; n += 1) lines.push(state.doc.line(n));
+  const allHave = lines.every((line) => line.text.trimStart().startsWith(prefix));
+  const changes = lines.map((line) => {
+    const at = line.text.search(/\S|$/);
+    if (allHave) {
+      const rest = line.text.slice(at).startsWith(prefix) ? line.text.slice(at + prefix.length) : line.text.slice(at);
+      return { from: line.from + at, to: line.to, insert: rest };
+    }
+    return { from: line.from + at, to: line.to, insert: prefix + line.text.slice(at) };
+  });
+  view.dispatch({ changes });
+}
+
+/** Cycle the current line's heading level: none → # → ## → … → ###### → none. */
+export function cycleHeading(view) {
+  const { state } = view;
+  const line = state.doc.lineAt(state.selection.main.from);
+  const match = /^(#{1,6})\s/.exec(line.text);
+  const level = match ? match[1].length : 0;
+  const stripped = match ? line.text.slice(match[0].length) : line.text;
+  const insert = level >= 6 ? stripped : `${'#'.repeat(level + 1)} ${stripped}`;
+  view.dispatch({ changes: { from: line.from, to: line.to, insert } });
+}
+
+/** Insert text at the selection (cursor lands at `cursorOffset` inside it). */
+export function insertAtCursor(view, text, cursorOffset = text.length) {
+  const { from, to } = view.state.selection.main;
+  view.dispatch({ changes: { from, to, insert: text }, selection: { anchor: from + cursorOffset } });
+  view.focus();
+}
+
+/** Insert a 3×3 markdown table template. */
+export function insertTable(view) {
+  insertAtCursor(view, '\n| 列一 | 列二 | 列三 |\n| --- | --- | --- |\n|  |  |  |\n');
+}
+
+/** Wrap inline code, or fence the selection when it spans multiple lines. */
+export function codeTransform(view) {
+  const { state } = view;
+  const { from, to } = state.selection.main;
+  if (state.doc.lineAt(from).number !== state.doc.lineAt(to).number) {
+    const text = state.sliceDoc(from, to);
+    const fence = '```';
+    view.dispatch({ changes: { from, to, insert: `\n${fence}\n${text}\n${fence}\n` } });
+    return;
+  }
+  wrapRange(view, '`');
+}

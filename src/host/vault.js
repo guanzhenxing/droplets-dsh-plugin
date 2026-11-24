@@ -616,18 +616,84 @@ export class Vault {
   /** 「x 副本」递增命名复制。 */
   async duplicate(rel) {
     const fromRel = normalizeVaultPath(rel);
+    const result = await this.copyTo(fromRel, path.dirname(fromRel) === '.' ? '' : path.dirname(fromRel));
+    return { path: result.path };
+  }
+
+  /** 复制一篇笔记到目标目录（重名自动「 副本 N」）。 */
+  async copyTo(from, toDir) {
+    const fromRel = normalizeVaultPath(from);
     const text = await this.readRaw(fromRel);
-    const dir = path.dirname(fromRel);
-    const stem = path.basename(fromRel, '.md');
-    let candidate = dir === '.' ? `${stem} 副本.md` : `${dir}/${stem} 副本.md`;
+    const name = path.basename(fromRel);
+    const dirRel = normalizeVaultDir(toDir);
+    const stem = name.replace(/\.md$/i, '');
+    const exists = (rel) => stat(path.join(this.root, rel)).then(() => true).catch(() => false);
+    let candidate = dirRel === '' ? `${stem}.md` : `${dirRel}/${stem}.md`;
+    if (candidate === fromRel) candidate = (dirRel === '' ? '' : dirRel + '/') + `${stem} 副本.md`;
     let counter = 2;
-    while (await stat(path.join(this.root, candidate)).then(() => true).catch(() => false)) {
-      candidate = (dir === '.' ? '' : dir + '/') + `${stem} 副本 ${counter}.md`;
+    while (await exists(candidate)) {
+      candidate = (dirRel === '' ? '' : dirRel + '/') + `${stem} 副本 ${counter}.md`;
       counter += 1;
     }
     const result = await this.write(candidate, text, { expectedSha: null, createOnly: true });
     if (result.conflict) throw new VaultError('exists', `笔记已存在：${candidate}`);
     return { path: result.path };
+  }
+
+  /** 复制整个文件夹到目标目录下（保留内部相对结构，重名自动「 N」）。 */
+  async copyDir(from, toDir) {
+    const fromRel = normalizeVaultDir(from);
+    if (fromRel === '') throw new VaultError('invalid_path', '不能复制 vault 根目录');
+    const rels = await walkVault(this.root);
+    const inside = rels.filter((rel) => rel.startsWith(fromRel + '/'));
+    if (inside.length === 0) throw new VaultError('not_found', `文件夹不存在或为空：${fromRel}`);
+    const name = path.basename(fromRel);
+    const base = normalizeVaultDir(toDir) === '' ? name : `${normalizeVaultDir(toDir)}/${name}`;
+    const exists = (rel) => stat(path.join(this.root, rel)).then(() => true).catch(() => false);
+    let target = base;
+    let counter = 2;
+    while (await exists(target)) {
+      target = `${base} ${counter}`;
+      counter += 1;
+    }
+    for (const rel of inside) {
+      const text = await this.readRaw(rel);
+      const dest = target + rel.slice(fromRel.length);
+      const result = await this.write(dest, text, { expectedSha: null, createOnly: true });
+      if (result.conflict) throw new VaultError('exists', `已存在：${dest}`);
+    }
+    this._genBump();
+    return { path: target };
+  }
+
+  /** 文件夹重命名/移动（不改写链接；缓存键前缀平移）。 */
+  async renameDir(from, to) {
+    const fromRel = normalizeVaultDir(from);
+    const toRel = normalizeVaultDir(to);
+    if (fromRel === '' || toRel === '') throw new VaultError('invalid_path', '目录名不能为空');
+    if (fromRel === toRel) return { path: toRel };
+    const fromAbs = await safeResolveDir(this.root, fromRel);
+    const toParent = await safeResolveDir(this.root, normalizeVaultDir(path.dirname(toRel)));
+    const toAbs = path.join(toParent, path.basename(toRel));
+    await stat(toAbs).then(() => { throw new VaultError('exists', `目标已存在：${toRel}`); }).catch((error) => {
+      if (error instanceof VaultError) throw error;
+      if (error?.code !== 'ENOENT') throw error;
+    });
+    await mkdir(path.dirname(toAbs), { recursive: true });
+    await rename(fromAbs, toAbs);
+    const cache = this.cache();
+    if (cache) {
+      const prefix = `${fromRel}/`;
+      for (const key of Object.keys(cache.files)) {
+        if (key.startsWith(prefix)) {
+          cache.files[`${toRel}/${key.slice(prefix.length)}`] = cache.files[key];
+          delete cache.files[key];
+        }
+      }
+      this.cacheHolder.touch();
+    }
+    this._genBump();
+    return { path: toRel };
   }
 
   /**
@@ -742,7 +808,7 @@ function normalizeVaultDir(input) {
 }
 
 /** Resolve a dir path with the same symlink/escape guards as files. */
-async function safeResolveDir(root, rel) {
+export async function safeResolveDir(root, rel) {
   if (rel === '') return path.resolve(root);
   const segments = rel.split('/');
   const realRoot = await realpath(path.resolve(root)).catch(() => path.resolve(root));

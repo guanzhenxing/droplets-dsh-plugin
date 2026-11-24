@@ -140301,18 +140301,83 @@ created: ${created}
   /** 「x 副本」递增命名复制。 */
   async duplicate(rel) {
     const fromRel = normalizeVaultPath(rel);
+    const result = await this.copyTo(fromRel, path2.dirname(fromRel) === "." ? "" : path2.dirname(fromRel));
+    return { path: result.path };
+  }
+  /** 复制一篇笔记到目标目录（重名自动「 副本 N」）。 */
+  async copyTo(from, toDir) {
+    const fromRel = normalizeVaultPath(from);
     const text2 = await this.readRaw(fromRel);
-    const dir = path2.dirname(fromRel);
-    const stem = path2.basename(fromRel, ".md");
-    let candidate = dir === "." ? `${stem} \u526F\u672C.md` : `${dir}/${stem} \u526F\u672C.md`;
+    const name2 = path2.basename(fromRel);
+    const dirRel = normalizeVaultDir(toDir);
+    const stem = name2.replace(/\.md$/i, "");
+    const exists = (rel) => stat5(path2.join(this.root, rel)).then(() => true).catch(() => false);
+    let candidate = dirRel === "" ? `${stem}.md` : `${dirRel}/${stem}.md`;
+    if (candidate === fromRel) candidate = (dirRel === "" ? "" : dirRel + "/") + `${stem} \u526F\u672C.md`;
     let counter = 2;
-    while (await stat5(path2.join(this.root, candidate)).then(() => true).catch(() => false)) {
-      candidate = (dir === "." ? "" : dir + "/") + `${stem} \u526F\u672C ${counter}.md`;
+    while (await exists(candidate)) {
+      candidate = (dirRel === "" ? "" : dirRel + "/") + `${stem} \u526F\u672C ${counter}.md`;
       counter += 1;
     }
     const result = await this.write(candidate, text2, { expectedSha: null, createOnly: true });
     if (result.conflict) throw new VaultError("exists", `\u7B14\u8BB0\u5DF2\u5B58\u5728\uFF1A${candidate}`);
     return { path: result.path };
+  }
+  /** 复制整个文件夹到目标目录下（保留内部相对结构，重名自动「 N」）。 */
+  async copyDir(from, toDir) {
+    const fromRel = normalizeVaultDir(from);
+    if (fromRel === "") throw new VaultError("invalid_path", "\u4E0D\u80FD\u590D\u5236 vault \u6839\u76EE\u5F55");
+    const rels = await walkVault(this.root);
+    const inside = rels.filter((rel) => rel.startsWith(fromRel + "/"));
+    if (inside.length === 0) throw new VaultError("not_found", `\u6587\u4EF6\u5939\u4E0D\u5B58\u5728\u6216\u4E3A\u7A7A\uFF1A${fromRel}`);
+    const name2 = path2.basename(fromRel);
+    const base = normalizeVaultDir(toDir) === "" ? name2 : `${normalizeVaultDir(toDir)}/${name2}`;
+    const exists = (rel) => stat5(path2.join(this.root, rel)).then(() => true).catch(() => false);
+    let target = base;
+    let counter = 2;
+    while (await exists(target)) {
+      target = `${base} ${counter}`;
+      counter += 1;
+    }
+    for (const rel of inside) {
+      const text2 = await this.readRaw(rel);
+      const dest = target + rel.slice(fromRel.length);
+      const result = await this.write(dest, text2, { expectedSha: null, createOnly: true });
+      if (result.conflict) throw new VaultError("exists", `\u5DF2\u5B58\u5728\uFF1A${dest}`);
+    }
+    this._genBump();
+    return { path: target };
+  }
+  /** 文件夹重命名/移动（不改写链接；缓存键前缀平移）。 */
+  async renameDir(from, to) {
+    const fromRel = normalizeVaultDir(from);
+    const toRel = normalizeVaultDir(to);
+    if (fromRel === "" || toRel === "") throw new VaultError("invalid_path", "\u76EE\u5F55\u540D\u4E0D\u80FD\u4E3A\u7A7A");
+    if (fromRel === toRel) return { path: toRel };
+    const fromAbs = await safeResolveDir(this.root, fromRel);
+    const toParent = await safeResolveDir(this.root, normalizeVaultDir(path2.dirname(toRel)));
+    const toAbs = path2.join(toParent, path2.basename(toRel));
+    await stat5(toAbs).then(() => {
+      throw new VaultError("exists", `\u76EE\u6807\u5DF2\u5B58\u5728\uFF1A${toRel}`);
+    }).catch((error) => {
+      if (error instanceof VaultError) throw error;
+      if (error?.code !== "ENOENT") throw error;
+    });
+    await mkdir6(path2.dirname(toAbs), { recursive: true });
+    await rename5(fromAbs, toAbs);
+    const cache = this.cache();
+    if (cache) {
+      const prefix = `${fromRel}/`;
+      for (const key of Object.keys(cache.files)) {
+        if (key.startsWith(prefix)) {
+          cache.files[`${toRel}/${key.slice(prefix.length)}`] = cache.files[key];
+          delete cache.files[key];
+        }
+      }
+      this.cacheHolder.touch();
+    }
+    this._genBump();
+    return { path: toRel };
   }
   /**
    * Move one note (or a whole folder) into .trash behind a staging commit —
@@ -141632,7 +141697,45 @@ var DropletsService = class extends TypertRemoteService {
   async vaultRename(request) {
     await this.ready;
     const from = typeof request === "string" ? request : request?.from;
+    if (typeof from === "string" && !from.toLowerCase().endsWith(".md")) {
+      return stripUndefined(await this.vaultService().renameDir(from, request?.to));
+    }
     return stripUndefined(await this.vaultService().renameNote(from, request?.to, { updateLinks: request?.updateLinks !== false }));
+  }
+  async vaultCopyTo(request) {
+    await this.ready;
+    return stripUndefined(await this.vaultService().copyTo(request?.from, request?.toDir ?? ""));
+  }
+  async vaultCopyDirTo(request) {
+    await this.ready;
+    return stripUndefined(await this.vaultService().copyDir(request?.from, request?.toDir ?? ""));
+  }
+  /** 树右键「在 Finder 中显示」（reveal & select）。 */
+  async vaultReveal(request) {
+    await this.ready;
+    const rel = typeof request === "string" ? request : request?.path;
+    const vault = this.vaultService();
+    const target = rel.toLowerCase().endsWith(".md") ? await safeResolve(vault.root, rel) : await safeResolveDir(vault.root, rel);
+    const { execFile } = await import("node:child_process");
+    const cmd = process.platform === "darwin" ? "open" : process.platform === "win32" ? "explorer" : "xdg-open";
+    const args = process.platform === "darwin" ? ["-R", target] : process.platform === "win32" ? ["/select,", target] : [target];
+    await new Promise((resolve2, reject) => execFile(cmd, args, (error) => error ? reject(error) : resolve2()));
+    return { revealed: true };
+  }
+  /** 复制绝对/相对路径到系统剪贴板（pbcopy / clip / xclip|wl-copy）。 */
+  async vaultCopyPath(request) {
+    await this.ready;
+    const rel = typeof request === "string" ? request : request?.path;
+    const vault = this.vaultService();
+    const absolute = join4(vault.root, rel);
+    const text2 = request?.relative ? rel : absolute;
+    const { execFile } = await import("node:child_process");
+    const candidates = process.platform === "darwin" ? ["pbcopy"] : process.platform === "win32" ? ["clip"] : ["xclip", "-selection", "clipboard"];
+    await new Promise((resolve2, reject) => {
+      const child = execFile(candidates[0], candidates.slice(1), (error) => error ? reject(error) : resolve2());
+      child.stdin?.end(text2, "utf8");
+    });
+    return { copied: text2 };
   }
   async vaultDuplicate(request) {
     await this.ready;
@@ -142083,6 +142186,10 @@ var DropletsService = class extends TypertRemoteService {
     "vaultTags",
     "vaultTrashList",
     "vaultTrashRestore",
+    "vaultCopyTo",
+    "vaultCopyDirTo",
+    "vaultReveal",
+    "vaultCopyPath",
     // settings / companion
     "getSettings",
     "saveSettings",

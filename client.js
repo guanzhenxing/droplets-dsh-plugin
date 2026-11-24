@@ -2912,8 +2912,22 @@ var __iconData3 = {
 __iconData3.node;
 var ArrowLeft = createLucideIcon(__iconData3);
 
-// node_modules/lucide-react/dist/esm/icons/arrow-up-narrow-wide.mjs
+// node_modules/lucide-react/dist/esm/icons/arrow-up-down.mjs
 var __iconData4 = {
+  name: "arrow-up-down",
+  size: 24,
+  node: [
+    ["path", { d: "m21 16-4 4-4-4", key: "f6ql7i" }],
+    ["path", { d: "M17 20V4", key: "1ejh1v" }],
+    ["path", { d: "m3 8 4-4 4 4", key: "11wl7u" }],
+    ["path", { d: "M7 4v16", key: "1glfcx" }]
+  ]
+};
+__iconData4.node;
+var ArrowUpDown = createLucideIcon(__iconData4);
+
+// node_modules/lucide-react/dist/esm/icons/arrow-up-narrow-wide.mjs
+var __iconData5 = {
   name: "arrow-up-narrow-wide",
   size: 24,
   node: [
@@ -2925,11 +2939,11 @@ var __iconData4 = {
   ],
   aliases: ["sort-asc"]
 };
-__iconData4.node;
-var ArrowUpNarrowWide = createLucideIcon(__iconData4);
+__iconData5.node;
+var ArrowUpNarrowWide = createLucideIcon(__iconData5);
 
 // node_modules/lucide-react/dist/esm/icons/arrow-up.mjs
-var __iconData5 = {
+var __iconData6 = {
   name: "arrow-up",
   size: 24,
   node: [
@@ -2937,11 +2951,29 @@ var __iconData5 = {
     ["path", { d: "M12 19V5", key: "x0mq9r" }]
   ]
 };
-__iconData5.node;
-var ArrowUp = createLucideIcon(__iconData5);
+__iconData6.node;
+var ArrowUp = createLucideIcon(__iconData6);
+
+// node_modules/lucide-react/dist/esm/icons/book-open.mjs
+var __iconData7 = {
+  name: "book-open",
+  size: 24,
+  node: [
+    ["path", { d: "M12 5v16", key: "1f6ucr" }],
+    [
+      "path",
+      {
+        d: "M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z",
+        key: "1fyvmf"
+      }
+    ]
+  ]
+};
+__iconData7.node;
+var BookOpen = createLucideIcon(__iconData7);
 
 // node_modules/lucide-react/dist/esm/icons/check-check.mjs
-var __iconData6 = {
+var __iconData8 = {
   name: "check-check",
   size: 24,
   node: [
@@ -2949,47 +2981,47 @@ var __iconData6 = {
     ["path", { d: "m22 10-7.5 7.5L13 16", key: "ke71qq" }]
   ]
 };
-__iconData6.node;
-var CheckCheck = createLucideIcon(__iconData6);
+__iconData8.node;
+var CheckCheck = createLucideIcon(__iconData8);
 
 // node_modules/lucide-react/dist/esm/icons/check.mjs
-var __iconData7 = {
+var __iconData9 = {
   name: "check",
   size: 24,
   node: [["path", { d: "M20 6 9 17l-5-5", key: "1gmf2c" }]]
 };
-__iconData7.node;
-var Check = createLucideIcon(__iconData7);
+__iconData9.node;
+var Check = createLucideIcon(__iconData9);
 
 // node_modules/lucide-react/dist/esm/icons/chevron-down.mjs
-var __iconData8 = {
+var __iconData10 = {
   name: "chevron-down",
   size: 24,
   node: [["path", { d: "m6 9 6 6 6-6", key: "qrunsl" }]]
 };
-__iconData8.node;
-var ChevronDown = createLucideIcon(__iconData8);
+__iconData10.node;
+var ChevronDown = createLucideIcon(__iconData10);
 
 // node_modules/lucide-react/dist/esm/icons/chevron-left.mjs
-var __iconData9 = {
+var __iconData11 = {
   name: "chevron-left",
   size: 24,
   node: [["path", { d: "m15 18-6-6 6-6", key: "1wnfg3" }]]
 };
-__iconData9.node;
-var ChevronLeft = createLucideIcon(__iconData9);
+__iconData11.node;
+var ChevronLeft = createLucideIcon(__iconData11);
 
 // node_modules/lucide-react/dist/esm/icons/chevron-right.mjs
-var __iconData10 = {
+var __iconData12 = {
   name: "chevron-right",
   size: 24,
   node: [["path", { d: "m9 18 6-6-6-6", key: "mthhwq" }]]
 };
-__iconData10.node;
-var ChevronRight = createLucideIcon(__iconData10);
+__iconData12.node;
+var ChevronRight = createLucideIcon(__iconData12);
 
 // node_modules/lucide-react/dist/esm/icons/chevrons-down-up.mjs
-var __iconData11 = {
+var __iconData13 = {
   name: "chevrons-down-up",
   size: 24,
   node: [
@@ -2997,11 +3029,11 @@ var __iconData11 = {
     ["path", { d: "m7 4 5 5 5-5", key: "1kwcof" }]
   ]
 };
-__iconData11.node;
-var ChevronsDownUp = createLucideIcon(__iconData11);
+__iconData13.node;
+var ChevronsDownUp = createLucideIcon(__iconData13);
 
 // node_modules/lucide-react/dist/esm/icons/circle-check.mjs
-var __iconData12 = {
+var __iconData14 = {
   name: "circle-check",
   size: 24,
   node: [
@@ -3010,32 +3042,34 @@ var __iconData12 = {
   ],
   aliases: ["check-circle-2"]
 };
-__iconData12.node;
-var CircleCheck = createLucideIcon(__iconData12);
+__iconData14.node;
+var CircleCheck = createLucideIcon(__iconData14);
 
-// node_modules/lucide-react/dist/esm/icons/circle-dot.mjs
-var __iconData13 = {
-  name: "circle-dot",
+// node_modules/lucide-react/dist/esm/icons/circle-question-mark.mjs
+var __iconData15 = {
+  name: "circle-question-mark",
   size: 24,
   node: [
-    ["circle", { cx: "12", cy: "12", r: "1", key: "41hilf" }],
-    ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }]
-  ]
+    ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
+    ["path", { d: "M9 9.5a3 2.5 0 016 0c0 2-2 2-3 3.5", key: "1awbb0" }],
+    ["path", { d: "M12 17h.01", key: "p32p05" }]
+  ],
+  aliases: ["help-circle", "circle-help"]
 };
-__iconData13.node;
-var CircleDot = createLucideIcon(__iconData13);
+__iconData15.node;
+var CircleQuestionMark = createLucideIcon(__iconData15);
 
 // node_modules/lucide-react/dist/esm/icons/circle.mjs
-var __iconData14 = {
+var __iconData16 = {
   name: "circle",
   size: 24,
   node: [["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }]]
 };
-__iconData14.node;
-var Circle = createLucideIcon(__iconData14);
+__iconData16.node;
+var Circle = createLucideIcon(__iconData16);
 
 // node_modules/lucide-react/dist/esm/icons/clipboard-paste.mjs
-var __iconData15 = {
+var __iconData17 = {
   name: "clipboard-paste",
   size: 24,
   node: [
@@ -3049,23 +3083,25 @@ var __iconData15 = {
     ["rect", { x: "8", y: "2", width: "8", height: "4", rx: "1", key: "ublpy" }]
   ]
 };
-__iconData15.node;
-var ClipboardPaste = createLucideIcon(__iconData15);
+__iconData17.node;
+var ClipboardPaste = createLucideIcon(__iconData17);
 
-// node_modules/lucide-react/dist/esm/icons/copy.mjs
-var __iconData16 = {
-  name: "copy",
+// node_modules/lucide-react/dist/esm/icons/code-xml.mjs
+var __iconData18 = {
+  name: "code-xml",
   size: 24,
   node: [
-    ["rect", { width: "14", height: "14", x: "8", y: "8", rx: "2", ry: "2", key: "17jyea" }],
-    ["path", { d: "M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2", key: "zix9uf" }]
-  ]
+    ["path", { d: "m18 16 4-4-4-4", key: "1inbqp" }],
+    ["path", { d: "m6 8-4 4 4 4", key: "15zrgr" }],
+    ["path", { d: "m14.5 4-5 16", key: "e7oirm" }]
+  ],
+  aliases: ["code-2"]
 };
-__iconData16.node;
-var Copy = createLucideIcon(__iconData16);
+__iconData18.node;
+var CodeXml = createLucideIcon(__iconData18);
 
 // node_modules/lucide-react/dist/esm/icons/external-link.mjs
-var __iconData17 = {
+var __iconData19 = {
   name: "external-link",
   size: 24,
   node: [
@@ -3074,11 +3110,29 @@ var __iconData17 = {
     ["path", { d: "M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6", key: "a6xqqp" }]
   ]
 };
-__iconData17.node;
-var ExternalLink = createLucideIcon(__iconData17);
+__iconData19.node;
+var ExternalLink = createLucideIcon(__iconData19);
+
+// node_modules/lucide-react/dist/esm/icons/eye.mjs
+var __iconData20 = {
+  name: "eye",
+  size: 24,
+  node: [
+    [
+      "path",
+      {
+        d: "M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0",
+        key: "1nclc0"
+      }
+    ],
+    ["circle", { cx: "12", cy: "12", r: "3", key: "1v7zrd" }]
+  ]
+};
+__iconData20.node;
+var Eye = createLucideIcon(__iconData20);
 
 // node_modules/lucide-react/dist/esm/icons/file-plus-corner.mjs
-var __iconData18 = {
+var __iconData21 = {
   name: "file-plus-corner",
   size: 24,
   node: [
@@ -3095,11 +3149,11 @@ var __iconData18 = {
   ],
   aliases: ["file-plus-2"]
 };
-__iconData18.node;
-var FilePlusCorner = createLucideIcon(__iconData18);
+__iconData21.node;
+var FilePlusCorner = createLucideIcon(__iconData21);
 
 // node_modules/lucide-react/dist/esm/icons/file-text.mjs
-var __iconData19 = {
+var __iconData22 = {
   name: "file-text",
   size: 24,
   node: [
@@ -3116,11 +3170,11 @@ var __iconData19 = {
     ["path", { d: "M16 17H8", key: "z1uh3a" }]
   ]
 };
-__iconData19.node;
-var FileText = createLucideIcon(__iconData19);
+__iconData22.node;
+var FileText = createLucideIcon(__iconData22);
 
 // node_modules/lucide-react/dist/esm/icons/file-up.mjs
-var __iconData20 = {
+var __iconData23 = {
   name: "file-up",
   size: 24,
   node: [
@@ -3136,11 +3190,11 @@ var __iconData20 = {
     ["path", { d: "m15 15-3-3-3 3", key: "15xj92" }]
   ]
 };
-__iconData20.node;
-var FileUp = createLucideIcon(__iconData20);
+__iconData23.node;
+var FileUp = createLucideIcon(__iconData23);
 
 // node_modules/lucide-react/dist/esm/icons/folder-open.mjs
-var __iconData21 = {
+var __iconData24 = {
   name: "folder-open",
   size: 24,
   node: [
@@ -3153,11 +3207,11 @@ var __iconData21 = {
     ]
   ]
 };
-__iconData21.node;
-var FolderOpen = createLucideIcon(__iconData21);
+__iconData24.node;
+var FolderOpen = createLucideIcon(__iconData24);
 
 // node_modules/lucide-react/dist/esm/icons/folder-plus.mjs
-var __iconData22 = {
+var __iconData25 = {
   name: "folder-plus",
   size: 24,
   node: [
@@ -3172,11 +3226,11 @@ var __iconData22 = {
     ]
   ]
 };
-__iconData22.node;
-var FolderPlus = createLucideIcon(__iconData22);
+__iconData25.node;
+var FolderPlus = createLucideIcon(__iconData25);
 
 // node_modules/lucide-react/dist/esm/icons/folder.mjs
-var __iconData23 = {
+var __iconData26 = {
   name: "folder",
   size: 24,
   node: [
@@ -3189,11 +3243,44 @@ var __iconData23 = {
     ]
   ]
 };
-__iconData23.node;
-var Folder = createLucideIcon(__iconData23);
+__iconData26.node;
+var Folder = createLucideIcon(__iconData26);
+
+// node_modules/lucide-react/dist/esm/icons/funnel.mjs
+var __iconData27 = {
+  name: "funnel",
+  size: 24,
+  node: [
+    [
+      "path",
+      {
+        d: "M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z",
+        key: "sc7q7i"
+      }
+    ]
+  ],
+  aliases: ["filter"]
+};
+__iconData27.node;
+var Funnel = createLucideIcon(__iconData27);
+
+// node_modules/lucide-react/dist/esm/icons/image-plus.mjs
+var __iconData28 = {
+  name: "image-plus",
+  size: 24,
+  node: [
+    ["path", { d: "M16 5h6", key: "1vod17" }],
+    ["path", { d: "M19 2v6", key: "4bpg5p" }],
+    ["path", { d: "M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5", key: "1ue2ih" }],
+    ["path", { d: "m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21", key: "1xmnt7" }],
+    ["circle", { cx: "9", cy: "9", r: "2", key: "af1f0g" }]
+  ]
+};
+__iconData28.node;
+var ImagePlus = createLucideIcon(__iconData28);
 
 // node_modules/lucide-react/dist/esm/icons/inbox.mjs
-var __iconData24 = {
+var __iconData29 = {
   name: "inbox",
   size: 24,
   node: [
@@ -3207,11 +3294,11 @@ var __iconData24 = {
     ]
   ]
 };
-__iconData24.node;
-var Inbox = createLucideIcon(__iconData24);
+__iconData29.node;
+var Inbox = createLucideIcon(__iconData29);
 
 // node_modules/lucide-react/dist/esm/icons/link-2.mjs
-var __iconData25 = {
+var __iconData30 = {
   name: "link-2",
   size: 24,
   node: [
@@ -3220,11 +3307,11 @@ var __iconData25 = {
     ["line", { x1: "8", x2: "16", y1: "12", y2: "12", key: "1jonct" }]
   ]
 };
-__iconData25.node;
-var Link2 = createLucideIcon(__iconData25);
+__iconData30.node;
+var Link2 = createLucideIcon(__iconData30);
 
 // node_modules/lucide-react/dist/esm/icons/link.mjs
-var __iconData26 = {
+var __iconData31 = {
   name: "link",
   size: 24,
   node: [
@@ -3232,11 +3319,27 @@ var __iconData26 = {
     ["path", { d: "M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71", key: "19qd67" }]
   ]
 };
-__iconData26.node;
-var Link = createLucideIcon(__iconData26);
+__iconData31.node;
+var Link = createLucideIcon(__iconData31);
+
+// node_modules/lucide-react/dist/esm/icons/list-ordered.mjs
+var __iconData32 = {
+  name: "list-ordered",
+  size: 24,
+  node: [
+    ["path", { d: "M11 5h10", key: "1cz7ny" }],
+    ["path", { d: "M11 12h10", key: "1438ji" }],
+    ["path", { d: "M11 19h10", key: "11t30w" }],
+    ["path", { d: "M4 4h1v5", key: "10yrso" }],
+    ["path", { d: "M4 9h2", key: "r1h2o0" }],
+    ["path", { d: "M6.5 20H3.4c0-1 2.6-1.925 2.6-3.5a1.5 1.5 0 0 0-2.6-1.02", key: "xtkcd5" }]
+  ]
+};
+__iconData32.node;
+var ListOrdered = createLucideIcon(__iconData32);
 
 // node_modules/lucide-react/dist/esm/icons/list-tree.mjs
-var __iconData27 = {
+var __iconData33 = {
   name: "list-tree",
   size: 24,
   node: [
@@ -3247,21 +3350,77 @@ var __iconData27 = {
     ["path", { d: "M3 5v12a2 2 0 0 0 2 2h3", key: "x1gjn2" }]
   ]
 };
-__iconData27.node;
-var ListTree = createLucideIcon(__iconData27);
+__iconData33.node;
+var ListTree = createLucideIcon(__iconData33);
+
+// node_modules/lucide-react/dist/esm/icons/list.mjs
+var __iconData34 = {
+  name: "list",
+  size: 24,
+  node: [
+    ["path", { d: "M3 5h.01", key: "18ugdj" }],
+    ["path", { d: "M3 12h.01", key: "nlz23k" }],
+    ["path", { d: "M3 19h.01", key: "noohij" }],
+    ["path", { d: "M8 5h13", key: "1pao27" }],
+    ["path", { d: "M8 12h13", key: "1za7za" }],
+    ["path", { d: "M8 19h13", key: "m83p4d" }]
+  ]
+};
+__iconData34.node;
+var List = createLucideIcon(__iconData34);
 
 // node_modules/lucide-react/dist/esm/icons/loader-circle.mjs
-var __iconData28 = {
+var __iconData35 = {
   name: "loader-circle",
   size: 24,
   node: [["path", { d: "M21 12a9 9 0 1 1-6.219-8.56", key: "13zald" }]],
   aliases: ["loader-2"]
 };
-__iconData28.node;
-var LoaderCircle = createLucideIcon(__iconData28);
+__iconData35.node;
+var LoaderCircle = createLucideIcon(__iconData35);
+
+// node_modules/lucide-react/dist/esm/icons/locate-fixed.mjs
+var __iconData36 = {
+  name: "locate-fixed",
+  size: 24,
+  node: [
+    ["line", { x1: "2", x2: "5", y1: "12", y2: "12", key: "bvdh0s" }],
+    ["line", { x1: "19", x2: "22", y1: "12", y2: "12", key: "1tbv5k" }],
+    ["line", { x1: "12", x2: "12", y1: "2", y2: "5", key: "11lu5j" }],
+    ["line", { x1: "12", x2: "12", y1: "19", y2: "22", key: "x3vr5v" }],
+    ["circle", { cx: "12", cy: "12", r: "7", key: "fim9np" }],
+    ["circle", { cx: "12", cy: "12", r: "3", key: "1v7zrd" }]
+  ]
+};
+__iconData36.node;
+var LocateFixed = createLucideIcon(__iconData36);
+
+// node_modules/lucide-react/dist/esm/icons/minus.mjs
+var __iconData37 = {
+  name: "minus",
+  size: 24,
+  node: [["path", { d: "M5 12h14", key: "1ays0h" }]]
+};
+__iconData37.node;
+var Minus = createLucideIcon(__iconData37);
+
+// node_modules/lucide-react/dist/esm/icons/network.mjs
+var __iconData38 = {
+  name: "network",
+  size: 24,
+  node: [
+    ["rect", { x: "16", y: "16", width: "6", height: "6", rx: "1", key: "4q2zg0" }],
+    ["rect", { x: "2", y: "16", width: "6", height: "6", rx: "1", key: "8cvhb9" }],
+    ["rect", { x: "9", y: "2", width: "6", height: "6", rx: "1", key: "1egb70" }],
+    ["path", { d: "M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3", key: "1jsf9p" }],
+    ["path", { d: "M12 12V8", key: "2874zd" }]
+  ]
+};
+__iconData38.node;
+var Network = createLucideIcon(__iconData38);
 
 // node_modules/lucide-react/dist/esm/icons/pencil.mjs
-var __iconData29 = {
+var __iconData39 = {
   name: "pencil",
   size: 24,
   node: [
@@ -3275,11 +3434,11 @@ var __iconData29 = {
     ["path", { d: "m15 5 4 4", key: "1mk7zo" }]
   ]
 };
-__iconData29.node;
-var Pencil = createLucideIcon(__iconData29);
+__iconData39.node;
+var Pencil = createLucideIcon(__iconData39);
 
 // node_modules/lucide-react/dist/esm/icons/pin-off.mjs
-var __iconData30 = {
+var __iconData40 = {
   name: "pin-off",
   size: 24,
   node: [
@@ -3295,11 +3454,11 @@ var __iconData30 = {
     ]
   ]
 };
-__iconData30.node;
-var PinOff = createLucideIcon(__iconData30);
+__iconData40.node;
+var PinOff = createLucideIcon(__iconData40);
 
 // node_modules/lucide-react/dist/esm/icons/pin.mjs
-var __iconData31 = {
+var __iconData41 = {
   name: "pin",
   size: 24,
   node: [
@@ -3313,11 +3472,11 @@ var __iconData31 = {
     ]
   ]
 };
-__iconData31.node;
-var Pin = createLucideIcon(__iconData31);
+__iconData41.node;
+var Pin = createLucideIcon(__iconData41);
 
 // node_modules/lucide-react/dist/esm/icons/play.mjs
-var __iconData32 = {
+var __iconData42 = {
   name: "play",
   size: 24,
   node: [
@@ -3330,11 +3489,11 @@ var __iconData32 = {
     ]
   ]
 };
-__iconData32.node;
-var Play = createLucideIcon(__iconData32);
+__iconData42.node;
+var Play = createLucideIcon(__iconData42);
 
 // node_modules/lucide-react/dist/esm/icons/plus.mjs
-var __iconData33 = {
+var __iconData43 = {
   name: "plus",
   size: 24,
   node: [
@@ -3342,11 +3501,47 @@ var __iconData33 = {
     ["path", { d: "M12 5v14", key: "s699le" }]
   ]
 };
-__iconData33.node;
-var Plus = createLucideIcon(__iconData33);
+__iconData43.node;
+var Plus = createLucideIcon(__iconData43);
+
+// node_modules/lucide-react/dist/esm/icons/quote.mjs
+var __iconData44 = {
+  name: "quote",
+  size: 24,
+  node: [
+    [
+      "path",
+      {
+        d: "M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z",
+        key: "rib7q0"
+      }
+    ],
+    [
+      "path",
+      {
+        d: "M5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z",
+        key: "1ymkrd"
+      }
+    ]
+  ]
+};
+__iconData44.node;
+var Quote = createLucideIcon(__iconData44);
+
+// node_modules/lucide-react/dist/esm/icons/redo-2.mjs
+var __iconData45 = {
+  name: "redo-2",
+  size: 24,
+  node: [
+    ["path", { d: "m15 14 5-5-5-5", key: "12vg1m" }],
+    ["path", { d: "M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13", key: "6uklza" }]
+  ]
+};
+__iconData45.node;
+var Redo2 = createLucideIcon(__iconData45);
 
 // node_modules/lucide-react/dist/esm/icons/refresh-cw.mjs
-var __iconData34 = {
+var __iconData46 = {
   name: "refresh-cw",
   size: 24,
   node: [
@@ -3356,11 +3551,11 @@ var __iconData34 = {
     ["path", { d: "M8 16H3v5", key: "1cv678" }]
   ]
 };
-__iconData34.node;
-var RefreshCw = createLucideIcon(__iconData34);
+__iconData46.node;
+var RefreshCw = createLucideIcon(__iconData46);
 
 // node_modules/lucide-react/dist/esm/icons/scan-search.mjs
-var __iconData35 = {
+var __iconData47 = {
   name: "scan-search",
   size: 24,
   node: [
@@ -3372,11 +3567,11 @@ var __iconData35 = {
     ["path", { d: "m16 16-1.9-1.9", key: "1dq9hf" }]
   ]
 };
-__iconData35.node;
-var ScanSearch = createLucideIcon(__iconData35);
+__iconData47.node;
+var ScanSearch = createLucideIcon(__iconData47);
 
 // node_modules/lucide-react/dist/esm/icons/search.mjs
-var __iconData36 = {
+var __iconData48 = {
   name: "search",
   size: 24,
   node: [
@@ -3384,11 +3579,11 @@ var __iconData36 = {
     ["circle", { cx: "11", cy: "11", r: "8", key: "4ej97u" }]
   ]
 };
-__iconData36.node;
-var Search = createLucideIcon(__iconData36);
+__iconData48.node;
+var Search = createLucideIcon(__iconData48);
 
 // node_modules/lucide-react/dist/esm/icons/settings.mjs
-var __iconData37 = {
+var __iconData49 = {
   name: "settings",
   size: 24,
   node: [
@@ -3402,11 +3597,11 @@ var __iconData37 = {
     ["circle", { cx: "12", cy: "12", r: "3", key: "1v7zrd" }]
   ]
 };
-__iconData37.node;
-var Settings = createLucideIcon(__iconData37);
+__iconData49.node;
+var Settings = createLucideIcon(__iconData49);
 
 // node_modules/lucide-react/dist/esm/icons/sparkles.mjs
-var __iconData38 = {
+var __iconData50 = {
   name: "sparkles",
   size: 24,
   node: [
@@ -3423,11 +3618,55 @@ var __iconData38 = {
   ],
   aliases: ["stars"]
 };
-__iconData38.node;
-var Sparkles = createLucideIcon(__iconData38);
+__iconData50.node;
+var Sparkles = createLucideIcon(__iconData50);
+
+// node_modules/lucide-react/dist/esm/icons/square-check-big.mjs
+var __iconData51 = {
+  name: "square-check-big",
+  size: 24,
+  node: [
+    [
+      "path",
+      { d: "M21 10.656V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12.344", key: "2acyp4" }
+    ],
+    ["path", { d: "m9 11 3 3L22 4", key: "1pflzl" }]
+  ],
+  aliases: ["check-square"]
+};
+__iconData51.node;
+var SquareCheckBig = createLucideIcon(__iconData51);
+
+// node_modules/lucide-react/dist/esm/icons/square-code.mjs
+var __iconData52 = {
+  name: "square-code",
+  size: 24,
+  node: [
+    ["path", { d: "m10 9-3 3 3 3", key: "1oro0q" }],
+    ["path", { d: "m14 15 3-3-3-3", key: "bz13h7" }],
+    ["rect", { x: "3", y: "3", width: "18", height: "18", rx: "2", key: "h1oib" }]
+  ],
+  aliases: ["code-square"]
+};
+__iconData52.node;
+var SquareCode = createLucideIcon(__iconData52);
+
+// node_modules/lucide-react/dist/esm/icons/table.mjs
+var __iconData53 = {
+  name: "table",
+  size: 24,
+  node: [
+    ["path", { d: "M12 3v18", key: "108xh3" }],
+    ["rect", { width: "18", height: "18", x: "3", y: "3", rx: "2", key: "afitv7" }],
+    ["path", { d: "M3 9h18", key: "1pudct" }],
+    ["path", { d: "M3 15h18", key: "5xshup" }]
+  ]
+};
+__iconData53.node;
+var Table = createLucideIcon(__iconData53);
 
 // node_modules/lucide-react/dist/esm/icons/tags.mjs
-var __iconData39 = {
+var __iconData54 = {
   name: "tags",
   size: 24,
   node: [
@@ -3445,11 +3684,11 @@ var __iconData39 = {
     ["circle", { cx: "10.5", cy: "6.5", r: ".5", fill: "currentColor", key: "12ikhr" }]
   ]
 };
-__iconData39.node;
-var Tags = createLucideIcon(__iconData39);
+__iconData54.node;
+var Tags = createLucideIcon(__iconData54);
 
 // node_modules/lucide-react/dist/esm/icons/trash.mjs
-var __iconData40 = {
+var __iconData55 = {
   name: "trash",
   size: 24,
   node: [
@@ -3461,11 +3700,11 @@ var __iconData40 = {
   ],
   aliases: ["trash-2"]
 };
-__iconData40.node;
-var Trash = createLucideIcon(__iconData40);
+__iconData55.node;
+var Trash = createLucideIcon(__iconData55);
 
 // node_modules/lucide-react/dist/esm/icons/triangle-exclamation-point.mjs
-var __iconData41 = {
+var __iconData56 = {
   name: "triangle-exclamation-point",
   size: 24,
   node: [
@@ -3481,11 +3720,23 @@ var __iconData41 = {
   ],
   aliases: ["alert-triangle", "triangle-alert"]
 };
-__iconData41.node;
-var TriangleExclamationPoint = createLucideIcon(__iconData41);
+__iconData56.node;
+var TriangleExclamationPoint = createLucideIcon(__iconData56);
+
+// node_modules/lucide-react/dist/esm/icons/undo-2.mjs
+var __iconData57 = {
+  name: "undo-2",
+  size: 24,
+  node: [
+    ["path", { d: "M9 14 4 9l5-5", key: "102s5s" }],
+    ["path", { d: "M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11", key: "f3b9sd" }]
+  ]
+};
+__iconData57.node;
+var Undo2 = createLucideIcon(__iconData57);
 
 // node_modules/lucide-react/dist/esm/icons/x.mjs
-var __iconData42 = {
+var __iconData58 = {
   name: "x",
   size: 24,
   node: [
@@ -3493,8 +3744,8 @@ var __iconData42 = {
     ["path", { d: "m6 6 12 12", key: "d8bk6v" }]
   ]
 };
-__iconData42.node;
-var X = createLucideIcon(__iconData42);
+__iconData58.node;
+var X = createLucideIcon(__iconData58);
 
 // src/client/feed/PanelGroup.jsx
 var import_react5 = require("react");
@@ -131697,7 +131948,7 @@ var TableParser = class {
     return true;
   }
 };
-var Table = {
+var Table2 = {
   defineNodes: [
     { name: "Table", block: true },
     { name: "TableHeader", style: { "TableHeader/...": tags.heading } },
@@ -131816,7 +132067,7 @@ var Autolink = {
     }
   }]
 };
-var GFM = [Table, TaskList, Strikethrough, Autolink];
+var GFM = [Table2, TaskList, Strikethrough, Autolink];
 function parseSubSuper(ch2, node, mark) {
   return (cx, next, pos) => {
     if (next != ch2 || cx.char(pos + 1) == ch2)
@@ -137016,12 +137267,72 @@ function createVaultEditor(parent, { doc: doc2 = "", onChange, mode = "live", li
     }
   };
 }
+function wrapRange(view, before, after = before) {
+  const { state } = view;
+  const { from, to } = state.selection.main;
+  const text2 = state.sliceDoc(from, to);
+  const wrapped = text2.startsWith(before) && text2.endsWith(after) && text2.length >= before.length + after.length;
+  const inner = wrapped ? text2.slice(before.length, text2.length - after.length) : text2;
+  const insert2 = wrapped ? inner : before + inner + after;
+  view.dispatch({
+    changes: { from, to, insert: insert2 },
+    selection: { anchor: from + (wrapped ? 0 : before.length), head: from + (wrapped ? inner.length : before.length + inner.length) }
+  });
+}
+function toggleLinePrefixes(view, prefix) {
+  const { state } = view;
+  const first = state.doc.lineAt(state.selection.main.from);
+  const last2 = state.doc.lineAt(state.selection.main.to);
+  const lines = [];
+  for (let n = first.number; n <= last2.number; n += 1) lines.push(state.doc.line(n));
+  const allHave = lines.every((line) => line.text.trimStart().startsWith(prefix));
+  const changes = lines.map((line) => {
+    const at = line.text.search(/\S|$/);
+    if (allHave) {
+      const rest = line.text.slice(at).startsWith(prefix) ? line.text.slice(at + prefix.length) : line.text.slice(at);
+      return { from: line.from + at, to: line.to, insert: rest };
+    }
+    return { from: line.from + at, to: line.to, insert: prefix + line.text.slice(at) };
+  });
+  view.dispatch({ changes });
+}
+function cycleHeading(view) {
+  const { state } = view;
+  const line = state.doc.lineAt(state.selection.main.from);
+  const match = /^(#{1,6})\s/.exec(line.text);
+  const level = match ? match[1].length : 0;
+  const stripped = match ? line.text.slice(match[0].length) : line.text;
+  const insert2 = level >= 6 ? stripped : `${"#".repeat(level + 1)} ${stripped}`;
+  view.dispatch({ changes: { from: line.from, to: line.to, insert: insert2 } });
+}
+function insertAtCursor(view, text2, cursorOffset = text2.length) {
+  const { from, to } = view.state.selection.main;
+  view.dispatch({ changes: { from, to, insert: text2 }, selection: { anchor: from + cursorOffset } });
+  view.focus();
+}
+function insertTable(view) {
+  insertAtCursor(view, "\n| \u5217\u4E00 | \u5217\u4E8C | \u5217\u4E09 |\n| --- | --- | --- |\n|  |  |  |\n");
+}
+function codeTransform(view) {
+  const { state } = view;
+  const { from, to } = state.selection.main;
+  if (state.doc.lineAt(from).number !== state.doc.lineAt(to).number) {
+    const text2 = state.sliceDoc(from, to);
+    const fence = "```";
+    view.dispatch({ changes: { from, to, insert: `
+${fence}
+${text2}
+${fence}
+` } });
+    return;
+  }
+  wrapRange(view, "`");
+}
 
 // src/client/VaultView.jsx
 var import_jsx_runtime8 = require("react/jsx-runtime");
 var TABS_KEY = "droplets.vault.tabs";
 var EXPANDED_KEY = "droplets.vault.expanded";
-var SIDEPANE_KEY = "droplets.vault.sidepane";
 var fileIndexCache = null;
 function loadJson(key, fallback) {
   try {
@@ -137058,27 +137369,101 @@ function filterFiles(files, query, limit = 40) {
   ranked.sort((a2, b) => a2.score - b.score || a2.file.name.localeCompare(b.file.name));
   return ranked.slice(0, limit).map((hit) => hit.file);
 }
+function markdownHeadings2(content2) {
+  const out = [];
+  let inFence = false;
+  for (const line of String(content2 ?? "").split("\n")) {
+    if (/^\s*(```+|~~~+)/.test(line)) {
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence) continue;
+    const match = line.match(/^#{2,6}\s+(.+?)\s*#*$/);
+    if (match) out.push({ level: match[0].match(/^#+/)[0].length, text: match[1].trim() });
+  }
+  return out;
+}
+function highlightSnippet(snippet2) {
+  const escaped = String(snippet2).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return escaped.replace(/«([^»]*)»/g, "<mark>$1</mark>");
+}
+function escapeHtml2(text2) {
+  return String(text2).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function neighborhoodOf(graph, center, depth = 2, limit = 300) {
+  const adjacency = /* @__PURE__ */ new Map();
+  for (const edge of graph.edges) {
+    if (!adjacency.has(edge.source)) adjacency.set(edge.source, []);
+    if (!adjacency.has(edge.target)) adjacency.set(edge.target, []);
+    adjacency.get(edge.source).push(edge.target);
+    adjacency.get(edge.target).push(edge.source);
+  }
+  const keep = /* @__PURE__ */ new Set([center]);
+  let frontier = [center];
+  for (let hop = 0; hop < depth; hop += 1) {
+    const next = [];
+    for (const node of frontier) {
+      for (const neighbor of adjacency.get(node) ?? []) {
+        if (!keep.has(neighbor)) {
+          keep.add(neighbor);
+          next.push(neighbor);
+        }
+      }
+    }
+    frontier = next;
+    if (keep.size >= limit) break;
+  }
+  return sliceGraph(graph, keep, limit);
+}
+function capByDegree(graph, limit = 300) {
+  const degree = /* @__PURE__ */ new Map();
+  for (const edge of graph.edges) {
+    degree.set(edge.source, (degree.get(edge.source) ?? 0) + 1);
+    degree.set(edge.target, (degree.get(edge.target) ?? 0) + 1);
+  }
+  const ranked = graph.nodes.filter((node) => !node.dangling).sort((a2, b) => (degree.get(b.id) ?? 0) - (degree.get(a2.id) ?? 0));
+  const keep = new Set(ranked.slice(0, limit).map((node) => node.id));
+  return sliceGraph(graph, keep, limit);
+}
+function sliceGraph(graph, keep, limit) {
+  const nodes = graph.nodes.filter((node) => keep.has(node.id)).slice(0, limit);
+  const kept = new Set(nodes.map((node) => node.id));
+  const edges = graph.edges.filter((edge) => kept.has(edge.source) && kept.has(edge.target));
+  return { nodes, edges };
+}
 function VaultView({ api, onMaterial }) {
   const [tabs, setTabs] = (0, import_react11.useState)(() => loadJson(TABS_KEY, []));
   const [activeTabId, setActiveTabId] = (0, import_react11.useState)(() => loadJson(TABS_KEY + ".active", null));
   const [expanded, setExpanded] = (0, import_react11.useState)(() => new Set(loadJson(EXPANDED_KEY, [])));
-  const [sidePane, setSidePane] = (0, import_react11.useState)(() => loadJson(SIDEPANE_KEY, "backlinks"));
+  const [leftMode, setLeftMode] = (0, import_react11.useState)("tree");
+  const [backlinksOpen, setBacklinksOpen] = (0, import_react11.useState)(false);
   const [sideData, setSideData] = (0, import_react11.useState)({ backlinks: [], unlinked: [], tags: [] });
-  const [graph, setGraph] = (0, import_react11.useState)(null);
+  const [graphData, setGraphData] = (0, import_react11.useState)(null);
+  const [filterOpen, setFilterOpen] = (0, import_react11.useState)(false);
+  const [filter, setFilter] = (0, import_react11.useState)("");
+  const [sortKey, setSortKey] = (0, import_react11.useState)("name-asc");
+  const [autoReveal, setAutoReveal] = (0, import_react11.useState)(true);
+  const [autoRevealRefState, setAutoRevealRefState] = (0, import_react11.useState)(0);
+  const autoRevealRef = (0, import_react11.useRef)(true);
+  const [clipboard, setClipboard] = (0, import_react11.useState)(null);
+  const [ctxMenu, setCtxMenu] = (0, import_react11.useState)(null);
   const [searchOpen, setSearchOpen] = (0, import_react11.useState)(false);
   const [searchQuery, setSearchQuery2] = (0, import_react11.useState)("");
   const [searchResults, setSearchResults] = (0, import_react11.useState)(null);
   const [quick, setQuick] = (0, import_react11.useState)(null);
-  const [fileIndex, setFileIndex] = (0, import_react11.useState)([]);
+  const [palette, setPalette] = (0, import_react11.useState)(null);
+  const [trash, setTrash] = (0, import_react11.useState)(null);
   const [conflict, setConflict] = (0, import_react11.useState)(null);
   const [creating, setCreating] = (0, import_react11.useState)(null);
   const [renaming, setRenaming] = (0, import_react11.useState)(null);
   const [renamePreview, setRenamePreview] = (0, import_react11.useState)(null);
+  const [moveTarget, setMoveTarget] = (0, import_react11.useState)(null);
   const [notice, setNotice] = (0, import_react11.useState)("");
   const [error, setError] = (0, import_react11.useState)("");
   const [stats, setStats] = (0, import_react11.useState)({ files: 0 });
-  const [sortKey, setSortKey] = (0, import_react11.useState)("name");
-  const [filter, setFilter] = (0, import_react11.useState)("");
+  const [fileIndex, setFileIndex] = (0, import_react11.useState)([]);
+  const [editOutline, setEditOutline] = (0, import_react11.useState)(null);
+  const [, setEditorScrollTick] = (0, import_react11.useState)(0);
   const readerRef = (0, import_react11.useRef)(null);
   const notePaneRef = (0, import_react11.useRef)(null);
   const dirty = tabs.some((tab) => tab.dirty);
@@ -137091,9 +137476,6 @@ function VaultView({ api, onMaterial }) {
   (0, import_react11.useEffect)(() => {
     saveJson(EXPANDED_KEY, [...expanded]);
   }, [expanded]);
-  (0, import_react11.useEffect)(() => {
-    saveJson(SIDEPANE_KEY, sidePane);
-  }, [sidePane]);
   const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? null;
   const refreshIndex = (0, import_react11.useCallback)(async () => {
     try {
@@ -137127,33 +137509,32 @@ function VaultView({ api, onMaterial }) {
         name: path.split("/").pop(),
         content: note.content,
         draft: null,
-        // null = clean, string = dirty buffer
         sha: note.sha,
         title: note.title,
         tags: note.tags ?? [],
         wordCount: note.wordCount ?? 0,
         savedAt: null
       };
-      setTabs((current) => {
-        const base2 = forceNew && existing ? [...current] : current.filter((item) => item.path !== path || item.id === path);
-        return [...base2.filter((item) => item.id !== tab.id), tab];
-      });
+      setTabs((current) => [...current.filter((item) => item.id !== tab.id), tab]);
       setActiveTabId(tab.id);
-      setGraph(null);
       setSearchResults(null);
-      setExpanded((current) => {
-        const next = new Set(current);
-        for (const dir of ancestorsOf(path)) next.add(dir);
-        return next;
-      });
+      if (autoRevealRef.current) {
+        setExpanded((current) => {
+          const next = new Set(current);
+          for (const dir of ancestorsOf(path)) next.add(dir);
+          return next;
+        });
+      }
       onMaterial({ space: "vault", path: note.path, title: note.title, content: note.content.slice(0, 6e4) });
     } catch (cause) {
       setError(String(cause?.message ?? cause));
     }
   }, [api, tabs, onMaterial]);
+  const restoredOnce = (0, import_react11.useRef)(false);
   (0, import_react11.useEffect)(() => {
-    if (activeTab?.content !== void 0 || tabs.length === 0) return;
-    const target = activeTab ?? tabs[0];
+    if (restoredOnce.current || tabs.length === 0) return;
+    restoredOnce.current = true;
+    const target = tabs.find((tab) => tab.id === activeTabId) ?? tabs[0];
     if (target?.path) void openPath(target.path);
   }, [tabs.length > 0]);
   const loadSideData = (0, import_react11.useCallback)(async (path) => {
@@ -137169,39 +137550,19 @@ function VaultView({ api, onMaterial }) {
   (0, import_react11.useEffect)(() => {
     if (activeTab?.path) void loadSideData(activeTab.path);
   }, [activeTab?.path, loadSideData]);
-  const linkMention = (0, import_react11.useCallback)(async (mention) => {
-    if (!activeTab) return;
-    try {
-      const note = await api.vaultRead(mention.path);
-      const stem = activeTab.path.split("/").pop().replace(/\.md$/i, "");
-      const text2 = note.content;
-      const pattern = new RegExp(`(^|[^\\[\\w])${stem.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}($|[^\\w])`);
-      const match = pattern.exec(text2);
-      if (!match) {
-        setNotice(`\u300C${mention.title}\u300D\u91CC\u6CA1\u627E\u5230\u300C${stem}\u300D\u539F\u6587`);
-        return;
-      }
-      const at = match.index + match[1].length;
-      const next = text2.slice(0, at) + `[[${stem}]]` + text2.slice(at);
-      const write = await api.vaultWrite({ path: mention.path, content: next, expectedSha: note.sha });
-      if (write.conflict) {
-        setNotice(`\u300C${mention.title}\u300D\u6709\u51B2\u7A81\uFF0C\u672A\u6539\u5199`);
-        return;
-      }
-      setNotice(`\u5DF2\u5728\u300C${mention.title}\u300D\u5EFA\u7ACB\u94FE\u63A5`);
-      await loadSideData(activeTab.path);
-    } catch (cause) {
-      setNotice(String(cause?.message ?? cause));
+  (0, import_react11.useEffect)(() => {
+    if (leftMode === "tags" && sideData.tags.length === 0) {
+      void api.vaultTags().then((outcome) => setSideData((current) => ({ ...current, tags: outcome.tags ?? [] }))).catch(() => {
+      });
     }
-  }, [activeTab, api, loadSideData]);
+  }, [leftMode]);
   const setDraft = (0, import_react11.useCallback)((tabId, draft) => {
     setTabs((current) => current.map((tab) => tab.id === tabId ? { ...tab, draft } : tab));
   }, []);
   const closeTab = (0, import_react11.useCallback)(async (tabId) => {
     const tab = tabs.find((item) => item.id === tabId);
     if (tab?.dirty) {
-      const choice = window.confirm(`\u300C${tab.name}\u300D\u6709\u672A\u4FDD\u5B58\u7684\u4FEE\u6539\u3002\u786E\u5B9A\u653E\u5F03\u5E76\u5173\u95ED\u5417\uFF1F`);
-      if (!choice) return;
+      if (!window.confirm(`\u300C${tab.name}\u300D\u6709\u672A\u4FDD\u5B58\u7684\u4FEE\u6539\u3002\u786E\u5B9A\u653E\u5F03\u5E76\u5173\u95ED\u5417\uFF1F`)) return;
     }
     setTabs((current) => {
       const next = current.filter((item) => item.id !== tabId);
@@ -137209,6 +137570,10 @@ function VaultView({ api, onMaterial }) {
       return next;
     });
   }, [tabs, activeTabId]);
+  const tabsRef = (0, import_react11.useRef)(tabs);
+  (0, import_react11.useEffect)(() => {
+    tabsRef.current = tabs;
+  }, [tabs]);
   const saveTimer = (0, import_react11.useRef)(null);
   (0, import_react11.useEffect)(() => {
     if (!activeTab?.dirty) return void 0;
@@ -137239,10 +137604,6 @@ function VaultView({ api, onMaterial }) {
       setError(String(cause?.message ?? cause));
     }
   }, [api]);
-  const tabsRef = (0, import_react11.useRef)(tabs);
-  (0, import_react11.useEffect)(() => {
-    tabsRef.current = tabs;
-  }, [tabs]);
   const runSearch = (0, import_react11.useCallback)(async () => {
     const query = searchQuery.trim();
     if (query === "") {
@@ -137252,18 +137613,34 @@ function VaultView({ api, onMaterial }) {
     try {
       const outcome = await api.vaultSearch({ query, limit: 50 });
       setSearchResults(outcome);
-      if (outcome.backend === "local") {
-        onMaterial({
-          space: "vault-search",
-          title: t("companion.askVaultTitle") + " \xB7 " + query,
-          matches: outcome.results.map((item) => ({ path: item.path, title: item.title, excerpt: item.excerpt })),
-          content: ""
-        }, { reveal: true });
-      }
     } catch (cause) {
       setError(String(cause?.message ?? cause));
     }
-  }, [api, searchQuery, onMaterial]);
+  }, [api, searchQuery]);
+  const loadGraph = (0, import_react11.useCallback)(async () => {
+    if (graphData) return graphData;
+    const full = await api.vaultGraph();
+    const scoped = activeTab ? neighborhoodOf(full, activeTab.path, 2, 300) : capByDegree(full, 300);
+    setGraphData(scoped);
+    return scoped;
+  }, [api, graphData, activeTab?.path]);
+  const switchLeft = (0, import_react11.useCallback)(async (mode) => {
+    setLeftMode((current) => current === mode ? "tree" : mode);
+    if (mode === "graph") {
+      try {
+        await loadGraph();
+      } catch (cause) {
+        setError(String(cause?.message ?? cause));
+      }
+    }
+    if (mode === "tags" && sideData.tags.length === 0) {
+      try {
+        const outcome = await api.vaultTags();
+        setSideData((current) => ({ ...current, tags: outcome.tags ?? [] }));
+      } catch {
+      }
+    }
+  }, [loadGraph, sideData.tags.length, api]);
   const submitCreate = (0, import_react11.useCallback)(async () => {
     if (!creating) return;
     try {
@@ -137271,24 +137648,21 @@ function VaultView({ api, onMaterial }) {
         await api.vaultCreateDir({ dir: creating.path });
       } else {
         const name2 = creating.name.trim() || "\u672A\u547D\u540D";
-        const dir = creating.dir === "" ? "" : creating.dir;
-        const path = (dir === "" ? name2 : `${dir}/${name2}`) + ".md";
-        await api.vaultWrite({ path, content: `---
+        const path = (creating.dir === "" ? name2 : `${creating.dir}/${name2}`) + ".md";
+        const result = await api.vaultWrite({ path, content: `---
+id: ${crypto.randomUUID()}
 title: ${name2}
 created: ${(/* @__PURE__ */ new Date()).toISOString()}
 ---
 
 # ${name2}
 
-`, expectedSha: null, createOnly: true }).then(async (result) => {
-          if (result.conflict) {
-            setNotice(`\u5DF2\u5B58\u5728\uFF1A${path}`);
-            return null;
-          }
-          return path;
-        }).then((created) => {
-          if (created) void openPath(created);
-        });
+`, expectedSha: null, createOnly: true });
+        if (result.conflict) {
+          setNotice(`\u5DF2\u5B58\u5728\uFF1A${path}`);
+          return;
+        }
+        void openPath(path);
       }
       setCreating(null);
       await refreshIndex();
@@ -137299,14 +137673,18 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
   const startRename = (0, import_react11.useCallback)((path) => {
     setRenaming({ path, name: path.split("/").pop() });
     setRenamePreview(null);
-    void (async () => {
-      try {
-        const outcome = await api.vaultBacklinks(path);
-        setRenamePreview((outcome.backlinks ?? []).length);
-      } catch {
-        setRenamePreview(0);
-      }
-    })();
+    if (path.toLowerCase().endsWith(".md")) {
+      void (async () => {
+        try {
+          const outcome = await api.vaultBacklinks(path);
+          setRenamePreview((outcome.backlinks ?? []).length);
+        } catch {
+          setRenamePreview(0);
+        }
+      })();
+    } else {
+      setRenamePreview(0);
+    }
   }, [api]);
   const submitRename = (0, import_react11.useCallback)(async (nextPath) => {
     if (!renaming) return;
@@ -137321,6 +137699,20 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
       setNotice(String(cause?.message ?? cause));
     }
   }, [renaming, api, refreshIndex, activeTabId]);
+  const submitMove = (0, import_react11.useCallback)(async (dir) => {
+    if (!moveTarget) return;
+    const to = dir === "" ? moveTarget.name : `${dir}/${moveTarget.name}`;
+    try {
+      const result = await api.vaultRename({ from: moveTarget.path, to, updateLinks: moveTarget.path.toLowerCase().endsWith(".md") });
+      setNotice(`\u5DF2\u79FB\u52A8\u5230 ${dir || "\u6839\u76EE\u5F55"}${result.updatedLinks > 0 ? `\uFF0C\u66F4\u65B0 ${result.updatedLinks} \u5904\u94FE\u63A5` : ""}`);
+      setMoveTarget(null);
+      setTabs((current) => current.map((tab) => tab.path === moveTarget.path ? { ...tab, path: result.path, name: result.path.split("/").pop(), id: result.path } : tab));
+      if (activeTabId === moveTarget.path) setActiveTabId(result.path);
+      await refreshIndex();
+    } catch (cause) {
+      setNotice(String(cause?.message ?? cause));
+    }
+  }, [moveTarget, api, refreshIndex, activeTabId]);
   const trashPath = (0, import_react11.useCallback)(async (path, name2) => {
     if (!window.confirm(`\u628A\u300C${name2}\u300D\u79FB\u5165\u56DE\u6536\u7AD9\uFF1F\u53EF\u5728 Droplets \u56DE\u6536\u7AD9\u6062\u590D\u3002`)) return;
     try {
@@ -137334,69 +137726,79 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
   }, [api, refreshIndex]);
   const duplicatePath = (0, import_react11.useCallback)(async (path) => {
     try {
-      const result = await api.vaultDuplicate({ path });
+      if (path.toLowerCase().endsWith(".md")) {
+        const result = await api.vaultDuplicate({ path });
+        void openPath(result.path);
+      } else {
+        const dir = path.split("/").slice(0, -1).join("/");
+        await api.vaultCopyDirTo({ from: path, toDir: dir });
+      }
       setNotice("\u5DF2\u521B\u5EFA\u526F\u672C");
       await refreshIndex();
-      void openPath(result.path);
     } catch (cause) {
       setNotice(String(cause?.message ?? cause));
     }
   }, [api, refreshIndex, openPath]);
-  const [palette, setPalette] = (0, import_react11.useState)(null);
-  const paletteActions = (0, import_react11.useMemo)(() => [
-    { id: "new-note", label: "\u65B0\u5EFA\u7B14\u8BB0", run: () => setCreating({ kind: "note", name: "", dir: activeTab ? ancestorsOf(activeTab.path)[0] ?? "" : "" }) },
-    { id: "new-folder", label: "\u65B0\u5EFA\u6587\u4EF6\u5939", run: () => setCreating({ kind: "dir", name: "", dir: activeTab ? ancestorsOf(activeTab.path)[0] ?? "" : "" }) },
-    { id: "search", label: "\u5168\u5E93\u641C\u7D22", run: () => setSearchOpen(true) },
-    { id: "graph", label: graph ? "\u5173\u95ED\u56FE\u8C31" : "\u6253\u5F00\u56FE\u8C31", run: () => void toggleGraph() },
-    { id: "backlinks", label: "\u67E5\u770B\u53CD\u94FE", run: () => setSidePane("backlinks") },
-    { id: "tags", label: "\u67E5\u770B\u6807\u7B7E", run: () => setSidePane("tags") },
-    { id: "trash", label: "\u56DE\u6536\u7AD9\uFF08\u6D4F\u89C8\u4E0E\u6062\u590D\uFF09", run: () => void openTrash() },
-    { id: "export-md", label: "\u5BFC\u51FA\u5F53\u524D\u7B14\u8BB0 (.md)", run: () => exportActive("md") },
-    { id: "export-html", label: "\u5BFC\u51FA\u5F53\u524D\u7B14\u8BB0 (.html)", run: () => exportActive("html") },
-    { id: "reindex", label: "\u91CD\u626B\u7D22\u5F15", run: () => void api.vaultReindex().then(refreshIndex) },
-    { id: "close-tab", label: "\u5173\u95ED\u5F53\u524D\u6807\u7B7E", run: () => {
-      if (activeTabId) void closeTab(activeTabId);
-    } }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], [graph, activeTab, activeTabId]);
-  (0, import_react11.useEffect)(() => {
-    const onKey = (event) => {
-      const mod = event.metaKey || event.ctrlKey;
-      if (!mod) return;
-      const key = event.key.toLowerCase();
-      if (key === "p" && !event.shiftKey) {
-        event.preventDefault();
-        setQuick({ query: "" });
-      } else if (key === "f" && event.shiftKey) {
-        event.preventDefault();
-        setSearchOpen(true);
-      } else if (key === "p" && event.shiftKey) {
-        event.preventDefault();
-        setPalette({ query: "" });
+  const pasteInto = (0, import_react11.useCallback)(async (dir) => {
+    if (!clipboard) return;
+    const name2 = clipboard.path.split("/").pop();
+    try {
+      if (clipboard.mode === "cut") {
+        const to = dir === "" ? name2 : `${dir}/${name2}`;
+        const result = await api.vaultRename({ from: clipboard.path, to, updateLinks: clipboard.path.toLowerCase().endsWith(".md") });
+        setTabs((current) => current.map((tab) => tab.path === clipboard.path ? { ...tab, path: result.path, name: result.path.split("/").pop(), id: result.path } : tab));
+        if (activeTabId === clipboard.path) setActiveTabId(result.path);
+        setNotice("\u5DF2\u7C98\u8D34\uFF08\u79FB\u52A8\uFF09");
+      } else if (clipboard.path.toLowerCase().endsWith(".md")) {
+        await api.vaultCopyTo({ from: clipboard.path, toDir: dir });
+        setNotice("\u5DF2\u7C98\u8D34\uFF08\u590D\u5236\uFF09");
+      } else {
+        await api.vaultCopyDirTo({ from: clipboard.path, toDir: dir });
+        setNotice("\u5DF2\u7C98\u8D34\uFF08\u590D\u5236\u6587\u4EF6\u5939\uFF09");
       }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-  const [trash, setTrash] = (0, import_react11.useState)(null);
-  const openTrash = (0, import_react11.useCallback)(async () => {
-    try {
-      const outcome = await api.vaultTrashList();
-      setTrash(outcome.entries ?? []);
-    } catch (cause) {
-      setNotice(String(cause?.message ?? cause));
-    }
-  }, [api]);
-  const restoreTrash = (0, import_react11.useCallback)(async (id2) => {
-    try {
-      const result = await api.vaultTrashRestore(id2);
-      setNotice(`\u5DF2\u6062\u590D\uFF1A${result.restored}`);
-      setTrash((current) => (current ?? []).filter((entry) => entry.id !== id2));
+      setClipboard(null);
       await refreshIndex();
     } catch (cause) {
       setNotice(String(cause?.message ?? cause));
     }
-  }, [api, refreshIndex]);
+  }, [clipboard, api, refreshIndex, activeTabId]);
+  const linkMention = (0, import_react11.useCallback)(async (mention) => {
+    if (!activeTab) return;
+    try {
+      const note = await api.vaultRead(mention.path);
+      const stem = activeTab.path.split("/").pop().replace(/\.md$/i, "");
+      const text2 = note.content;
+      const pattern = new RegExp(`(^|[^\\[\\w])${stem.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}($|[^\\w])`);
+      const match = pattern.exec(text2);
+      if (!match) {
+        setNotice(`\u300C${mention.title}\u300D\u91CC\u6CA1\u627E\u5230\u300C${stem}\u300D\u539F\u6587`);
+        return;
+      }
+      const at = match.index + match[1].length;
+      const next = text2.slice(0, at) + `[[${stem}]]` + text2.slice(at);
+      const write = await api.vaultWrite({ path: mention.path, content: next, expectedSha: note.sha });
+      if (write.conflict) {
+        setNotice(`\u300C${mention.title}\u300D\u6709\u51B2\u7A81\uFF0C\u672A\u6539\u5199`);
+        return;
+      }
+      setNotice(`\u5DF2\u5728\u300C${mention.title}\u300D\u5EFA\u7ACB\u94FE\u63A5`);
+      await loadSideData(activeTab.path);
+    } catch (cause) {
+      setNotice(String(cause?.message ?? cause));
+    }
+  }, [activeTab, api, loadSideData]);
+  const askAiNote = (0, import_react11.useCallback)(async (path) => {
+    try {
+      const note = await api.vaultRead(path);
+      onMaterial({ space: "vault", path: note.path, title: note.title, content: note.content.slice(0, 6e4) }, { reveal: true });
+    } catch (cause) {
+      setNotice(String(cause?.message ?? cause));
+    }
+  }, [api, onMaterial]);
+  const askWholeLibrary = (0, import_react11.useCallback)(() => {
+    const listing = (fileIndexCache ?? fileIndex).map((file, index2) => `${index2 + 1}. ${file.path}`).join("\n");
+    onMaterial({ space: "vault", title: "\u77E5\u8BC6\u5E93\u6574\u5E93\u95EE\u7B54", content: listing.slice(0, 3e5) }, { reveal: true });
+  }, [fileIndex, onMaterial]);
   const exportActive = (0, import_react11.useCallback)(async (format) => {
     if (!activeTab) {
       setNotice("\u5148\u6253\u5F00\u4E00\u7BC7\u7B14\u8BB0");
@@ -137417,10 +137819,32 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
     }
     const rendered = readerRef.current?.querySelector(".dpl-vault2-body");
     if (!rendered) {
-      setNotice("\u8BF7\u5207\u5230\u9605\u8BFB\u89C6\u56FE\u518D\u5BFC\u51FA HTML");
+      setNotice("\u8BF7\u5207\u5230\u9605\u8BFB\u89C6\u56FE\u518D\u5BFC\u51FA");
       return;
     }
-    const html3 = `<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>${escapeHtml2(stem)}</title><style>body{max-width:720px;margin:40px auto;padding:0 24px;font:15px/1.75 -apple-system,'PingFang SC',sans-serif;color:#1a1a1a}h1,h2,h3{line-height:1.4}pre{background:#f5f5f5;padding:12px;border-radius:8px;overflow:auto}code{background:#f5f5f5;border-radius:4px;padding:1px 5px}img{max-width:100%}blockquote{border-left:3px solid #ddd;margin:0;padding:2px 14px;color:#555}table{border-collapse:collapse}th,td{border:1px solid #ddd;padding:5px 10px}</style></head><body>${rendered.innerHTML}</body></html>`;
+    const html3 = `<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>${escapeHtml2(stem)}</title><style>body{max-width:720px;margin:40px auto;padding:0 24px;font:15px/1.75 -apple-system,'PingFang SC',sans-serif;color:#1a1a1a}h1,h2,h3{line-height:1.4}pre{background:#f5f5f5;padding:12px;border-radius:8px;overflow:auto}code{background:#f5f5f5;border-radius:4px;padding:1px 5px}img{max-width:100%}blockquote{border-left:3px solid #ddd;margin:0;padding:2px 14px;color:#555}table{border-collapse:collapse}th,td{border:1px solid #ddd;padding:5px 10px}@media print{body{margin:0}}</style></head><body>${rendered.innerHTML}</body></html>`;
+    if (format === "pdf") {
+      const frame2 = document.createElement("iframe");
+      frame2.style.position = "fixed";
+      frame2.style.right = "0";
+      frame2.style.bottom = "0";
+      frame2.style.width = "0";
+      frame2.style.height = "0";
+      frame2.style.border = "0";
+      document.body.appendChild(frame2);
+      frame2.srcdoc = html3;
+      frame2.onload = () => {
+        try {
+          frame2.contentWindow.focus();
+          frame2.contentWindow.print();
+        } catch {
+          setNotice("\u6253\u5370\u9762\u677F\u4E0D\u53EF\u7528\uFF0C\u8BF7\u7528\u5BFC\u51FA HTML");
+        }
+        setTimeout(() => frame2.remove(), 6e4);
+      };
+      setNotice("\u5DF2\u6253\u5F00\u6253\u5370\u9762\u677F\uFF08\u53EF\u9009\u300C\u5B58\u50A8\u4E3A PDF\u300D\uFF09");
+      return;
+    }
     const blob = new Blob([html3], { type: "text/html;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
@@ -137430,43 +137854,61 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
     URL.revokeObjectURL(url);
     setNotice("\u5DF2\u5BFC\u51FA .html");
   }, [activeTab]);
+  const paletteActions = (0, import_react11.useMemo)(() => [
+    { id: "new-note", label: "\u65B0\u5EFA\u7B14\u8BB0", run: () => setCreating({ kind: "note", name: "", dir: activeTab ? ancestorsOf(activeTab.path)[0] ?? "" : "" }) },
+    { id: "new-folder", label: "\u65B0\u5EFA\u6587\u4EF6\u5939", run: () => setCreating({ kind: "dir", name: "", dir: activeTab ? ancestorsOf(activeTab.path)[0] ?? "" : "" }) },
+    { id: "search", label: "\u5168\u5E93\u641C\u7D22", run: () => setSearchOpen(true) },
+    { id: "graph", label: "\u56FE\u8C31", run: () => void switchLeft("graph") },
+    { id: "tags", label: "\u6807\u7B7E\u4E91", run: () => void switchLeft("tags") },
+    { id: "backlinks", label: "\u53CD\u5411\u94FE\u63A5", run: () => setBacklinksOpen(true) },
+    { id: "trash", label: "\u56DE\u6536\u7AD9\uFF08\u6D4F\u89C8\u4E0E\u6062\u590D\uFF09", run: () => void openTrash() },
+    { id: "export-md", label: "\u5BFC\u51FA\u5F53\u524D\u7B14\u8BB0 (.md)", run: () => void exportActive("md") },
+    { id: "export-html", label: "\u5BFC\u51FA\u5F53\u524D\u7B14\u8BB0 (.html)", run: () => void exportActive("html") },
+    { id: "reindex", label: "\u91CD\u626B\u7D22\u5F15", run: () => void api.vaultReindex().then(refreshIndex) },
+    { id: "close-tab", label: "\u5173\u95ED\u5F53\u524D\u6807\u7B7E", run: () => {
+      if (activeTabId) void closeTab(activeTabId);
+    } }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [activeTab, activeTabId, graphData]);
+  (0, import_react11.useEffect)(() => {
+    const onKey = (event) => {
+      const mod = event.metaKey || event.ctrlKey;
+      if (!mod) return;
+      const key = event.key.toLowerCase();
+      if (key === "p" && !event.shiftKey) {
+        event.preventDefault();
+        setQuick({ query: "" });
+      } else if (key === "f" && event.shiftKey) {
+        event.preventDefault();
+        setSearchOpen(true);
+      } else if (key === "p" && event.shiftKey) {
+        event.preventDefault();
+        setPalette({ query: "" });
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   const paletteResults = (0, import_react11.useMemo)(
     () => palette && palette.query.trim() !== "" ? paletteActions.filter((action) => action.label.toLowerCase().includes(palette.query.trim().toLowerCase())) : paletteActions,
     [palette, paletteActions]
-  );
-  const activeDirty = Boolean(activeTab?.dirty);
-  const [editOutline, setEditOutline] = (0, import_react11.useState)(null);
-  const [, setEditorScrollTick] = (0, import_react11.useState)(0);
-  (0, import_react11.useEffect)(() => {
-    setEditOutline(null);
-  }, [activeTab?.id]);
-  const headings = (0, import_react11.useMemo)(() => {
-    if (editOutline !== null) return editOutline;
-    return markdownHeadings2(activeTab?.content ?? "");
-  }, [editOutline, activeTab?.content]);
-  const filteredIndex = (0, import_react11.useMemo)(
-    () => filter.trim() === "" ? [] : filterFiles(fileIndex, filter, 30),
-    [filter, fileIndex]
   );
   const quickResults = (0, import_react11.useMemo)(
     () => quick && quick.query.trim() !== "" ? filterFiles(fileIndex, quick.query, 20) : [],
     [quick, fileIndex]
   );
-  const graphLayout = (0, import_react11.useMemo)(
-    () => graph ? computeLayout(graph, 900, 620) : null,
-    [graph]
+  const filteredIndex = (0, import_react11.useMemo)(
+    () => filterOpen && filter.trim() !== "" ? filterFiles(fileIndex, filter, 30) : [],
+    [filterOpen, filter, fileIndex]
   );
-  const captured = (0, import_react11.useRef)(false);
-  const captureSelection = () => {
-    if (captured.current) return;
-    const selection = String(window.getSelection?.() ?? "").trim();
-    captured.current = true;
-    setTimeout(() => {
-      captured.current = false;
-    }, 400);
-    if (!activeTab || selection === "") return;
-    onMaterial({ space: "vault", path: activeTab.path, title: activeTab.title, selection, content: "" });
-  };
+  const graphLayout = (0, import_react11.useMemo)(
+    () => leftMode === "graph" && graphData ? computeLayout(graphData, 640, 760) : null,
+    [leftMode, graphData]
+  );
+  const headings = (0, import_react11.useMemo)(() => {
+    if (editOutline !== null) return editOutline;
+    return markdownHeadings2(activeTab?.content ?? "");
+  }, [editOutline, activeTab?.content]);
   const onVaultLink = (0, import_react11.useCallback)((target) => {
     const wanted = String(target).replace(/\.md$/i, "").replace(/^\.?\//, "").split("#")[0];
     if (wanted === "") return;
@@ -137478,12 +137920,40 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
     }
   }, [fileIndex, openPath, activeTab?.path]);
   const resolveVaultImage = (0, import_react11.useCallback)((src) => {
-    if (!src || /^(https?:|data:|blob:)/i.test(src)) return /^https?:/i.test(src) ? src : src.startsWith("/") ? src : null;
-    const baseDir = activeTab?.path ? activeTab.path.split("/").slice(0, -1).join("/") : "";
+    if (/^https?:/i.test(src ?? "")) return src;
     return null;
-  }, [activeTab?.path]);
+  }, []);
+  const openTrash = (0, import_react11.useCallback)(async () => {
+    try {
+      const outcome = await api.vaultTrashList();
+      setTrash(outcome.entries ?? []);
+    } catch (cause) {
+      setNotice(String(cause?.message ?? cause));
+    }
+  }, [api]);
+  const restoreTrash = (0, import_react11.useCallback)(async (id2) => {
+    try {
+      const result = await api.vaultTrashRestore(id2);
+      setNotice(`\u5DF2\u6062\u590D\uFF1A${result.restored}`);
+      setTrash((current) => (current ?? []).filter((entry) => entry.id !== id2));
+      await refreshIndex();
+    } catch (cause) {
+      setNotice(String(cause?.message ?? cause));
+    }
+  }, [api, refreshIndex]);
+  const captured = (0, import_react11.useRef)(false);
+  const captureSelection = () => {
+    if (captured.current) return;
+    const selection = String(window.getSelection?.() ?? "").trim();
+    captured.current = true;
+    setTimeout(() => {
+      captured.current = false;
+    }, 400);
+    if (!activeTab || selection === "") return;
+    onMaterial({ space: "vault", path: activeTab.path, title: activeTab.title, selection, content: "" });
+  };
   if (stats.files === 0 && fileIndex.length === 0) {
-    return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault-empty", children: [
+    return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-empty", children: [
       /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(LoaderCircle, { size: 16, className: "dpl-spin" }),
       /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { children: t("vault.noVault") }),
       /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { className: "dpl-hint", children: t("vault.chooseVault") })
@@ -137491,84 +137961,54 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
   }
   return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2", children: [
     /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("aside", { className: "dpl-col dpl-vault2-tree", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-ib-panehead", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-ib-pansub", children: t("vault.tree") }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-treeactions", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "dpl-icon-btn", title: "\u65B0\u5EFA\u7B14\u8BB0", onClick: () => setCreating({ kind: "note", name: "", dir: activeTab ? ancestorsOf(activeTab.path)[0] ?? "" : "" }), children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Plus, { size: 14 }) }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "dpl-icon-btn", title: "\u65B0\u5EFA\u6587\u4EF6\u5939", onClick: () => setCreating({ kind: "dir", name: "", dir: activeTab ? ancestorsOf(activeTab.path)[0] ?? "" : "" }), children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(FolderPlus, { size: 14 }) }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "dpl-icon-btn", title: "\u91CD\u626B\u7D22\u5F15", onClick: () => void api.vaultReindex().then(refreshIndex), children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(RefreshCw, { size: 13 }) }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(PanelCollapseButton, {})
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-treehead", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { children: "\u7B14\u8BB0" }),
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(PanelCollapseButton, {})
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-seg", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("button", { type: "button", className: leftMode === "graph" ? "is-active" : "", onClick: () => void switchLeft("graph"), "data-testid": "vault-graph-toggle", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Network, { size: 14 }),
+          " \u56FE\u8C31"
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("button", { type: "button", className: leftMode === "tags" ? "is-active" : "", onClick: () => void switchLeft("tags"), "data-testid": "vault-tags-toggle", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Tags, { size: 14 }),
+          " \u6807\u7B7E\u4E91"
         ] })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-filter", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Search, { size: 13 }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("input", { placeholder: "\u8FC7\u6EE4\u6587\u4EF6\u540D\u2026", value: filter, onChange: (event) => setFilter(event.target.value) }),
-        filter !== "" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", onClick: () => setFilter(""), "aria-label": "\u6E05\u9664\u8FC7\u6EE4", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(X, { size: 12 }) }) : null
-      ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-treescroll", children: filter.trim() !== "" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-flatlist", children: [
-        filteredIndex.map((file) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("button", { type: "button", className: "dpl-vault2-file" + (activeTab?.path === file.path ? " is-active" : ""), onClick: () => void openPath(file.path), children: [
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(FileText, { size: 13 }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-truncate", children: file.name.replace(/\.md$/i, "") }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-vault2-filedir", children: file.path.split("/").slice(0, -1).join("/") })
-        ] }, file.path)),
-        filteredIndex.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-empty", children: "\u65E0\u5339\u914D\u6587\u4EF6" }) : null
-      ] }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
-        TreePane,
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+        TreeToolbar,
         {
-          api,
-          expanded,
-          setExpanded,
-          activePath: activeTab?.path,
+          filterOpen,
+          onToggleFilter: () => setFilterOpen(!filterOpen),
           sortKey,
-          onOpen: (path) => void openPath(path),
-          onRename: (path) => {
-            startRename(path);
+          onSort: (key) => {
+            setSortKey(key);
           },
-          onDuplicate: (path) => void duplicatePath(path),
-          onTrash: trashPath,
-          onNewNote: (dir) => setCreating({ kind: "note", name: "", dir }),
-          onNewDir: (dir) => setCreating({ kind: "dir", name: "", dir })
+          autoReveal,
+          onToggleAutoReveal: () => {
+            setAutoReveal(!autoReveal);
+            autoRevealRef.current = !autoReveal;
+          },
+          onCollapseAll: () => setExpanded(/* @__PURE__ */ new Set()),
+          onNewNote: () => setCreating({ kind: "note", name: "", dir: activeTab ? ancestorsOf(activeTab.path)[0] ?? "" : "" }),
+          onNewFolder: () => setCreating({ kind: "dir", name: "", dir: activeTab ? ancestorsOf(activeTab.path)[0] ?? "" : "" })
         }
-      ) }),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-sidepane", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-sidetabs", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: sidePane === "backlinks" ? "is-active" : "", onClick: () => setSidePane("backlinks"), children: "\u53CD\u94FE" }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: sidePane === "tags" ? "is-active" : "", onClick: () => setSidePane("tags"), children: "\u6807\u7B7E" })
-        ] }),
-        sidePane === "backlinks" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-sidebody", children: activeTab ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
-          sideData.backlinks.length > 0 ? sideData.backlinks.map((item) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("button", { type: "button", className: "dpl-vault2-backlink", onClick: () => void openPath(item.path), children: [
-            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-truncate", children: item.title }),
-            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-vault2-filedir", children: item.path })
-          ] }, item.path)) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-empty", children: "\u6682\u65E0\u53CD\u94FE" }),
-          sideData.unlinked.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
-            /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-unlinkedhead", children: [
-              "\u672A\u94FE\u63A5\u63D0\u53CA \xB7 ",
-              sideData.unlinked.length
-            ] }),
-            sideData.unlinked.map((item) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-unlinked", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("button", { type: "button", className: "dpl-vault2-backlink", onClick: () => void openPath(item.path), children: [
-                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-truncate", children: item.title }),
-                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-vault2-filedir", children: item.path })
-              ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
-                "button",
-                {
-                  type: "button",
-                  className: "dpl-vault2-unlinkbtn",
-                  title: `\u5728 ${item.title} \u91CC\u52A0 [[\u94FE\u63A5]]`,
-                  onClick: () => void linkMention(item),
-                  children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(ArrowLeftRight, { size: 12 })
-                }
-              )
-            ] }, item.path))
-          ] }) : null
-        ] }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-empty", children: "\u5148\u6253\u5F00\u4E00\u7BC7\u7B14\u8BB0" }) }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-sidebody dpl-vault2-tags", children: sideData.tags.slice(0, 80).map((item) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
+      ),
+      filterOpen ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-filter", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Search, { size: 13 }),
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("input", { autoFocus: true, placeholder: "\u8FC7\u6EE4\u6587\u4EF6\u540D\u2026", value: filter, onChange: (event) => setFilter(event.target.value), onKeyDown: (event) => {
+          if (event.key === "Escape") setFilter("");
+        } }),
+        filter !== "" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", onClick: () => setFilter(""), "aria-label": "\u6E05\u9664\u8FC7\u6EE4", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(X, { size: 12 }) }) : null
+      ] }) : null,
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-treescroll", children: leftMode === "graph" ? graphData && graphLayout ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(GraphPane, { graph: graphData, layout: graphLayout, onOpen: (path) => void openPath(path), onClose: () => setLeftMode("tree") }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-empty", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(LoaderCircle, { size: 14, className: "dpl-spin" }) }) : leftMode === "tags" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-tags", children: [
+        sideData.tags.slice(0, 120).map((item) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
           "button",
           {
             type: "button",
             onClick: () => {
-              setSearchQuery2(item.tag);
               setSearchOpen(true);
+              setSearchQuery2(item.tag);
               void api.vaultSearch({ query: item.tag, limit: 50, tag: item.tag }).then(setSearchResults).catch(() => {
               });
             },
@@ -137580,8 +138020,31 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
             ]
           },
           item.tag
-        )) })
-      ] })
+        )),
+        sideData.tags.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-empty", children: "\u6682\u65E0\u6807\u7B7E" }) : null
+      ] }) : filterOpen && filter.trim() !== "" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-flatlist", children: [
+        filteredIndex.map((file) => /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-row" + (activeTab?.path === file.path ? " is-active" : ""), children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("button", { type: "button", className: "dpl-vault2-file", onClick: () => void openPath(file.path), children: [
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(FileText, { size: 13 }),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-truncate", children: file.name.replace(/\.md$/i, "") }),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-vault2-filedir", children: file.path.split("/").slice(0, -1).join("/") })
+        ] }) }, file.path)),
+        filteredIndex.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-empty", children: "\u65E0\u5339\u914D\u6587\u4EF6" }) : null
+      ] }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+        TreePane,
+        {
+          api,
+          expanded,
+          setExpanded,
+          activePath: activeTab?.path,
+          sortKey,
+          onOpen: (path) => void openPath(path),
+          onContextMenu: (event, kind, path, name2) => {
+            event.preventDefault();
+            setCtxMenu({ x: event.clientX, y: event.clientY, kind, path, name: name2 });
+          }
+        }
+      ) }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "dpl-vault2-askall", onClick: askWholeLibrary, "data-testid": "vault-ask-ai", children: "\u6574\u5E93\u95EE AI" })
     ] }),
     /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("section", { className: "dpl-col dpl-vault2-main", children: [
       /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-tabstrip", children: [
@@ -137615,8 +138078,7 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
           tab.id
         )),
         /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-tabspring" }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "dpl-icon-btn", title: "\u5168\u5E93\u641C\u7D22 (\u2318\u21E7F)", onClick: () => setSearchOpen(!searchOpen), children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Search, { size: 14 }) }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "dpl-icon-btn" + (graph ? " is-toggled" : ""), title: "\u56FE\u8C31", onClick: () => void toggleGraph(), children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(CircleDot, { size: 14 }) })
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "dpl-icon-btn", title: "\u5168\u5E93\u641C\u7D22 (\u2318\u21E7F)", onClick: () => setSearchOpen(!searchOpen), children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Search, { size: 14 }) })
       ] }),
       searchOpen ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-searchbar", children: [
         /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Search, { size: 13 }),
@@ -137644,38 +138106,68 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
           setSearchResults(null);
         }, "aria-label": "\u5173\u95ED\u641C\u7D22", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(X, { size: 13 }) })
       ] }) : null,
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-content", onMouseUp: captureSelection, children: graph ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(GraphPane, { graph, layout: graphLayout, onOpen: (path) => {
-        setGraph(null);
-        void openPath(path);
-      }, onClose: () => setGraph(null) }) : searchResults ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-searchresults", children: [
-        searchResults.results.map((hit) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("button", { type: "button", className: "dpl-vault2-hit", onClick: () => void openPath(hit.path), children: [
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("strong", { children: hit.title }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-vault2-filedir", children: hit.path }),
-          hit.excerpt ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { dangerouslySetInnerHTML: { __html: highlightSnippet(hit.excerpt) } }) : null
-        ] }, hit.path)),
-        searchResults.results.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-empty", children: "\u65E0\u7ED3\u679C" }) : null
-      ] }) : activeTab ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
-        NoteReadPane,
-        {
-          ref: notePaneRef,
-          tab: activeTab,
-          onDraft: (draft) => setDraft(activeTab.id, draft),
-          onSave: () => void flushSave(activeTab.id),
-          onDiscard: () => setDraft(activeTab.id, null),
-          onWikilink: onVaultLink,
-          onMaterial,
-          onOutlineChange: setEditOutline,
-          onEditorScroll: () => setEditorScrollTick((tick) => tick + 1),
-          resolveImage: resolveVaultImage,
-          noteFiles: fileIndex,
-          readerRef
-        },
-        activeTab.id
-      ) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-empty dpl-vault2-readerempty", children: "\u5728\u5DE6\u4FA7\u9009\u62E9\u4E00\u7BC7\u7B14\u8BB0\u5F00\u59CB\u9605\u8BFB" }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-content", onMouseUp: captureSelection, children: [
+        searchResults ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-searchresults", children: [
+          searchResults.results.map((hit) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("button", { type: "button", className: "dpl-vault2-hit", onClick: () => void openPath(hit.path), children: [
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("strong", { children: hit.title }),
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-vault2-filedir", children: hit.path }),
+            hit.excerpt ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { dangerouslySetInnerHTML: { __html: highlightSnippet(hit.excerpt) } }) : null
+          ] }, hit.path)),
+          searchResults.results.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-empty", children: "\u65E0\u7ED3\u679C" }) : null
+        ] }) : activeTab ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+          NoteReadPane,
+          {
+            ref: notePaneRef,
+            tab: activeTab,
+            onDraft: (draft) => setDraft(activeTab.id, draft),
+            onSave: () => void flushSave(activeTab.id),
+            onDiscard: () => setDraft(activeTab.id, null),
+            onWikilink: onVaultLink,
+            onMaterial,
+            onOutlineChange: setEditOutline,
+            onEditorScroll: () => setEditorScrollTick((tick) => tick + 1),
+            resolveImage: resolveVaultImage,
+            noteFiles: fileIndex,
+            readerRef,
+            backlinksOpen,
+            onToggleBacklinks: () => setBacklinksOpen(!backlinksOpen),
+            onExport: (format) => void exportActive(format)
+          },
+          activeTab.id
+        ) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-empty dpl-vault2-readerempty", children: "\u5728\u5DE6\u4FA7\u9009\u62E9\u4E00\u7BC7\u7B14\u8BB0\u5F00\u59CB\u9605\u8BFB" }),
+        backlinksOpen && activeTab && !searchResults ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-bldrawer", "data-testid": "backlinks-drawer", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-bldrawhead", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { children: [
+              "\u53CD\u5411\u94FE\u63A5\uFF08",
+              sideData.backlinks.length,
+              "\uFF09",
+              sideData.unlinked.length > 0 ? ` \xB7 \u672A\u94FE\u63A5 ${sideData.unlinked.length}` : ""
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "dpl-icon-btn", onClick: () => setBacklinksOpen(false), "aria-label": "\u5173\u95ED\u53CD\u5411\u94FE\u63A5", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(X, { size: 13 }) })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-bldrawbody", children: [
+            sideData.backlinks.map((item) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("button", { type: "button", className: "dpl-vault2-backlink", onClick: () => void openPath(item.path), children: [
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-truncate", children: item.title }),
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-vault2-filedir", children: item.path })
+            ] }, item.path)),
+            sideData.backlinks.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-empty", children: "\u6682\u65E0\u53CD\u94FE" }) : null,
+            sideData.unlinked.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-unlinkedhead", children: "\u672A\u94FE\u63A5\u63D0\u53CA" }),
+              sideData.unlinked.map((item) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-unlinked", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("button", { type: "button", className: "dpl-vault2-backlink", onClick: () => void openPath(item.path), children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-truncate", children: item.title }),
+                  /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-vault2-filedir", children: item.path })
+                ] }),
+                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "dpl-vault2-unlinkbtn", title: `\u5728 ${item.title} \u91CC\u52A0 [[\u94FE\u63A5]]`, onClick: () => void linkMention(item), children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(ArrowLeftRight, { size: 12 }) })
+              ] }, item.path))
+            ] }) : null
+          ] })
+        ] }) : null
+      ] }),
       /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-statusbar", children: [
         /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { children: activeTab ? `${activeTab.wordCount.toLocaleString()} \u5B57` : `${stats.files} \u7BC7\u7B14\u8BB0` }),
         /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { children: activeTab?.dirty ? "\u672A\u4FDD\u5B58" : activeTab?.savedAt ? `\u5DF2\u4FDD\u5B58 ${activeTab.savedAt}` : "" }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("button", { type: "button", className: "dpl-vault2-statuslink", onClick: () => setSidePane("backlinks"), children: [
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("button", { type: "button", className: "dpl-vault2-statuslink", onClick: () => setBacklinksOpen(!backlinksOpen), children: [
           sideData.backlinks.length,
           " \u53CD\u94FE"
         ] }),
@@ -137689,7 +138181,7 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
         ] }) : null
       ] })
     ] }),
-    activeTab && !graph && !searchResults ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+    activeTab && !searchResults ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
       AuxRail,
       {
         headings,
@@ -137721,22 +138213,13 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
         }
       ),
       /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-quicklist", children: [
-        quickResults.map((file, index2) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
-          "button",
-          {
-            type: "button",
-            className: index2 === 0 ? "is-first" : "",
-            onClick: () => {
-              setQuick(null);
-              void openPath(file.path);
-            },
-            children: [
-              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-truncate", children: file.name.replace(/\.md$/i, "") }),
-              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-vault2-filedir", children: file.path })
-            ]
-          },
-          file.path
-        )),
+        quickResults.map((file, index2) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("button", { type: "button", className: index2 === 0 ? "is-first" : "", onClick: () => {
+          setQuick(null);
+          void openPath(file.path);
+        }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-truncate", children: file.name.replace(/\.md$/i, "") }),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-vault2-filedir", children: file.path })
+        ] }, file.path)),
         quick && quick.query.trim() !== "" && quickResults.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-empty", children: "\u65E0\u5339\u914D" }) : null
       ] })
     ] }) }) : null,
@@ -137759,19 +138242,10 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
         }
       ),
       /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-quicklist", children: [
-        paletteResults.map((action, index2) => /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
-          "button",
-          {
-            type: "button",
-            className: index2 === 0 ? "is-first" : "",
-            onClick: () => {
-              setPalette(null);
-              action.run();
-            },
-            children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-truncate", children: action.label })
-          },
-          action.id
-        )),
+        paletteResults.map((action, index2) => /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: index2 === 0 ? "is-first" : "", onClick: () => {
+          setPalette(null);
+          action.run();
+        }, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-truncate", children: action.label }) }, action.id)),
         palette && palette.query.trim() !== "" && paletteResults.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-empty", children: "\u65E0\u5339\u914D\u547D\u4EE4" }) : null
       ] })
     ] }) }) : null,
@@ -137843,7 +138317,7 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
     renaming ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(Modal, { title: "\u91CD\u547D\u540D\uFF08\u81EA\u52A8\u66F4\u65B0\u94FE\u63A5\uFF09", onClose: () => setRenaming(null), children: [
       /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-form-col", children: [
         /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-field", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { children: "\u65B0\u8DEF\u5F84" }),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { children: "\u65B0\u540D\u79F0" }),
           /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
             "input",
             {
@@ -137859,7 +138333,7 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
             }
           )
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { className: "dpl-hint", children: renamePreview === null ? "\u6B63\u5728\u7EDF\u8BA1\u5F15\u7528\u2026" : renamePreview > 0 ? `\u5C06\u5168\u5E93\u66F4\u65B0 ${renamePreview} \u5904\u6307\u5411\u5B83\u7684 [[\u94FE\u63A5]]\u3002` : "\u6CA1\u6709\u522B\u7684\u7B14\u8BB0\u5F15\u7528\u5B83\u3002" })
+        renaming.path.toLowerCase().endsWith(".md") ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { className: "dpl-hint", children: renamePreview === null ? "\u6B63\u5728\u7EDF\u8BA1\u5F15\u7528\u2026" : renamePreview > 0 ? `\u5C06\u5168\u5E93\u66F4\u65B0 ${renamePreview} \u5904\u6307\u5411\u5B83\u7684 [[\u94FE\u63A5]]\u3002` : "\u6CA1\u6709\u522B\u7684\u7B14\u8BB0\u5F15\u7528\u5B83\u3002" }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { className: "dpl-hint", children: "\u5C06\u79FB\u52A8\u6574\u4E2A\u6587\u4EF6\u5939\uFF08\u5176\u4E2D\u7684\u7B14\u8BB0\u94FE\u63A5\u4FDD\u6301\u4E0D\u53D8\uFF09\u3002" })
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-form-row dpl-end", children: [
         /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "dpl-btn", onClick: () => setRenaming(null), children: "\u53D6\u6D88" }),
@@ -137876,84 +138350,192 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
           }
         )
       ] })
-    ] }) : null
-  ] });
-  async function toggleGraph() {
-    if (graph) {
-      setGraph(null);
-      return;
-    }
-    try {
-      const full = await api.vaultGraph();
-      setGraph(activeTab ? neighborhoodOf(full, activeTab.path, 2, 300) : capByDegree(full, 300));
-    } catch (cause) {
-      setError(String(cause?.message ?? cause));
-    }
-  }
-}
-function neighborhoodOf(graph, center, depth = 2, limit = 300) {
-  const adjacency = /* @__PURE__ */ new Map();
-  for (const edge of graph.edges) {
-    if (!adjacency.has(edge.source)) adjacency.set(edge.source, []);
-    if (!adjacency.has(edge.target)) adjacency.set(edge.target, []);
-    adjacency.get(edge.source).push(edge.target);
-    adjacency.get(edge.target).push(edge.source);
-  }
-  const keep = /* @__PURE__ */ new Set([center]);
-  let frontier = [center];
-  for (let hop = 0; hop < depth; hop += 1) {
-    const next = [];
-    for (const node of frontier) {
-      for (const neighbor of adjacency.get(node) ?? []) {
-        if (!keep.has(neighbor)) {
-          keep.add(neighbor);
-          next.push(neighbor);
+    ] }) : null,
+    moveTarget ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(Modal, { title: "\u79FB\u52A8\u5230\u2026", onClose: () => setMoveTarget(null), children: [
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-form-col", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-field", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { children: "\u76EE\u6807\u6587\u4EF6\u5939\uFF08\u7A7A = vault \u6839\uFF09" }),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+            "input",
+            {
+              autoFocus: true,
+              value: moveTarget.dir,
+              onChange: (event) => setMoveTarget({ ...moveTarget, dir: event.target.value }),
+              onKeyDown: (event) => {
+                if (event.key === "Enter") void submitMove(moveTarget.dir);
+              }
+            }
+          )
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { className: "dpl-hint", children: "\u79FB\u52A8 .md \u4F1A\u540C\u6B65\u66F4\u65B0\u5168\u5E93\u6307\u5411\u5B83\u7684 [[\u94FE\u63A5]]\u3002" })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-form-row dpl-end", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "dpl-btn", onClick: () => setMoveTarget(null), children: "\u53D6\u6D88" }),
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "dpl-btn is-primary", onClick: () => void submitMove(moveTarget.dir), children: "\u79FB\u52A8" })
+      ] })
+    ] }) : null,
+    ctxMenu ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+      VaultContextMenu,
+      {
+        menu: ctxMenu,
+        clipboard,
+        onClose: () => setCtxMenu(null),
+        actions: {
+          openFile: (path) => void openPath(path),
+          toggleDir: (dir) => {
+            setExpanded((current) => {
+              const next = new Set(current);
+              if (next.has(dir)) next.delete(dir);
+              else next.add(dir);
+              return next;
+            });
+          },
+          rename: (path) => startRename(path),
+          move: (path) => setMoveTarget({ path, name: path.split("/").pop(), dir: path.split("/").slice(0, -1).join("/") }),
+          cut: (path) => setClipboard({ mode: "cut", path, name: path.split("/").pop() }),
+          duplicate: (path) => void duplicatePath(path),
+          copyAbs: (path) => {
+            void api.vaultCopyPath({ path, relative: false }).then(() => setNotice("\u5DF2\u590D\u5236\u8DEF\u5F84")).catch((cause) => setNotice(String(cause?.message ?? cause)));
+          },
+          copyRel: (path) => {
+            void api.vaultCopyPath({ path, relative: true }).then(() => setNotice("\u5DF2\u590D\u5236\u76F8\u5BF9\u8DEF\u5F84")).catch((cause) => setNotice(String(cause?.message ?? cause)));
+          },
+          paste: (dir) => void pasteInto(dir),
+          reveal: (path) => {
+            void api.vaultReveal({ path }).catch((cause) => setNotice(String(cause?.message ?? cause)));
+          },
+          askAi: (path) => void askAiNote(path),
+          delete: trashPath,
+          newNote: (dir) => setCreating({ kind: "note", name: "", dir }),
+          newFolder: (dir) => setCreating({ kind: "dir", name: "", dir })
         }
       }
+    ) : null
+  ] });
+}
+function VaultContextMenu({ menu, clipboard, onClose, actions }) {
+  (0, import_react11.useEffect)(() => {
+    const close = () => onClose();
+    window.addEventListener("mousedown", close);
+    window.addEventListener("blur", close);
+    const onKey = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("mousedown", close);
+      window.removeEventListener("blur", close);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [onClose]);
+  const act = (fn) => () => {
+    onClose();
+    fn();
+  };
+  const t3 = menu;
+  const isFile = t3.kind === "file";
+  const items = [];
+  if (isFile) {
+    items.push(
+      { label: "\u6253\u5F00", run: () => actions.openFile(t3.path) },
+      { label: "\u91CD\u547D\u540D", run: () => actions.rename(t3.path) },
+      { label: "\u79FB\u52A8\u5230\u2026", run: () => actions.move(t3.path) },
+      { divider: true },
+      { label: "\u526A\u5207", run: () => actions.cut(t3.path) },
+      { label: "\u590D\u5236", run: () => actions.duplicate(t3.path) },
+      { label: "\u590D\u5236\u8DEF\u5F84", run: () => actions.copyAbs(t3.path) },
+      { label: "\u590D\u5236\u76F8\u5BF9\u8DEF\u5F84", run: () => actions.copyRel(t3.path) },
+      { divider: true },
+      { label: "\u5728 Finder \u4E2D\u663E\u793A", run: () => actions.reveal(t3.path) },
+      { label: "\u95EE AI\uFF08\u8FD9\u7BC7\uFF09", run: () => actions.askAi(t3.path) },
+      { divider: true },
+      { label: "\u5220\u9664", danger: true, run: () => actions.delete(t3.path, t3.name) }
+    );
+  } else {
+    const isRoot = t3.path === "";
+    items.push(
+      { label: "\u65B0\u5EFA\u7B14\u8BB0", run: () => actions.newNote(t3.path) },
+      { label: "\u65B0\u5EFA\u6587\u4EF6\u5939", run: () => actions.newFolder(t3.path) }
+    );
+    if (!isRoot) items.push({ label: "\u91CD\u547D\u540D", run: () => actions.rename(t3.path) });
+    items.push({ divider: true });
+    if (!isRoot) items.push({ label: "\u526A\u5207", run: () => actions.cut(t3.path) });
+    if (!isRoot) items.push({ label: "\u590D\u5236", run: () => actions.duplicate(t3.path) });
+    items.push({ label: "\u590D\u5236\u8DEF\u5F84", run: () => actions.copyAbs(t3.path) });
+    if (!isRoot) items.push({ label: "\u590D\u5236\u76F8\u5BF9\u8DEF\u5F84", run: () => actions.copyRel(t3.path) });
+    if (clipboard?.mode === "cut") items.push({ label: "\u7C98\u8D34", run: () => actions.paste(t3.path) });
+    items.push({ divider: true });
+    items.push({ label: "\u5728 Finder \u4E2D\u663E\u793A", run: () => actions.reveal(t3.path) });
+  }
+  return /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+    "div",
+    {
+      className: "dpl-vault2-ctxmenu",
+      style: { left: Math.min(menu.x, window.innerWidth - 180), top: Math.min(menu.y, window.innerHeight - 320) },
+      onMouseDown: (event) => event.stopPropagation(),
+      "data-testid": "vault-context-menu",
+      children: items.map((item, index2) => item.divider ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-ctxdivider" }, `d${index2}`) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+        "button",
+        {
+          type: "button",
+          className: "dpl-vault2-ctxitem" + (item.danger ? " is-danger" : ""),
+          onClick: act(item.run),
+          children: item.label
+        },
+        item.label
+      ))
     }
-    frontier = next;
-    if (keep.size >= limit) break;
-  }
-  return sliceGraph(graph, keep, limit);
+  );
 }
-function capByDegree(graph, limit = 300) {
-  const degree = /* @__PURE__ */ new Map();
-  for (const edge of graph.edges) {
-    degree.set(edge.source, (degree.get(edge.source) ?? 0) + 1);
-    degree.set(edge.target, (degree.get(edge.target) ?? 0) + 1);
-  }
-  const ranked = graph.nodes.filter((node) => !node.dangling).sort((a2, b) => (degree.get(b.id) ?? 0) - (degree.get(a2.id) ?? 0));
-  const keep = new Set(ranked.slice(0, limit).map((node) => node.id));
-  return sliceGraph(graph, keep, limit);
+function TreeToolbar({ filterOpen, onToggleFilter, sortKey, onSort, autoReveal, onToggleAutoReveal, onCollapseAll, onNewNote, onNewFolder }) {
+  const [sortMenu, setSortMenu] = (0, import_react11.useState)(null);
+  const [help, setHelp] = (0, import_react11.useState)(false);
+  const sortLabel = { "name-asc": "\u540D\u79F0 \u2191", "name-desc": "\u540D\u79F0 \u2193", "mtime-desc": "\u65F6\u95F4 \u2193", "mtime-asc": "\u65F6\u95F4 \u2191" }[sortKey] ?? "\u540D\u79F0 \u2191";
+  return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-tbrow", "data-testid": "vault-tree-toolbar", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-tbdots", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", {}),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", {}),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", {}),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", {}),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", {})
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-tbactions", "data-testid": "vault-tree-toolbar-actions", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", title: "\u65B0\u5EFA\u7B14\u8BB0", onClick: onNewNote, "data-testid": "vault-tb-new-note", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Plus, { size: 13 }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", title: "\u65B0\u5EFA\u6587\u4EF6\u5939", onClick: onNewFolder, "data-testid": "vault-tb-new-folder", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(FolderPlus, { size: 13 }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", title: "\u5E2E\u52A9", onClick: () => setHelp(!help), "data-testid": "vault-tb-help", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(CircleQuestionMark, { size: 13 }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", title: "\u8FC7\u6EE4", className: filterOpen ? "is-on" : "", onClick: onToggleFilter, "data-testid": "vault-tb-filter", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Funnel, { size: 13 }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-relative", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", title: `\u6392\u5E8F\uFF1A${sortLabel}`, onClick: () => setSortMenu(!sortMenu), "data-testid": "vault-tb-sort", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(ArrowUpDown, { size: 13 }) }),
+        sortMenu ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(PopMenu, { onClose: () => setSortMenu(null), children: ["name-asc", "name-desc", "mtime-desc", "mtime-asc"].map((mode) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("button", { type: "button", className: "dpl-vault2-ctxitem", onClick: () => {
+          onSort(mode);
+          setSortMenu(null);
+        }, children: [
+          sortLabel && mode === sortKey ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Check, { size: 12 }) : null,
+          { "name-asc": "\u540D\u79F0 \u2191", "name-desc": "\u540D\u79F0 \u2193", "mtime-desc": "\u65F6\u95F4 \u2193", "mtime-asc": "\u65F6\u95F4 \u2191" }[mode]
+        ] }, mode)) }) : null
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", title: "\u81EA\u52A8\u5B9A\u4F4D\u6253\u5F00\u7684\u7B14\u8BB0", className: autoReveal ? "is-on" : "", onClick: onToggleAutoReveal, "data-testid": "vault-tb-autoreveal", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(LocateFixed, { size: 13 }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", title: "\u5168\u90E8\u6298\u53E0", onClick: onCollapseAll, "data-testid": "vault-tb-collapse-all", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(ChevronsDownUp, { size: 13 }) })
+    ] }),
+    help ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(PopMenu, { onClose: () => setHelp(false), wide: true, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-helplist", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { children: "\u2318P \u5FEB\u901F\u5207\u6362 \xB7 \u2318\u21E7F \u5168\u5E93\u641C\u7D22 \xB7 \u2318\u21E7P \u547D\u4EE4\u9762\u677F \xB7 \u2318E \u5207\u6362\u89C6\u56FE \xB7 \u53F3\u952E\u6587\u4EF6/\u6587\u4EF6\u5939\u6709\u5B8C\u6574\u64CD\u4F5C" }) }) }) : null
+  ] });
 }
-function sliceGraph(graph, keep, limit) {
-  const nodes = graph.nodes.filter((node) => keep.has(node.id)).slice(0, limit);
-  const kept = new Set(nodes.map((node) => node.id));
-  const edges = graph.edges.filter((edge) => kept.has(edge.source) && kept.has(edge.target));
-  return { nodes, edges };
+function PopMenu({ onClose, children, wide }) {
+  (0, import_react11.useEffect)(() => {
+    const close = () => onClose();
+    window.addEventListener("mousedown", close);
+    const onKey = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("mousedown", close);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [onClose]);
+  return /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-popmenu" + (wide ? " is-wide" : ""), onMouseDown: (event) => event.stopPropagation(), children });
 }
-function highlightSnippet(snippet2) {
-  const escaped = String(snippet2).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  return escaped.replace(/«([^»]*)»/g, "<mark>$1</mark>");
-}
-function escapeHtml2(text2) {
-  return String(text2).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-function markdownHeadings2(content2) {
-  const out = [];
-  let inFence = false;
-  for (const line of String(content2 ?? "").split("\n")) {
-    if (/^\s*(```+|~~~+)/.test(line)) {
-      inFence = !inFence;
-      continue;
-    }
-    if (inFence) continue;
-    const match = line.match(/^#{2,6}\s+(.+?)\s*#*$/);
-    if (match) out.push({ level: match[0].match(/^#+/)[0].length, text: match[1].trim() });
-  }
-  return out;
-}
-function TreePane({ api, expanded, setExpanded, activePath, sortKey, onOpen, onRename, onDuplicate, onTrash, onNewNote, onNewDir }) {
+function TreePane({ api, expanded, setExpanded, activePath, sortKey, onOpen, onContextMenu }) {
   const [roots, setRoots] = (0, import_react11.useState)(null);
   const load = (0, import_react11.useCallback)(async (dir) => {
     const { entries: entries2 } = await api.vaultList(dir);
@@ -137971,94 +138553,91 @@ function TreePane({ api, expanded, setExpanded, activePath, sortKey, onOpen, onR
     });
     if (!expanded.has(dir)) void load(dir);
   };
+  const sortEntries = (entries2) => {
+    const dirs = entries2.filter((entry) => entry.kind === "dir").sort((a2, b) => a2.name.localeCompare(b.name, "zh-Hans-CN"));
+    const files = entries2.filter((entry) => entry.kind === "file");
+    const sorted = [...files].sort((a2, b) => {
+      switch (sortKey) {
+        case "name-desc":
+          return b.name.localeCompare(a2.name, "zh-Hans-CN");
+        case "mtime-desc":
+          return (b.mtime ?? 0) - (a2.mtime ?? 0) || a2.name.localeCompare(b.name);
+        case "mtime-asc":
+          return (a2.mtime ?? 0) - (b.mtime ?? 0) || a2.name.localeCompare(b.name);
+        default:
+          return a2.name.localeCompare(b.name, "zh-Hans-CN");
+      }
+    });
+    return [...dirs, ...sorted];
+  };
   if (!roots || !roots[""]) {
     return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-empty", children: [
       /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(LoaderCircle, { size: 14, className: "dpl-spin" }),
       " \u52A0\u8F7D\u4E2D\u2026"
     ] });
   }
-  const renderEntries = (entries2, dir) => {
-    const dirs = entries2.filter((entry) => entry.kind === "dir");
-    const files = entries2.filter((entry) => entry.kind === "file");
-    const sort = (list, key) => key === "mtime" ? [...list].sort((a2, b) => (b.mtime ?? 0) - (a2.mtime ?? 0)) : [...list].sort((a2, b) => a2.name.localeCompare(b.name, "zh-Hans-CN"));
-    return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
-      sort(dirs, sortKey).map((entry) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-row" + (expanded.has(entry.path) ? " is-open" : ""), children: [
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("button", { type: "button", className: "dpl-vault2-dir", onClick: () => toggle(entry.path), children: [
-            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-vault2-chevron", children: expanded.has(entry.path) ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(ChevronDown, { size: 12 }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(ChevronRight, { size: 12 }) }),
-            expanded.has(entry.path) ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(FolderOpen, { size: 13 }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Folder, { size: 13 }),
-            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-truncate", children: entry.name })
-          ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-rowactions", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", title: "\u65B0\u5EFA\u7B14\u8BB0", onClick: (event) => {
-              event.stopPropagation();
-              onNewNote(entry.path);
-            }, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Plus, { size: 12 }) }),
-            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", title: "\u91CD\u547D\u540D", onClick: (event) => {
-              event.stopPropagation();
-              onRename(entry.path);
-            }, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Pencil, { size: 11 }) }),
-            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", title: "\u5220\u9664", onClick: (event) => {
-              event.stopPropagation();
-              onTrash(entry.path, entry.name);
-            }, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Trash, { size: 11 }) })
-          ] })
-        ] }),
-        expanded.has(entry.path) ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-children", children: roots[entry.path] ? renderEntries(roots[entry.path], entry.path) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-loading", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(LoaderCircle, { size: 11, className: "dpl-spin" }) }) }) : null
-      ] }, entry.path)),
-      sort(files, sortKey).map((entry) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-row" + (activePath === entry.path ? " is-active" : ""), children: [
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("button", { type: "button", className: "dpl-vault2-file", onClick: () => onOpen(entry.path), children: [
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(FileText, { size: 13 }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-truncate", children: entry.name.replace(/\.md$/i, "") }),
-          sortKey === "mtime" && entry.mtime ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-vault2-filemtime", children: formatWhen(entry.mtime) }) : null
-        ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-rowactions", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", title: "\u91CD\u547D\u540D", onClick: (event) => {
-            event.stopPropagation();
-            onRename(entry.path);
-          }, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Pencil, { size: 11 }) }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", title: "\u521B\u5EFA\u526F\u672C", onClick: (event) => {
-            event.stopPropagation();
-            onDuplicate(entry.path);
-          }, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Copy, { size: 11 }) }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", title: "\u79FB\u5165\u56DE\u6536\u7AD9", onClick: (event) => {
-            event.stopPropagation();
-            onTrash(entry.path, entry.name);
-          }, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Trash, { size: 11 }) })
+  const renderEntries = (entries2) => /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_jsx_runtime8.Fragment, { children: sortEntries(entries2).map((entry) => entry.kind === "dir" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+      "div",
+      {
+        className: "dpl-vault2-row" + (expanded.has(entry.path) ? " is-open" : ""),
+        onContextMenu: (event) => onContextMenu(event, "folder", entry.path, entry.name),
+        children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("button", { type: "button", className: "dpl-vault2-dir", onClick: () => toggle(entry.path), children: [
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-vault2-chevron", children: expanded.has(entry.path) ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(ChevronDown, { size: 12 }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(ChevronRight, { size: 12 }) }),
+          expanded.has(entry.path) ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(FolderOpen, { size: 13 }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Folder, { size: 13 }),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-truncate", children: entry.name })
         ] })
-      ] }, entry.path))
-    ] });
-  };
-  return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-treeroot", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-sortrow", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-ib-pansub", children: "\u6392\u5E8F" }),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "dpl-vault2-sortbtn" + (sortKey === "name" ? " is-active" : ""), onClick: () => {
-      }, children: "\u540D\u79F0" }),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "dpl-vault2-sortbtn" + (sortKey === "mtime" ? " is-active" : ""), onClick: () => {
-      }, children: "\u65F6\u95F4" })
-    ] }),
-    renderEntries(roots[""], ""),
-    /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-treefoot", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("button", { type: "button", className: "dpl-vault2-footbtn", onClick: () => onNewNote(""), children: [
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Plus, { size: 12 }),
-        " \u6839\u7B14\u8BB0"
-      ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("button", { type: "button", className: "dpl-vault2-footbtn", onClick: () => onNewDir(""), children: [
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(FolderPlus, { size: 12 }),
-        " \u6839\u6587\u4EF6\u5939"
+      }
+    ),
+    expanded.has(entry.path) ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-children", children: roots[entry.path] ? renderEntries(roots[entry.path]) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-loading", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(LoaderCircle, { size: 11, className: "dpl-spin" }) }) }) : null
+  ] }, entry.path) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+    "div",
+    {
+      className: "dpl-vault2-row" + (activePath === entry.path ? " is-active" : ""),
+      onContextMenu: (event) => onContextMenu(event, "file", entry.path, entry.name),
+      children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("button", { type: "button", className: "dpl-vault2-file", onClick: () => onOpen(entry.path), children: [
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(FileText, { size: 13 }),
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-truncate", children: entry.name.replace(/\.md$/i, "") })
       ] })
-    ] })
-  ] });
+    },
+    entry.path
+  )) });
+  return /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-treeroot", children: renderEntries(roots[""]) });
 }
-var NoteReadPane = (0, import_react11.forwardRef)(function NoteReadPane2({ tab, onDraft, onSave, onDiscard, onWikilink, onMaterial, onOutlineChange, onEditorScroll, resolveImage, noteFiles, readerRef }, forwardedRef) {
+var MODE_ITEMS = [
+  { id: "source", label: "\u6E90\u7801\u6A21\u5F0F", Icon: SquareCode },
+  { id: "live", label: "\u5B9E\u65F6\u9884\u89C8", Icon: Eye },
+  { id: "read", label: "\u9605\u8BFB\u89C6\u56FE", Icon: BookOpen }
+];
+var NoteReadPane = (0, import_react11.forwardRef)(function NoteReadPane2({
+  tab,
+  onDraft,
+  onSave,
+  onDiscard,
+  onWikilink,
+  onMaterial,
+  onOutlineChange,
+  onEditorScroll,
+  resolveImage,
+  noteFiles,
+  readerRef,
+  backlinksOpen,
+  onToggleBacklinks,
+  onExport
+}, forwardedRef) {
   const [view, setView] = (0, import_react11.useState)("read");
   const [lineNumbers2, setLineNumbers] = (0, import_react11.useState)(true);
   const [wrap, setWrap] = (0, import_react11.useState)(true);
+  const [toolbarVisible, setToolbarVisible] = (0, import_react11.useState)(true);
+  const [modeMenu, setModeMenu] = (0, import_react11.useState)(false);
+  const [moreMenu, setMoreMenu] = (0, import_react11.useState)(false);
   const hostRef = (0, import_react11.useRef)(null);
   const editorRef = (0, import_react11.useRef)(null);
   const outlineRef = (0, import_react11.useRef)([]);
   const dirty = tab.dirty !== null && tab.dirty !== void 0;
   const text2 = dirty ? tab.draft : tab.content;
+  const segments = tab.path.split("/");
+  const ModeIcon = view === "source" ? SquareCode : view === "live" ? Eye : BookOpen;
   (0, import_react11.useEffect)(() => {
     if (view === "read" || !hostRef.current) {
       if (editorRef.current) {
@@ -138099,13 +138678,7 @@ var NoteReadPane = (0, import_react11.forwardRef)(function NoteReadPane2({ tab, 
   }, [text2, dirty]);
   const setMode = (next) => {
     if (next === view) return;
-    if (next !== "read" && dirty) {
-      setView(next);
-      requestAnimationFrame(() => {
-        if (editorRef.current) editorRef.current.setDoc(text2);
-      });
-      return;
-    }
+    setModeMenu(false);
     setView(next);
   };
   (0, import_react11.useEffect)(() => {
@@ -138134,51 +138707,182 @@ var NoteReadPane = (0, import_react11.forwardRef)(function NoteReadPane2({ tab, 
     }
   };
   (0, import_react11.useImperativeHandle)(forwardedRef, () => ({ jumpToHeading: jumpTo }), [jumpTo]);
+  const fmt = (Icon2, title, run, extraClass = "") => /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+    "button",
+    {
+      type: "button",
+      title,
+      className: "dpl-vault2-fmtbtn " + extraClass,
+      onMouseDown: (event) => event.preventDefault(),
+      onClick: () => {
+        if (editorRef.current) run(editorRef.current.view);
+      },
+      children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Icon2, { size: 14 })
+    },
+    title
+  );
   return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-note", "data-view": view, children: [
-    /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-notehead", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("h1", { children: tab.title }),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-noteactions", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-viewswitch", children: ["read", "live", "source"].map((mode) => /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-crumbbar", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-crumb", children: segments.map((segment, index2) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { className: index2 === segments.length - 1 ? "is-last" : "", children: [
+        index2 > 0 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-vault2-crumbsep", children: "/" }) : null,
+        segment.replace(/\.md$/i, "")
+      ] }, index2)) }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-crumbright", children: [
+        dirty ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "dpl-btn dpl-sm dpl-primary-solid", onClick: onSave, children: "\u4FDD\u5B58" }),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "dpl-btn dpl-sm", onClick: onDiscard, children: "\u653E\u5F03" })
+        ] }) : null,
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-relative", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
+            "button",
+            {
+              type: "button",
+              className: "dpl-vault2-crumbbtn",
+              title: "\u5207\u6362\u89C6\u56FE (\u2318E)",
+              onClick: () => {
+                setModeMenu(!modeMenu);
+                setMoreMenu(false);
+              },
+              "data-testid": "vault-mode",
+              children: [
+                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(ModeIcon, { size: 14 }),
+                " ",
+                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(ChevronDown, { size: 12 })
+              ]
+            }
+          ),
+          modeMenu ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(PopMenu, { onClose: () => setModeMenu(false), children: MODE_ITEMS.map(({ id: id2, label, Icon: Icon2 }) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("button", { type: "button", className: "dpl-vault2-ctxitem", onClick: () => setMode(id2), "data-testid": `vault-mode-${id2}`, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Icon2, { size: 13 }),
+            " ",
+            label,
+            " ",
+            view === id2 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Check, { size: 12 }) : null
+          ] }, id2)) }) : null
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-relative", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+            "button",
+            {
+              type: "button",
+              className: "dpl-vault2-crumbbtn",
+              title: "\u66F4\u591A",
+              onClick: () => {
+                setMoreMenu(!moreMenu);
+                setModeMenu(false);
+              },
+              "data-testid": "vault-more",
+              children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(MoreIcon, {})
+            }
+          ),
+          moreMenu ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(PopMenu, { onClose: () => setMoreMenu(false), children: [
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("button", { type: "button", className: "dpl-vault2-ctxitem", onClick: () => {
+              setMoreMenu(false);
+              onToggleBacklinks();
+            }, "data-testid": "backlinks-toggle", children: [
+              "\u53CD\u5411\u94FE\u63A5 ",
+              backlinksOpen ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Check, { size: 12 }) : null
+            ] }),
+            view !== "read" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "dpl-vault2-ctxitem", onClick: () => {
+              setMoreMenu(false);
+              if (editorRef.current) openSearchPanel(editorRef.current.view);
+            }, "data-testid": "vault-more-find", children: "\u67E5\u627E / \u66FF\u6362" }) : null,
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-ctxdivider" }),
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "dpl-vault2-ctxitem", onClick: () => {
+              setMoreMenu(false);
+              onExport("pdf");
+            }, "data-testid": "vault-more-export-pdf", children: "\u5BFC\u51FA\u4E3A PDF\u2026" }),
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "dpl-vault2-ctxitem", onClick: () => {
+              setMoreMenu(false);
+              onExport("html");
+            }, "data-testid": "vault-more-export-html", children: "\u5BFC\u51FA\u4E3A HTML\u2026" }),
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-ctxdivider" }),
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("button", { type: "button", className: "dpl-vault2-ctxitem", onClick: () => setToolbarVisible(!toolbarVisible), "data-testid": "vault-more-toolbar", children: [
+              "\u683C\u5F0F\u5DE5\u5177\u680F ",
+              toolbarVisible ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Check, { size: 12 }) : null
+            ] }),
+            view !== "read" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("button", { type: "button", className: "dpl-vault2-ctxitem", onClick: () => {
+                setLineNumbers(!lineNumbers2);
+                editorRef.current?.setLineNumbers(!lineNumbers2);
+              }, "data-testid": "vault-more-line-numbers", children: [
+                "\u884C\u53F7 ",
+                lineNumbers2 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Check, { size: 12 }) : null
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("button", { type: "button", className: "dpl-vault2-ctxitem", onClick: () => {
+                setWrap(!wrap);
+                editorRef.current?.setWrap(!wrap);
+              }, "data-testid": "vault-more-wrap", children: [
+                "\u81EA\u52A8\u6362\u884C ",
+                wrap ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Check, { size: 12 }) : null
+              ] })
+            ] }) : null
+          ] }) : null
+        ] })
+      ] })
+    ] }),
+    view !== "read" && toolbarVisible ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-fmtbar", "data-testid": "vault-format-toolbar", children: [
+      fmt(({ size }) => /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { style: { fontWeight: 700, fontSize: size - 1 }, children: "H" }), "\u6807\u9898", cycleHeading),
+      fmt(({ size }) => /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { style: { fontWeight: 700 }, children: "B" }), "\u7C97\u4F53", (view2) => wrapRange(view2, "**")),
+      fmt(({ size }) => /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { style: { fontStyle: "italic" }, children: "I" }), "\u659C\u4F53", (view2) => wrapRange(view2, "*")),
+      fmt(({ size }) => /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { style: { textDecoration: "line-through" }, children: "S" }), "\u5220\u9664\u7EBF", (view2) => wrapRange(view2, "~~")),
+      fmt(Link2, "\u94FE\u63A5", (view2) => {
+        const sel = view2.state.sliceDoc(view2.state.selection.main.from, view2.state.selection.main.to) || "\u6587\u672C";
+        insertAtCursor(view2, `[${sel}](url)`, view2.state.selection.main.from + sel.length + 3);
+      }),
+      fmt(List, "\u65E0\u5E8F\u5217\u8868", (view2) => toggleLinePrefixes(view2, "- ")),
+      fmt(ListOrdered, "\u6709\u5E8F\u5217\u8868", (view2) => toggleLinePrefixes(view2, "1. ")),
+      fmt(SquareCheckBig, "\u4EFB\u52A1\u5217\u8868", (view2) => toggleLinePrefixes(view2, "- [ ] ")),
+      fmt(Quote, "\u5F15\u7528", (view2) => toggleLinePrefixes(view2, "> ")),
+      fmt(Minus, "\u5206\u9694\u7EBF", (view2) => insertAtCursor(view2, "\n---\n")),
+      fmt(CodeXml, "\u4EE3\u7801", codeTransform),
+      fmt(Table, "\u8868\u683C", insertTable),
+      fmt(Undo2, "\u64A4\u9500", (view2) => view2.undo?.()),
+      fmt(Redo2, "\u91CD\u505A", (view2) => view2.redo?.()),
+      fmt(ImagePlus, "\u56FE\u7247", (view2) => insertAtCursor(view2, "![\u63CF\u8FF0](attachments/\u56FE\u7247.png)", 3)),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-fmtmore", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "dpl-vault2-fmtbtn", title: "\u66F4\u591A\u683C\u5F0F", onMouseDown: (event) => event.preventDefault(), onClick: (event) => event.currentTarget.nextElementSibling?.classList.toggle("is-open"), children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(MoreGlyph, {}) }),
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-fmtmoremenu", children: [
+          { label: "\u9AD8\u4EAE", run: (v) => wrapRange(v, "==") },
+          { label: "\u53CC\u94FE", run: (v) => wrapRange(v, "[[", "]]") },
+          { label: "\u5D4C\u5165", run: (v) => wrapRange(v, "![[", "]]") },
+          { label: "Callout", run: (v) => toggleLinePrefixes(v, "> [!NOTE] ") },
+          { label: "\u811A\u6CE8", run: (v) => insertAtCursor(v, "[^1]", 1) },
+          { label: "\u6CE8\u91CA", run: (v) => wrapRange(v, "%%") }
+        ].map((item) => /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
           "button",
           {
             type: "button",
-            className: view === mode ? "is-active" : "",
-            onClick: () => setMode(mode),
-            title: mode === "read" ? "\u9605\u8BFB" : mode === "live" ? "\u5B9E\u65F6\u9884\u89C8 (\u2318E)" : "\u6E90\u7801 (\u2318E)",
-            children: mode === "read" ? "\u9605\u8BFB" : mode === "live" ? "\u5B9E\u65F6" : "\u6E90\u7801"
+            className: "dpl-vault2-ctxitem",
+            onMouseDown: (event) => event.preventDefault(),
+            onClick: (event) => {
+              if (editorRef.current) item.run(editorRef.current.view);
+              event.currentTarget.parentElement.classList.remove("is-open");
+            },
+            children: item.label
           },
-          mode
-        )) }),
-        view !== "read" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "dpl-btn dpl-sm" + (lineNumbers2 ? " is-on" : ""), onClick: () => {
-            setLineNumbers(!lineNumbers2);
-            editorRef.current?.setLineNumbers(!lineNumbers2);
-          }, children: "\u884C\u53F7" }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "dpl-btn dpl-sm" + (wrap ? " is-on" : ""), onClick: () => {
-            setWrap(!wrap);
-            editorRef.current?.setWrap(!wrap);
-          }, children: "\u6362\u884C" })
-        ] }) : null,
-        dirty ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "dpl-btn dpl-sm dpl-primary-solid", onClick: onSave, children: "\u4FDD\u5B58" }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "dpl-btn dpl-sm", onClick: onDiscard, children: "\u653E\u5F03\u4FEE\u6539" })
-        ] }) : null
+          item.label
+        )) })
       ] })
-    ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-notemeta", children: [
-      tab.path,
-      tab.tags.length > 0 ? " \xB7 " + tab.tags.map((tag) => "#" + tag).join(" ") : "",
-      view === "live" ? " \xB7 \u5B9E\u65F6\u9884\u89C8" : view === "source" ? " \xB7 \u6E90\u7801" : ""
-    ] }),
+    ] }) : null,
     view === "read" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { ref: readerRef, className: "dpl-vault2-readerscroll", children: [
       /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(MarkdownView, { className: "dpl-note-body dpl-vault2-body", markdown: text2, onWikilink }),
       /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-bodyend" })
     ] }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-editwrap", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { ref: hostRef, className: "dpl-vault2-cmhost", "data-testid": "vault-editor" }) })
   ] });
 });
+function MoreIcon() {
+  return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("svg", { width: "14", height: "14", viewBox: "0 0 24 24", fill: "currentColor", "aria-hidden": "true", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("circle", { cx: "5", cy: "12", r: "1.6" }),
+    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("circle", { cx: "12", cy: "12", r: "1.6" }),
+    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("circle", { cx: "19", cy: "12", r: "1.6" })
+  ] });
+}
+function MoreGlyph() {
+  return /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("svg", { width: "14", height: "14", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("path", { d: "M4 7h16M4 12h16M4 17h16" }) });
+}
 function GraphPane({ graph, layout, onOpen, onClose }) {
-  const width = 900;
-  const height = 620;
+  const width = 640;
+  const height = 760;
   const [hover, setHover] = (0, import_react11.useState)(null);
   return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-graph", children: [
     /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-graphhead", children: [
