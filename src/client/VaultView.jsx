@@ -145,7 +145,6 @@ export function VaultView({ api, onMaterial }) {
   const [filter, setFilter] = useState('');
   const [sortKey, setSortKey] = useState('name-asc');
   const [autoReveal, setAutoReveal] = useState(true);
-  const [autoRevealRefState, setAutoRevealRefState] = useState(0);
   const autoRevealRef = useRef(true);
   const [clipboard, setClipboard] = useState(null); // { mode:'cut', path, name }
   const [ctxMenu, setCtxMenu] = useState(null); // { x, y, kind, path, name }
@@ -190,6 +189,37 @@ export function VaultView({ api, onMaterial }) {
   }, [api]);
 
   useEffect(() => { void refreshIndex(); }, [refreshIndex]);
+
+  /**
+   * Locate the active note in the tree: expand its ancestors and scroll the
+   * row into view. Used by the 自动定位 toolbar button so clicking it has an
+   * immediate, visible effect (the toggle alone only changed a tint — the
+   * button read as dead). Children load asynchronously, so the scroll
+   * retries briefly until the row exists.
+   */
+  const revealActiveNote = useCallback(() => {
+    const path = activeTab?.path;
+    if (!path) return false;
+    if (leftMode !== 'tree') setLeftMode('tree');
+    setExpanded((current) => {
+      const next = new Set(current);
+      for (const dir of ancestorsOf(path)) next.add(dir);
+      return next;
+    });
+    let attempts = 0;
+    const tryScroll = () => {
+      const row = document.querySelector('.dpl-vault2-row.is-active');
+      if (row) { row.scrollIntoView?.({ block: 'center', behavior: 'smooth' }); return; }
+      if (attempts < 40) { attempts += 1; window.requestAnimationFrame?.(tryScroll); }
+    };
+    window.requestAnimationFrame?.(tryScroll);
+    return true;
+  }, [activeTab?.path, leftMode]);
+
+  const flashNotice = useCallback((message) => {
+    setNotice(message);
+    setTimeout(() => { setNotice((current) => (current === message ? '' : current)); }, 3500);
+  }, []);
 
   const openPath = useCallback(async (path, { forceNew = false } = {}) => {
     const existing = tabs.find((tab) => tab.path === path);
@@ -647,7 +677,17 @@ export function VaultView({ api, onMaterial }) {
           sortKey={sortKey}
           onSort={(key) => { setSortKey(key); }}
           autoReveal={autoReveal}
-          onToggleAutoReveal={() => { setAutoReveal(!autoReveal); autoRevealRef.current = !autoReveal; }}
+          onToggleAutoReveal={() => {
+            const next = !autoReveal;
+            setAutoReveal(next);
+            autoRevealRef.current = next;
+            if (!next) {
+              flashNotice('自动定位已关闭：打开笔记时不再展开定位');
+              return;
+            }
+            if (revealActiveNote()) flashNotice(`已定位到 ${activeTab?.title ?? activeTab?.name ?? '当前笔记'}`);
+            else flashNotice('当前没有打开的笔记可定位');
+          }}
           onCollapseAll={() => setExpanded(new Set())}
           onNewNote={() => setCreating({ kind: 'note', name: '', dir: activeTab ? ancestorsOf(activeTab.path)[0] ?? '' : '' })}
           onNewFolder={() => setCreating({ kind: 'dir', name: '', dir: activeTab ? ancestorsOf(activeTab.path)[0] ?? '' : '' })}
@@ -1103,10 +1143,17 @@ function VaultContextMenu({ menu, clipboard, onClose, actions }) {
 }
 
 /** Dot toolbar that reveals icon actions on hover (native tree toolbar). */
+const SORT_MODES = [
+  ['name-asc', '名称 ↑'],
+  ['name-desc', '名称 ↓'],
+  ['mtime-desc', '时间 ↓'],
+  ['mtime-asc', '时间 ↑'],
+];
+
 function TreeToolbar({ filterOpen, onToggleFilter, sortKey, onSort, autoReveal, onToggleAutoReveal, onCollapseAll, onNewNote, onNewFolder }) {
   const [sortMenu, setSortMenu] = useState(null);
   const [help, setHelp] = useState(false);
-  const sortLabel = { 'name-asc': '名称 ↑', 'name-desc': '名称 ↓', 'mtime-desc': '时间 ↓', 'mtime-asc': '时间 ↑' }[sortKey] ?? '名称 ↑';
+  const sortLabel = SORT_MODES.find(([mode]) => mode === sortKey)?.[1] ?? '名称 ↑';
   return (
     <div className="dpl-vault2-tbrow" data-testid="vault-tree-toolbar">
       <div className="dpl-vault2-tbdots"><span /><span /><span /><span /><span /></div>
@@ -1119,10 +1166,10 @@ function TreeToolbar({ filterOpen, onToggleFilter, sortKey, onSort, autoReveal, 
           <button type="button" title={`排序：${sortLabel}`} onClick={() => setSortMenu(!sortMenu)} data-testid="vault-tb-sort"><ArrowUpDown size={13} /></button>
           {sortMenu ? (
             <PopMenu onClose={() => setSortMenu(null)}>
-              {['name-asc', 'name-desc', 'mtime-desc', 'mtime-asc'].map((mode) => (
+              {SORT_MODES.map(([mode, label]) => (
                 <button key={mode} type="button" className="dpl-vault2-ctxitem" onClick={() => { onSort(mode); setSortMenu(null); }}>
-                  {sortLabel && mode === sortKey ? <Check size={12} /> : null}
-                  { { 'name-asc': '名称 ↑', 'name-desc': '名称 ↓', 'mtime-desc': '时间 ↓', 'mtime-asc': '时间 ↑' }[mode] }
+                  {mode === sortKey ? <Check size={12} /> : null}
+                  {label}
                 </button>
               ))}
             </PopMenu>
@@ -1134,7 +1181,11 @@ function TreeToolbar({ filterOpen, onToggleFilter, sortKey, onSort, autoReveal, 
       {help ? (
         <PopMenu onClose={() => setHelp(false)} wide>
           <div className="dpl-vault2-helplist">
-            <span>⌘P 快速切换 · ⌘⇧F 全库搜索 · ⌘⇧P 命令面板 · ⌘E 切换视图 · 右键文件/文件夹有完整操作</span>
+            <div className="dpl-vault2-helprow"><kbd>⌘P</kbd><span>快速切换</span></div>
+            <div className="dpl-vault2-helprow"><kbd>⌘⇧F</kbd><span>全库搜索</span></div>
+            <div className="dpl-vault2-helprow"><kbd>⌘⇧P</kbd><span>命令面板</span></div>
+            <div className="dpl-vault2-helprow"><kbd>⌘E</kbd><span>切换视图</span></div>
+            <div className="dpl-vault2-helprow is-plain"><span>右键文件/文件夹有完整操作</span></div>
           </div>
         </PopMenu>
       ) : null}

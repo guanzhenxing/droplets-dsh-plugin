@@ -179,6 +179,32 @@ test('vault renders tree/tabs/read + native menus + graph', { skip: !existsSync(
   // Breadcrumb renders the path segments.
   assert.ok(container.querySelector('.dpl-vault2-crumb'), 'breadcrumb bar renders');
 
+  // ---- 自动定位 button: clicking must produce visible feedback ----
+  // (It used to only flip an internal flag; the statusbar notice + reveal
+  // now make the click feel alive.)
+  const autoRevealButton = container.querySelector('[data-testid="vault-tb-autoreveal"]');
+  assert.ok(autoRevealButton, 'autoreveal button present');
+  autoRevealButton.click();
+  await new Promise((resolve) => setTimeout(resolve, 120));
+  assert.ok(container.innerHTML.includes('自动定位已关闭'), 'turning off announces itself in the statusbar');
+  autoRevealButton.click();
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  assert.ok(container.innerHTML.includes('已定位到'), 'turning on reveals the active note with a notice');
+
+  // ---- sort menu: the checkmark rides inline with its label ----
+  const sortButton = container.querySelector('[data-testid="vault-tb-sort"]');
+  assert.ok(sortButton, 'sort toolbar button present');
+  sortButton.click();
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  const sortItems = [...container.querySelectorAll('.dpl-vault2-popmenu .dpl-vault2-ctxitem')];
+  assert.equal(sortItems.length, 4, 'four sort modes listed');
+  const checked = sortItems.find((item) => item.querySelector('svg'));
+  assert.ok(checked, 'one row carries the checkmark');
+  assert.ok(checked.textContent.includes('名称'), 'the checked row still shows its label');
+  assert.ok(sortItems.every((item) => item.textContent.trim() !== ''), 'no label-less orphan rows');
+  window.dispatchEvent(new window.MouseEvent('mousedown', { bubbles: true }));
+  await new Promise((resolve) => setTimeout(resolve, 80));
+
   // ---- mode dropdown (native 源码/实时/阅读) ----
   const cmErrors = [];
   const cmNoise = (error) => {

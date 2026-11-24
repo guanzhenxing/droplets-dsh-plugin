@@ -2056,6 +2056,9 @@
   justify-content: center;
   gap: 16px;
   transition: opacity 0.12s;
+  /* Decorative placeholder: must never capture pointer events (same
+     hit-test lesson as the feed toolbar dots). */
+  pointer-events: none;
 }
 .dpl-vault2-tbdots span { width: 4px; height: 4px; border-radius: 50%; background: var(--dpl-faint); }
 .dpl-vault2-tbactions {
@@ -2072,7 +2075,12 @@
 }
 .dpl-vault2-tbrow:hover .dpl-vault2-tbdots { opacity: 0; }
 .dpl-vault2-tbrow:hover .dpl-vault2-tbactions { opacity: 1; pointer-events: auto; }
-.dpl-vault2-tbactions button {
+/* Direct children ONLY: a plain descendant selector here once styled the
+   sort-menu buttons nested inside .dpl-relative as 24×24 grid cells — the
+   whole menu collapsed into cramped squares with clipped labels and an
+   orphaned checkmark (reproduced in a real browser against this CSS). */
+.dpl-vault2-tbactions > button,
+.dpl-vault2-tbactions > .dpl-relative > button {
   display: grid;
   place-items: center;
   width: 24px;
@@ -2083,8 +2091,10 @@
   color: var(--dpl-faint);
   cursor: pointer;
 }
-.dpl-vault2-tbactions button:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }
-.dpl-vault2-tbactions button.is-on { color: var(--dpl-accent); background: color-mix(in srgb, var(--dpl-accent) 12%, transparent); }
+.dpl-vault2-tbactions > button:hover,
+.dpl-vault2-tbactions > .dpl-relative > button:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }
+.dpl-vault2-tbactions > button.is-on,
+.dpl-vault2-tbactions > .dpl-relative > button.is-on { color: var(--dpl-accent); background: color-mix(in srgb, var(--dpl-accent) 12%, transparent); }
 .dpl-relative { position: relative; }
 
 .dpl-vault2-popmenu {
@@ -2104,7 +2114,10 @@
   display: flex;
   flex-direction: column;
 }
-.dpl-vault2-popmenu.is-wide { min-width: 260px; }
+/* The help popover lives in a 240px tree pane; right-anchored at the toolbar
+   row it must stay narrower than the pane or the window clips its left edge
+   (the old single-line help text measured ~420px). */
+.dpl-vault2-popmenu.is-wide { min-width: 188px; max-width: 224px; }
 
 /* 右键菜单（fixed，光标处） */
 .dpl-vault2-ctxmenu {
@@ -2244,4 +2257,19 @@
   cursor: pointer;
 }
 .dpl-vault2-askall:hover { background: var(--dpl-bg-2); }
-.dpl-vault2-helplist { padding: 8px 10px; font-size: 11.5px; color: var(--dpl-muted); line-height: 1.7; }
+.dpl-vault2-helplist { padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; }
+.dpl-vault2-helprow { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--dpl-muted); line-height: 1.5; }
+.dpl-vault2-helprow.is-plain span { color: var(--dpl-faint); }
+.dpl-vault2-helprow kbd {
+  flex: none;
+  min-width: 20px;
+  text-align: center;
+  padding: 1px 5px;
+  border: 1px solid var(--dpl-border);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--dpl-bg-2);
+  font-family: inherit;
+  font-size: 10.5px;
+  color: var(--dpl-fg);
+}

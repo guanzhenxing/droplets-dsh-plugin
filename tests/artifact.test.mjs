@@ -149,3 +149,22 @@ test('feed fixes are frozen in the bundle: hit-test dots, aux rail, translation 
   assert.ok(client.includes('translateEntry'), 'translation remote wired');
   assert.ok(client.includes('feedIcons'), 'favicon remote wired');
 });
+
+test('vault toolbar regressions are frozen: scoped button rule, dots, help popover', () => {
+  const client = readFileSync(new URL('../client.js', import.meta.url), 'utf8');
+  // The toolbar button rule must be direct-child scoped: a descendant
+  // selector once styled the nested sort-menu rows as 24×24 grid cells
+  // (orphaned checkmark, clipped labels).
+  assert.ok(
+    /\.dpl-vault2-tbactions > button,/.test(client) && /\.dpl-vault2-tbactions > \.dpl-relative > button \{/.test(client),
+    'toolbar button rule scoped to direct children',
+  );
+  assert.ok(!/\.dpl-vault2-tbactions button \{/.test(client), 'no unscoped toolbar button rule');
+  // Vault dots must stay out of the hit-test tree (same lesson as the feed).
+  assert.ok(/\.dpl-vault2-tbdots\s*\{[^}]*pointer-events:\s*none/.test(client), 'vault dots are pointer-events:none');
+  // The help popover must stay narrower than the 240px tree pane (the old
+  // single-line version measured ~420px and was clipped at the window edge).
+  assert.ok(/\.dpl-vault2-popmenu\.is-wide\s*\{[^}]*max-width:\s*224px/.test(client), 'help popover capped at 224px');
+  assert.ok(client.includes('.dpl-vault2-helprow {'), 'help rows present');
+  assert.ok(client.includes('.dpl-vault2-helprow kbd {'), 'help kbd chips present');
+});
