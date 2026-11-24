@@ -49,7 +49,6 @@
     "pickToPreview": "Pick an entry in the list to preview",
     "stateRead": "Read",
     "stateUnread": "Unread",
-    "translatePending": "AI translation arrives in a later release",
     "groups": "Groups",
     "ungrouped": "Ungrouped",
     "addSubscription": "Add subscription",
@@ -73,7 +72,12 @@
     "noFeedSelected": "Pick a source to start reading",
     "lastError": "Last refresh failed",
     "subscriptions": "Subscriptions",
-    "confirmRemove": "Unsubscribing removes the cached entries; favorites and notes are kept. Unsubscribe?"
+    "confirmRemove": "Unsubscribing removes the cached entries; favorites and notes are kept. Unsubscribe?",
+    "feed.translate": "Translate to Chinese",
+    "feed.translating": "Translating…",
+    "feed.showTranslation": "Show translation",
+    "feed.showOriginal": "Show original",
+    "feed.translationNotice": "AI translation (may differ from the original)"
   },
   "inbox": {
     "addUrl": "Save a link",

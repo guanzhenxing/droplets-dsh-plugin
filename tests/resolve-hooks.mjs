@@ -8,6 +8,7 @@ const redirect = new Map([
   ['@deepseek-ai/dsh-typert-protocol', path.join(stubs, '@deepseek-ai/dsh-typert-protocol/index.js')],
   ['@deepseek-ai/dsh-tools', path.join(stubs, '@deepseek-ai/dsh-tools/index.js')],
   ['@deepseek-ai/dsh-home-paths', path.join(stubs, '@deepseek-ai/dsh-home-paths/index.js')],
+  ['@deepseek-ai/dsh-llm', path.join(stubs, '@deepseek-ai/dsh-llm/index.js')],
 ]);
 
 export async function resolve(specifier, context, next) {

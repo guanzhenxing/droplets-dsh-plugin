@@ -49,7 +49,6 @@
     "pickToPreview": "在中间列表选择一条内容预览",
     "stateRead": "已读",
     "stateUnread": "未读",
-    "translatePending": "AI 译文将在后续版本提供",
     "groups": "分组",
     "ungrouped": "未分组",
     "addSubscription": "添加订阅",
@@ -73,7 +72,12 @@
     "noFeedSelected": "选择左侧源开始阅读",
     "lastError": "上次刷新失败",
     "subscriptions": "订阅管理",
-    "confirmRemove": "退订后条目缓存将被移除,收藏的笔记保留。确定退订吗?"
+    "confirmRemove": "退订后条目缓存将被移除,收藏的笔记保留。确定退订吗?",
+    "feed.translate": "生成中文翻译",
+    "feed.translating": "翻译中…",
+    "feed.showTranslation": "查看译文",
+    "feed.showOriginal": "查看原文",
+    "feed.translationNotice": "AI 译文（与原文可能有出入）"
   },
   "inbox": {
     "addUrl": "存一篇",

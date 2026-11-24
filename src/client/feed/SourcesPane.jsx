@@ -40,7 +40,7 @@ function useRefreshProgress(api) {
 }
 
 export function SourcesPane({
-  api, feeds, sourceId, selectedGroup, spinning, onRefresh, onManage,
+  api, feeds, icons, sourceId, selectedGroup, spinning, onRefresh, onManage,
   onSelectSource, onSelectGroup, collapsed, onExpand, onCollapse,
 }) {
   const progress = useRefreshProgress(api);
@@ -181,7 +181,7 @@ export function SourcesPane({
                   className={'dpl-source dpl-in-group' + (sourceId === feed.id ? ' is-selected' : '') + (feed.enabled ? '' : ' is-disabled')}
                   onClick={() => onSelectSource(feed.id)}
                 >
-                  <FeedBadge feed={feed} />
+                  <FeedBadge feed={feed} icon={icons?.[feed.id]} />
                   <span className="dpl-grow dpl-truncate" title={feed.title}>{feed.title}</span>
                   {feed.lastError ? (
                     <span className="dpl-source-error" title={feed.lastError}><TriangleAlert size={13} /></span>
@@ -198,7 +198,7 @@ export function SourcesPane({
   );
 }
 
-/** 16px badge: letter with a seed-hued background (badgeColorOf port). */
+/** Seed-hue letter badge helpers (badgeColorOf port). */
 const BADGE_HUES = [145, 212, 262, 0, 175, 245, 25, 330];
 function badgeHueOf(seed) {
   let h = 0;
@@ -206,9 +206,27 @@ function badgeHueOf(seed) {
   return BADGE_HUES[h % BADGE_HUES.length];
 }
 
-export function FeedBadge({ feed }) {
+/**
+ * 16px feed badge: the source's own favicon when one was acquired (data
+ * URL, falls back to the letter mark if the image fails to decode), else
+ * the seeded-hue letter mark (badgeColorOf port).
+ */
+export function FeedBadge({ feed, icon }) {
+  const [broken, setBroken] = useState(false);
   const letter = ([...String(feed.title ?? '').trim()][0] ?? '?').toUpperCase();
   const hue = badgeHueOf(feed.id ?? feed.title ?? '');
+  if (icon && !broken) {
+    return (
+      <img
+        className="dpl-badge dpl-badge-img"
+        src={icon}
+        alt=""
+        aria-hidden="true"
+        loading="lazy"
+        onError={() => setBroken(true)}
+      />
+    );
+  }
   return (
     <span
       className="dpl-badge"

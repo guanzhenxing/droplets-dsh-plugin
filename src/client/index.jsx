@@ -37,7 +37,7 @@ function method(name, params = true) {
 
 const NO_PARAM_METHODS = new Set([
   'listChannels', 'listFeeds', 'refreshStatus', 'listSubscriptions', 'opmlExport', 'vaultStatus', 'vaultReindex',
-  'vaultTree', 'vaultGraph', 'vaultTags', 'vaultTrashList', 'vaultIndexFiles', 'getSettings', 'getWorkspace', 'getStorageInfo', 'clearData', 'inboxRetryAllFailed',
+  'vaultTree', 'vaultGraph', 'vaultTags', 'vaultTrashList', 'vaultIndexFiles', 'getSettings', 'getWorkspace', 'getStorageInfo', 'clearData', 'inboxRetryAllFailed', 'feedIcons',
 ]);
 
 const TYPERT_REMOTE = {
@@ -46,7 +46,7 @@ const TYPERT_REMOTE = {
     'listChannels', 'listEntries', 'getEntry', 'searchEntries', 'setRead', 'setFavorite',
     'listFeeds', 'refreshStatus', 'listItems', 'setItemState', 'markAllRead', 'setFeed',
     'listSubscriptions', 'addSubscription', 'removeSubscription', 'updateSubscription',
-    'opmlPreview', 'opmlImport', 'opmlExport', 'refresh',
+    'opmlPreview', 'opmlImport', 'opmlExport', 'refresh', 'feedIcons', 'translateEntry',
     'inboxAddUrl', 'inboxList', 'inboxGet', 'inboxRead', 'inboxReadOriginal',
     'inboxUpdate', 'inboxRetry', 'inboxRetryAllFailed', 'inboxImportMarkdown',
     'inboxMoveToLibrary', 'inboxMoveToTrash', 'inboxMarkDone',
@@ -112,6 +112,8 @@ function registerPanel(ctx) {
     opmlImport: (xml, urls) => call('opmlImport', { xml, urls }),
     opmlExport: () => call('opmlExport'),
     refresh: (channel) => call('refresh', { channel }),
+    feedIcons: () => call('feedIcons'),
+    translateEntry: (key) => call('translateEntry', { key }),
     inboxAddUrl: (params) => call('inboxAddUrl', params),
     inboxList: (params) => call('inboxList', params),
     inboxGet: (id) => call('inboxGet', { id }),

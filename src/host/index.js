@@ -27,6 +27,8 @@ import { extractArticle } from './extract.js';
 import { excerptOf, FEED_LIMITS, mergeEntries, parseFeed, parseOpml, buildOpml, sortByDate, subscriptionIdOf } from './feeds.js';
 import { htmlToText } from './sanitize.js';
 import { guardedFetch } from './guarded-fetch.js';
+import { FeedIconStore, ensureFeedIcon } from './icons.js';
+import { TranslationStore, completeWithLlm, translationInputOf, titleOfTranslation, TRANSLATE_SYSTEM_PROMPT } from './translate.js';
 
 export const name = 'droplets';
 
@@ -106,6 +108,12 @@ export class DropletsService extends TypertRemoteService {
     // this for a permissive factory to exercise the full flow on loopback.
     this.fetcher = guardedFetch;
     this.inbox = this.createInbox();
+    // Per-feed icon cache (favicons) and translation cache: both live in
+    // plugin-private sidecar files, never in data.json.
+    this.icons = new FeedIconStore(join(storageDir(), 'icons'), ctx.logger);
+    this.translations = new TranslationStore(join(storageDir(), 'translations'), ctx.logger);
+    /** In-flight favicon jobs (awaitable in tests, otherwise fire-and-forget). */
+    this.iconJobs = new Set();
     this.refreshing = false;
     this.tickTimer = undefined;
     this.stopped = false;
@@ -476,7 +484,7 @@ export class DropletsService extends TypertRemoteService {
     await this.ready;
     const entry = this.findEntry(key);
     if (!entry) throw new Error(`droplets: unknown entry ${key}`);
-    return { entry: this.entrySummary(entry), html: entry.html, truncated: entry.truncated === true };
+    return { entry: this.entrySummary(entry), html: entry.html, truncated: entry.truncated === true, hasTranslation: await this.hasTranslation(key) };
   }
 
   findEntry(key) {
@@ -485,6 +493,56 @@ export class DropletsService extends TypertRemoteService {
       if (entry) return { ...entry, channelKey: sub.id, channelName: sub.name };
     }
     return undefined;
+  }
+
+  /** The subscription owning an entry key (cache backends are per feed). */
+  findSubscriptionOfKey(key) {
+    return this.store.data.subscriptions.find((sub) => (sub.entries ?? []).some((entry) => entry.key === key));
+  }
+
+  async hasTranslation(key) {
+    const sub = this.findSubscriptionOfKey(key);
+    if (!sub) return false;
+    await this.translations.feedMap(sub.id, (sub.entries ?? []).map((entry) => entry.key));
+    return this.translations.get(sub.id, key) !== undefined;
+  }
+
+  /** Cached per-feed favicons as { [feedId]: dataUrl } for the badges. */
+  async feedIcons() {
+    await this.ready;
+    return { icons: await this.icons.all() };
+  }
+
+  /**
+   * Generate (or return the cached) Chinese translation of one entry.
+   * Cache hit → no model request; miss → stream the article text through
+   * the profile's default model and persist the Markdown result.
+   */
+  async translateEntry(request) {
+    const { key } = request ?? {};
+    if (typeof key !== 'string' || key === '') throw new Error('无效条目');
+    await this.ready;
+    if (this.config.enableTranslation === false) {
+      throw new Error('翻译已在插件配置中停用（enableTranslation）');
+    }
+    const sub = this.findSubscriptionOfKey(key);
+    const entry = sub ? (sub.entries ?? []).find((candidate) => candidate.key === key) : undefined;
+    if (!sub || !entry) throw new Error(`droplets: unknown entry ${key}`);
+    const liveKeys = (sub.entries ?? []).map((candidate) => candidate.key);
+    const map = await this.translations.feedMap(sub.id, liveKeys);
+    const cached = map[key];
+    if (cached) return { translation: cached, cached: true };
+    const markdown = await completeWithLlm(this.ctx, {
+      system: TRANSLATE_SYSTEM_PROMPT,
+      user: translationInputOf(entry, htmlToText),
+    });
+    const record = {
+      title: titleOfTranslation(markdown, entry.title),
+      markdown,
+      generatedAt: new Date().toISOString(),
+    };
+    await this.translations.put(sub.id, key, record);
+    return { translation: record, cached: false };
   }
 
   async searchEntries(request) {
@@ -567,9 +625,10 @@ export class DropletsService extends TypertRemoteService {
     let status = 'ok';
     let lastError;
     let feedTitle;
+    let parsed;
     try {
       const xml = await this.fetchFeedText(trimmed);
-      const parsed = parseFeed(xml, trimmed);
+      parsed = parseFeed(xml, trimmed);
       entries = parsed.entries;
       feedTitle = parsed.title;
     } catch (error) {
@@ -590,6 +649,15 @@ export class DropletsService extends TypertRemoteService {
     this.store.data.subscriptions.push(sub);
     this.store.touch();
     await this.store.flush();
+    // Grab the favicon right away so a just-added source shows its own
+    // icon on the first paint (not only after the next refresh).
+    if (parsed) {
+      const job = ensureFeedIcon(sub, parsed, this.fetcher, this.icons)
+        .then((outcome) => { if (outcome) this.store.touch(); })
+        .catch(() => {})
+        .finally(() => { this.iconJobs.delete(job); });
+      this.iconJobs.add(job);
+    }
     return { id: sub.id, name: sub.name, entryCount: (sub.entries ?? []).length, status, lastError };
   }
 
@@ -604,6 +672,9 @@ export class DropletsService extends TypertRemoteService {
     for (const entry of target.entries ?? []) {
       this.store.bodies.delete([entry.key]);
     }
+    // Derived per-feed caches (favicon file, translations) die with the sub.
+    void this.icons.remove(id);
+    void this.translations.remove(id);
     this.store.touch();
     await this.store.flush();
     return true;
@@ -799,6 +870,14 @@ export class DropletsService extends TypertRemoteService {
       sub.status = 'ok';
       sub.entries = merged;
       if (changed) this.store.touch();
+      // Favicon acquisition is best-effort and one-shot per feed (7-day
+      // retry throttle); never block the refresh pipeline on it. The
+      // pending promises are tracked so tests can await settlement.
+      const job = ensureFeedIcon(sub, parsed, this.fetcher, this.icons)
+        .then((outcome) => { if (outcome) this.store.touch(); })
+        .catch(() => {})
+        .finally(() => { this.iconJobs.delete(job); });
+      this.iconJobs.add(job);
       return parsed.entries.length;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -1308,6 +1387,9 @@ export class DropletsService extends TypertRemoteService {
       : new DropletsStore(this.ctx.logger, this.config.maxBodies ?? 300);
     this.vaultInstance = undefined;
     this.inbox = this.createInbox();
+    // A different subscription set may live in the new workspace: drop the
+    // in-memory translation map (per-feed files are pruned on first load).
+    this.translations = new TranslationStore(join(storageDir(), 'translations'), this.ctx.logger);
     this.ready = this.store.load().then(async () => {
       this.store.setMaxBodies(this.config.maxBodies ?? 300);
       await ensureDefaultVault(this.vaultRoot());
@@ -1512,7 +1594,7 @@ export class DropletsService extends TypertRemoteService {
     'listChannels', 'listEntries', 'getEntry', 'searchEntries', 'setRead', 'setFavorite',
     'listFeeds', 'listItems', 'setItemState', 'markAllRead', 'setFeed', 'refreshStatus',
     'listSubscriptions', 'addSubscription', 'removeSubscription', 'updateSubscription',
-    'opmlPreview', 'opmlImport', 'opmlExport', 'refresh',
+    'opmlPreview', 'opmlImport', 'opmlExport', 'refresh', 'feedIcons', 'translateEntry',
     // inbox
     'inboxAddUrl', 'inboxList', 'inboxGet', 'inboxRead', 'inboxReadOriginal',
     'inboxUpdate', 'inboxRetry', 'inboxRetryAllFailed', 'inboxImportMarkdown',

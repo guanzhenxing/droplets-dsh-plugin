@@ -18951,7 +18951,7 @@ var require_snapshot_utils = __commonJS({
 var require_snapshot_recorder = __commonJS({
   "node_modules/undici/lib/mock/snapshot-recorder.js"(exports2, module) {
     "use strict";
-    var { writeFile: writeFile8, readFile: readFile8, mkdir: mkdir8 } = __require("node:fs/promises");
+    var { writeFile: writeFile10, readFile: readFile10, mkdir: mkdir10 } = __require("node:fs/promises");
     var { dirname: dirname5, resolve: resolve2 } = __require("node:path");
     var { setTimeout: setTimeout2, clearTimeout: clearTimeout2 } = __require("node:timers");
     var { InvalidArgumentError, UndiciError } = require_errors();
@@ -19153,7 +19153,7 @@ var require_snapshot_recorder = __commonJS({
           throw new InvalidArgumentError("Snapshot path is required");
         }
         try {
-          const data = await readFile8(resolve2(path5), "utf8");
+          const data = await readFile10(resolve2(path5), "utf8");
           const parsed = JSON.parse(data);
           if (Array.isArray(parsed)) {
             this.#snapshots.clear();
@@ -19183,12 +19183,12 @@ var require_snapshot_recorder = __commonJS({
           throw new InvalidArgumentError("Snapshot path is required");
         }
         const resolvedPath = resolve2(path5);
-        await mkdir8(dirname5(resolvedPath), { recursive: true });
+        await mkdir10(dirname5(resolvedPath), { recursive: true });
         const data = Array.from(this.#snapshots.entries()).map(([hash, snapshot]) => ({
           hash,
           snapshot
         }));
-        await writeFile8(resolvedPath, JSON.stringify(data, null, 2), { flush: true });
+        await writeFile10(resolvedPath, JSON.stringify(data, null, 2), { flush: true });
       }
       /**
        * Clears all recorded snapshots
@@ -35061,7 +35061,7 @@ var init_pdf = __esm({
       var defineProperty = Object.defineProperty;
       var stringSlice = uncurryThis("".slice);
       var replace = uncurryThis("".replace);
-      var join5 = uncurryThis([].join);
+      var join7 = uncurryThis([].join);
       var CONFIGURABLE_LENGTH = DESCRIPTORS && !fails(function() {
         return defineProperty(function() {
         }, "length", { value: 8 }).length !== 8;
@@ -35088,7 +35088,7 @@ var init_pdf = __esm({
         }
         var state = enforceInternalState(value);
         if (!hasOwn(state, "source")) {
-          state.source = join5(TEMPLATE, typeof name2 == "string" ? name2 : "");
+          state.source = join7(TEMPLATE, typeof name2 == "string" ? name2 : "");
         }
         return value;
       };
@@ -37469,7 +37469,7 @@ var init_pdf = __esm({
       var charAt = uncurryThis("".charAt);
       var Uint8Array2 = globalThis2.Uint8Array;
       var $Array = globalThis2.Array;
-      var join5 = uncurryThis([].join);
+      var join7 = uncurryThis([].join);
       var INCORRECT_BEHAVIOR_OR_DOESNT_EXISTS = !Uint8Array2 || !Uint8Array2.prototype.toBase64 || !(function() {
         try {
           var target = new Uint8Array2();
@@ -37515,7 +37515,7 @@ var init_pdf = __esm({
               result[written++] = "=";
             }
           }
-          return join5(result, "");
+          return join7(result, "");
         }
       });
     });
@@ -37526,7 +37526,7 @@ var init_pdf = __esm({
       var anUint8Array = an_uint8_array_namespaceFn();
       var notDetached = array_buffer_not_detached_namespaceFn();
       var numberToString = uncurryThis(1.1.toString);
-      var join5 = uncurryThis([].join);
+      var join7 = uncurryThis([].join);
       var $Array = Array;
       var Uint8Array2 = globalThis2.Uint8Array;
       var INCORRECT_BEHAVIOR_OR_DOESNT_EXISTS = !Uint8Array2 || !Uint8Array2.prototype.toHex || !(function() {
@@ -37546,7 +37546,7 @@ var init_pdf = __esm({
             var hex = numberToString(this[i2], 16);
             result[i2] = hex.length === 1 ? "0" + hex : hex;
           }
-          return join5(result, "");
+          return join7(result, "");
         }
       });
     });
@@ -74363,7 +74363,7 @@ var init_pdf_worker = __esm({
       var defineProperty = Object.defineProperty;
       var stringSlice = uncurryThis("".slice);
       var replace = uncurryThis("".replace);
-      var join5 = uncurryThis([].join);
+      var join7 = uncurryThis([].join);
       var CONFIGURABLE_LENGTH = DESCRIPTORS && !fails(function() {
         return defineProperty(function() {
         }, "length", { value: 8 }).length !== 8;
@@ -74390,7 +74390,7 @@ var init_pdf_worker = __esm({
         }
         var state = enforceInternalState(value);
         if (!hasOwn(state, "source")) {
-          state.source = join5(TEMPLATE, typeof name2 == "string" ? name2 : "");
+          state.source = join7(TEMPLATE, typeof name2 == "string" ? name2 : "");
         }
         return value;
       };
@@ -76398,7 +76398,7 @@ var init_pdf_worker = __esm({
       var charAt = uncurryThis("".charAt);
       var Uint8Array2 = globalThis2.Uint8Array;
       var $Array = globalThis2.Array;
-      var join5 = uncurryThis([].join);
+      var join7 = uncurryThis([].join);
       var INCORRECT_BEHAVIOR_OR_DOESNT_EXISTS = !Uint8Array2 || !Uint8Array2.prototype.toBase64 || !(function() {
         try {
           var target = new Uint8Array2();
@@ -76444,7 +76444,7 @@ var init_pdf_worker = __esm({
               result[written++] = "=";
             }
           }
-          return join5(result, "");
+          return join7(result, "");
         }
       });
     });
@@ -76455,7 +76455,7 @@ var init_pdf_worker = __esm({
       var anUint8Array = an_uint8_array_namespaceFn2();
       var notDetached = array_buffer_not_detached_namespaceFn2();
       var numberToString = uncurryThis(1.1.toString);
-      var join5 = uncurryThis([].join);
+      var join7 = uncurryThis([].join);
       var $Array = Array;
       var Uint8Array2 = globalThis2.Uint8Array;
       var INCORRECT_BEHAVIOR_OR_DOESNT_EXISTS = !Uint8Array2 || !Uint8Array2.prototype.toHex || !(function() {
@@ -76475,7 +76475,7 @@ var init_pdf_worker = __esm({
             var hex = numberToString(this[i2], 16);
             result[i2] = hex.length === 1 ? "0" + hex : hex;
           }
-          return join5(result, "");
+          return join7(result, "");
         }
       });
     });
@@ -132777,9 +132777,9 @@ var init_vault_index = __esm({
 
 // src/host/index.js
 import path4 from "node:path";
-import { mkdir as mkdir7, readdir as readdir4, readFile as readFile7, rename as rename6, stat as stat6, writeFile as writeFile7 } from "node:fs/promises";
+import { mkdir as mkdir9, readdir as readdir5, readFile as readFile9, rename as rename8, stat as stat6, writeFile as writeFile9 } from "node:fs/promises";
 import { existsSync, statSync } from "node:fs";
-import { join as join4, resolve, sep as sep2 } from "node:path";
+import { join as join6, resolve, sep as sep2 } from "node:path";
 import { TypertRemoteService, Remote } from "@deepseek-ai/dsh-typert-protocol";
 import { defineTool as defineTool2 } from "@deepseek-ai/dsh-tools";
 
@@ -133220,8 +133220,8 @@ var WorkspaceStore = class {
   }
   async cleanStaleTemps() {
     try {
-      const { readdir: readdir5 } = await import("node:fs/promises");
-      for (const name2 of await readdir5(this.sidecarDir)) {
+      const { readdir: readdir6 } = await import("node:fs/promises");
+      for (const name2 of await readdir6(this.sidecarDir)) {
         if (!name2.endsWith(".tmp")) continue;
         const full = join2(this.sidecarDir, name2);
         const info3 = await stat2(full).catch(() => null);
@@ -138882,6 +138882,7 @@ function parseXmlFeed(xmlText, feedUrl) {
   let title = "";
   let link;
   let description;
+  let iconCandidates = [];
   let items;
   if (channel) {
     title = textOf(find(channel, "title")).trim();
@@ -138889,12 +138890,19 @@ function parseXmlFeed(xmlText, feedUrl) {
     description = textOf(find(channel, "description")).trim() || void 0;
     items = findAll(channel, "item");
     if (items.length === 0 && rdf) items = findAll(rdf, "item");
+    iconCandidates = [textOf(find(find(channel, "image"), "url")).trim()].filter(Boolean);
   } else if (atomFeed) {
     title = textOf(find(atomFeed, "title")).trim();
     link = linkOf(atomFeed, true);
     const subtitle = find(atomFeed, "subtitle");
     description = subtitle ? textOf(subtitle).trim() || void 0 : void 0;
     items = findAll(atomFeed, "entry");
+    iconCandidates = [
+      textOf(find(atomFeed, "icon")).trim(),
+      // square icon per spec
+      textOf(find(atomFeed, "logo")).trim()
+      // often a wide logo
+    ].filter(Boolean);
   } else {
     throw new Error("feed contains no channel/entry records");
   }
@@ -138902,6 +138910,7 @@ function parseXmlFeed(xmlText, feedUrl) {
     title: title || feedUrl,
     link,
     description,
+    iconCandidates,
     entries: collectEntries(items.map((item) => normalizeItem(item, Boolean(atomFeed), feedId)))
   };
 }
@@ -138942,6 +138951,8 @@ function parseJsonFeed(sourceText, feedUrl) {
     title: String(parsed.title ?? "").trim() || feedUrl,
     link: homeUrl,
     description: typeof parsed.description === "string" ? parsed.description : void 0,
+    // JSON Feed v1.1 has both `favicon` (square) and `icon` (artwork).
+    iconCandidates: [parsed.favicon, parsed.icon].filter((value) => typeof value === "string" && value !== ""),
     entries: collectEntries(entries)
   };
 }
@@ -140802,6 +140813,290 @@ ${results.map(formatEntryLine).join("\n")}`;
 
 // src/host/index.js
 init_sanitize();
+
+// src/host/icons.js
+import { mkdir as mkdir7, readFile as readFile7, readdir as readdir4, rename as rename6, rm as rm8, writeFile as writeFile7 } from "node:fs/promises";
+import { join as join4 } from "node:path";
+var MAX_ICON_BYTES = 64 * 1024;
+var MAX_HTML_BYTES = 256 * 1024;
+var ICON_TIMEOUT_MS = 8e3;
+var RETRY_AFTER_MS = 7 * 24 * 60 * 60 * 1e3;
+function sniffImageType(bytes) {
+  if (bytes.length >= 8 && bytes[0] === 137 && bytes[1] === 80 && bytes[2] === 78 && bytes[3] === 71) return "image/png";
+  if (bytes.length >= 6 && bytes[0] === 71 && bytes[1] === 73 && bytes[2] === 70) return "image/gif";
+  if (bytes.length >= 3 && bytes[0] === 255 && bytes[1] === 216) return "image/jpeg";
+  if (bytes.length >= 4 && bytes[0] === 0 && bytes[1] === 0 && bytes[2] === 1) return "image/x-icon";
+  if (bytes.length >= 12 && bytes.toString("latin1", 0, 4) === "RIFF" && bytes.toString("latin1", 8, 12) === "WEBP") return "image/webp";
+  const head = bytes.toString("latin1", 0, Math.min(bytes.length, 512)).trimStart();
+  if (head.startsWith("<svg") || head.startsWith("<?xml")) return "image/svg+xml";
+  return void 0;
+}
+function absoluteOf(href, base) {
+  try {
+    const url = new URL(String(href), base);
+    return (url.protocol === "http:" || url.protocol === "https:") && !url.username && !url.password ? url.href : void 0;
+  } catch {
+    return void 0;
+  }
+}
+function siteOriginOf(sub, parsed) {
+  const candidates = [
+    typeof parsed?.link === "string" ? parsed.link : void 0,
+    typeof sub?.url === "string" ? sub.url : void 0
+  ];
+  for (const candidate of candidates) {
+    try {
+      const url = new URL(candidate);
+      if ((url.protocol === "http:" || url.protocol === "https:") && !url.username && !url.password) return url.origin;
+    } catch {
+    }
+  }
+  return void 0;
+}
+function iconLinkOfHtml(html, baseUrl) {
+  const pattern = /<link\b[^>]*>/gi;
+  let match;
+  while ((match = pattern.exec(String(html ?? ""))) !== null) {
+    const tag = match[0];
+    if (!/\brel\s*=\s*["'][^"']*icon[^"']*["']/i.test(tag)) continue;
+    const href = /\bhref\s*=\s*["']([^"']+)["']/i.exec(tag)?.[1];
+    if (href) {
+      const absolute = absoluteOf(href, baseUrl);
+      if (absolute) return absolute;
+    }
+  }
+  return void 0;
+}
+async function fetchIconDataUrl(fetcher, url) {
+  try {
+    const response = await fetcher.fetch(url, {
+      connectTimeoutMs: ICON_TIMEOUT_MS,
+      totalTimeoutMs: ICON_TIMEOUT_MS,
+      maxBodyBytes: MAX_ICON_BYTES
+    });
+    if (response.status >= 400) return void 0;
+    const body = response.body;
+    if (!body || body.length === 0 || body.length > MAX_ICON_BYTES) return void 0;
+    const declared = String(response.headers["content-type"] ?? "").split(";")[0].trim().toLowerCase();
+    const mime = declared.startsWith("image/") ? declared : sniffImageType(body);
+    if (!mime) return void 0;
+    return `data:${mime};base64,${Buffer.from(body).toString("base64")}`;
+  } catch {
+    return void 0;
+  }
+}
+var FeedIconStore = class {
+  constructor(dir, logger) {
+    this.dir = dir;
+    this.logger = logger;
+    this.cache = null;
+    this.writing = Promise.resolve();
+  }
+  /** All known icons as { feedId: dataUrl } (cached after the first read). */
+  async all() {
+    if (this.cache !== null) return this.cache;
+    const map = {};
+    try {
+      for (const name2 of await readdir4(this.dir)) {
+        if (name2.startsWith(".")) continue;
+        const dataUrl = (await readFile7(join4(this.dir, name2), "utf8")).trim();
+        if (dataUrl.startsWith("data:image/")) map[decodeURIComponent(name2)] = dataUrl;
+      }
+    } catch {
+    }
+    this.cache = map;
+    return map;
+  }
+  save(feedId, dataUrl) {
+    if (this.cache === null) this.cache = {};
+    this.cache[feedId] = dataUrl;
+    const target = join4(this.dir, encodeURIComponent(feedId));
+    this.writing = this.writing.catch(() => {
+    }).then(async () => {
+      const temp = `${target}.${process.pid}.tmp`;
+      try {
+        await mkdir7(this.dir, { recursive: true });
+        await writeFile7(temp, dataUrl, { encoding: "utf8", mode: 384 });
+        await rename6(temp, target);
+      } catch (error) {
+        await rm8(temp, { force: true }).catch(() => {
+        });
+        this.logger?.warn?.(`droplets: cannot store icon for ${feedId}: ${String(error)}`);
+      }
+    });
+    return this.writing;
+  }
+  remove(feedId) {
+    if (this.cache !== null) delete this.cache[feedId];
+    return rm8(join4(this.dir, encodeURIComponent(feedId)), { force: true }).catch(() => {
+    });
+  }
+  /** Backward compatibility: callers may check existence before saving. */
+  async has(feedId) {
+    return (await this.all())[feedId] !== void 0;
+  }
+};
+async function ensureFeedIcon(sub, parsed, fetcher, store) {
+  if (!sub?.id) return void 0;
+  if (await store.has(sub.id)) return void 0;
+  if (typeof sub.iconErrorAt === "number" && Date.now() - sub.iconErrorAt < RETRY_AFTER_MS) return void 0;
+  const origin = siteOriginOf(sub, parsed);
+  const candidates = [];
+  if (origin) candidates.push(origin + "/favicon.ico");
+  if (origin) {
+    try {
+      const response = await fetcher.fetch(origin + "/", {
+        connectTimeoutMs: ICON_TIMEOUT_MS,
+        totalTimeoutMs: ICON_TIMEOUT_MS,
+        maxBodyBytes: MAX_HTML_BYTES
+      });
+      if (response.status < 400 && typeof response.body?.toString === "function") {
+        const html = response.body.toString("utf8");
+        const link = iconLinkOfHtml(html, origin + "/");
+        if (link) candidates.push(link);
+      }
+    } catch {
+    }
+  }
+  for (const declared of parsed?.iconCandidates ?? []) {
+    const absolute = absoluteOf(declared, typeof sub.url === "string" ? sub.url : void 0);
+    if (absolute) candidates.push(absolute);
+  }
+  for (const candidate of candidates) {
+    const dataUrl = await fetchIconDataUrl(fetcher, candidate);
+    if (dataUrl) {
+      await store.save(sub.id, dataUrl);
+      sub.iconErrorAt = void 0;
+      return "stored";
+    }
+  }
+  sub.iconErrorAt = Date.now();
+  return "failed";
+}
+
+// src/host/translate.js
+import { mkdir as mkdir8, readFile as readFile8, rename as rename7, rm as rm9, writeFile as writeFile8 } from "node:fs/promises";
+import { join as join5 } from "node:path";
+var MAX_TRANSLATION_INPUT = 12e3;
+var TRANSLATE_SYSTEM_PROMPT = [
+  "\u4F60\u662F\u4E00\u4F4D\u4E13\u4E1A\u7684\u4E2D\u6587\u79D1\u6280\u7FFB\u8BD1\u3002\u628A\u7528\u6237\u63D0\u4F9B\u7684\u6587\u7AE0\u5B8C\u6574\u7FFB\u8BD1\u6210\u7B80\u4F53\u4E2D\u6587\uFF1A",
+  "- \u4FDD\u7559\u539F\u6587\u7684\u7ED3\u6784\uFF08\u6807\u9898\u3001\u5C0F\u8282\u3001\u5217\u8868\u3001\u4EE3\u7801\u5757\uFF09\uFF0C\u4E0D\u8981\u589E\u5220\u5185\u5BB9",
+  "- \u4E13\u6709\u540D\u8BCD\u3001\u4EA7\u54C1\u540D\u3001\u4EBA\u540D\u4FDD\u7559\u539F\u6587\uFF0C\u9996\u6B21\u51FA\u73B0\u65F6\u53EF\u5728\u62EC\u53F7\u5185\u9644\u4E0A\u539F\u6587",
+  "- \u8F93\u51FA\u4F7F\u7528 Markdown \u683C\u5F0F\uFF0C\u7B2C\u4E00\u884C\u8F93\u51FA\u300C# <\u4E2D\u6587\u6807\u9898>\u300D",
+  "- \u4E0D\u8981\u8F93\u51FA\u4EFB\u4F55\u89E3\u91CA\u3001\u524D\u8A00\u6216\u603B\u7ED3\uFF0C\u53EA\u8F93\u51FA\u8BD1\u6587\u672C\u8EAB"
+].join("\n");
+async function completeWithLlm(ctx, { system, user, signal }) {
+  const model = ctx.get?.("agentDefaultModel");
+  const llm = ctx.get?.("llm");
+  if (!llm || typeof llm.stream !== "function") {
+    throw new Error("\u5F53\u524D\u914D\u7F6E\u6CA1\u6709\u53EF\u7528\u7684 LLM \u670D\u52A1\uFF0C\u65E0\u6CD5\u751F\u6210\u8BD1\u6587");
+  }
+  let provider;
+  let modelId;
+  if (model && typeof model.currentSelection === "function") {
+    const selection = model.currentSelection();
+    provider = selection?.provider;
+    modelId = selection?.model;
+  }
+  if (!provider || !modelId) {
+    throw new Error("\u5C1A\u672A\u9009\u62E9\u9ED8\u8BA4\u6A21\u578B\uFF0C\u8BF7\u5148\u5728\u8BBE\u7F6E\u4E2D\u9009\u62E9\u4E00\u4E2A\u6A21\u578B\u518D\u4F7F\u7528\u7FFB\u8BD1");
+  }
+  const { createSystemMessage, createUserMessage } = await import("@deepseek-ai/dsh-llm");
+  const messages = [
+    createSystemMessage(system),
+    createUserMessage({ content: [{ type: "text", text: user }], source: { kind: "user" } })
+  ];
+  const stream = llm.stream({ provider, model: modelId, messages, ...signal ? { signal } : {} });
+  let text2 = "";
+  let finished = false;
+  for await (const chunk of stream) {
+    if (signal?.aborted) throw new Error("droplets: \u7FFB\u8BD1\u5DF2\u4E2D\u6B62");
+    if (chunk.type === "text-delta") text2 += chunk.text;
+    else if (chunk.type === "block-end" && chunk.block?.type === "text" && text2 === "") text2 = chunk.block.text;
+    else if (chunk.type === "finish") {
+      finished = true;
+      if (chunk.reason?.kind === "error") {
+        throw new Error(`\u6A21\u578B\u8C03\u7528\u5931\u8D25\uFF1A${chunk.reason.failure?.message ?? "\u672A\u77E5\u9519\u8BEF"}`);
+      }
+      if (chunk.reason?.kind === "aborted") throw new Error("droplets: \u7FFB\u8BD1\u5DF2\u4E2D\u6B62");
+      break;
+    }
+  }
+  if (!finished && text2 === "") throw new Error("\u6A21\u578B\u6CA1\u6709\u8FD4\u56DE\u4EFB\u4F55\u5185\u5BB9");
+  const cleaned = text2.replace(/^```(?:markdown)?\s*\n?/, "").replace(/\n?```\s*$/, "").trim();
+  if (cleaned === "") throw new Error("\u6A21\u578B\u8FD4\u56DE\u4E86\u7A7A\u8BD1\u6587");
+  return cleaned;
+}
+function translationInputOf(entry, htmlToText2) {
+  const heading = entry.title ? `\u6807\u9898: ${String(entry.title).slice(0, 500)}
+
+` : "";
+  const plain = htmlToText2(entry.html ?? "", MAX_TRANSLATION_INPUT + 1);
+  const available = Math.max(0, MAX_TRANSLATION_INPUT - heading.length);
+  const truncated = plain.length > available;
+  const suffix = truncated ? "\n\uFF08\u4E0A\u4E0B\u6587\u5DF2\u622A\u65AD\uFF09" : "";
+  return heading + plain.slice(0, Math.max(0, available - suffix.length)) + suffix;
+}
+function titleOfTranslation(markdown, fallback) {
+  const heading = /^#\s+(.+)$/m.exec(String(markdown ?? ""));
+  return heading?.[1]?.trim() || fallback;
+}
+var TranslationStore = class {
+  constructor(dir, logger) {
+    this.dir = dir;
+    this.logger = logger;
+    this.loaded = /* @__PURE__ */ new Map();
+  }
+  fileOf(feedId) {
+    return join5(this.dir, encodeURIComponent(feedId) + ".json");
+  }
+  /** Load (once) and prune one feed's translations to its live entry keys. */
+  async feedMap(feedId, liveKeys) {
+    if (this.loaded.has(feedId)) return this.loaded.get(feedId);
+    let map = {};
+    try {
+      const parsed = JSON.parse(await readFile8(this.fileOf(feedId), "utf8"));
+      if (parsed && typeof parsed === "object") map = parsed;
+    } catch {
+    }
+    const keep = {};
+    for (const key of liveKeys) if (map[key] !== void 0) keep[key] = map[key];
+    this.loaded.set(feedId, keep);
+    return keep;
+  }
+  get(feedId, entryKey) {
+    return this.loaded.get(feedId)?.[entryKey];
+  }
+  put(feedId, entryKey, record) {
+    let map = this.loaded.get(feedId);
+    if (!map) {
+      map = {};
+      this.loaded.set(feedId, map);
+    }
+    map[entryKey] = record;
+    const target = this.fileOf(feedId);
+    const write = async () => {
+      const temp = `${target}.${process.pid}.tmp`;
+      try {
+        await mkdir8(this.dir, { recursive: true });
+        await writeFile8(temp, JSON.stringify(map), { encoding: "utf8", mode: 384 });
+        await rename7(temp, target);
+      } catch (error) {
+        await rm9(temp, { force: true }).catch(() => {
+        });
+        this.logger?.warn?.(`droplets: cannot cache translation for ${feedId}: ${String(error)}`);
+      }
+    };
+    return write();
+  }
+  remove(feedId) {
+    this.loaded.delete(feedId);
+    return rm9(this.fileOf(feedId), { force: true }).catch(() => {
+    });
+  }
+};
+
+// src/host/index.js
 var name = "droplets";
 var inject = ["tools"];
 var REFRESH_WORKERS = 3;
@@ -140851,12 +141146,15 @@ var DropletsService = class extends TypertRemoteService {
     super(ctx, "droplets");
     this.ctx = ctx;
     this.config = config;
-    this.workspacePointer = join4(storageDir(), "workspace.json");
+    this.workspacePointer = join6(storageDir(), "workspace.json");
     this.workspacePath = config.workspacePath ?? null;
     this.store = this.workspacePath ? new WorkspaceStore(ctx.logger, this.workspacePath, config.maxBodies ?? 300) : new DropletsStore(ctx.logger, config.maxBodies ?? 300);
     this.sharedWorkspace = Boolean(this.workspacePath);
     this.fetcher = guardedFetch;
     this.inbox = this.createInbox();
+    this.icons = new FeedIconStore(join6(storageDir(), "icons"), ctx.logger);
+    this.translations = new TranslationStore(join6(storageDir(), "translations"), ctx.logger);
+    this.iconJobs = /* @__PURE__ */ new Set();
     this.refreshing = false;
     this.tickTimer = void 0;
     this.stopped = false;
@@ -140870,7 +141168,7 @@ var DropletsService = class extends TypertRemoteService {
             this.inbox = this.createInbox();
           }
         } else if (pointer !== this.workspacePath) {
-          const probe = await stat6(join4(pointer, "state", "app.sqlite")).catch(() => null);
+          const probe = await stat6(join6(pointer, "state", "app.sqlite")).catch(() => null);
           if (probe) {
             this.workspacePath = pointer;
             this.sharedWorkspace = true;
@@ -140935,7 +141233,7 @@ var DropletsService = class extends TypertRemoteService {
   vaultRoot() {
     const configured = this.config.vaultPath;
     if (typeof configured === "string" && configured.trim() !== "") return configured;
-    if (this.sharedWorkspace) return join4(this.store.root, "vault");
+    if (this.sharedWorkspace) return join6(this.store.root, "vault");
     return defaultVaultPath();
   }
   /**
@@ -140945,7 +141243,7 @@ var DropletsService = class extends TypertRemoteService {
    * the same layout inside the plugin's own storage dir.
    */
   createInbox() {
-    const root = this.sharedWorkspace && this.store?.root ? this.store.root : join4(storageDir(), "inbox-workspace");
+    const root = this.sharedWorkspace && this.store?.root ? this.store.root : join6(storageDir(), "inbox-workspace");
     return new WorkspaceInbox(root, this.ctx?.logger, () => this.fetcher);
   }
   vaultService() {
@@ -141202,7 +141500,7 @@ var DropletsService = class extends TypertRemoteService {
     await this.ready;
     const entry = this.findEntry(key);
     if (!entry) throw new Error(`droplets: unknown entry ${key}`);
-    return { entry: this.entrySummary(entry), html: entry.html, truncated: entry.truncated === true };
+    return { entry: this.entrySummary(entry), html: entry.html, truncated: entry.truncated === true, hasTranslation: await this.hasTranslation(key) };
   }
   findEntry(key) {
     for (const sub of this.store.data.subscriptions) {
@@ -141210,6 +141508,52 @@ var DropletsService = class extends TypertRemoteService {
       if (entry) return { ...entry, channelKey: sub.id, channelName: sub.name };
     }
     return void 0;
+  }
+  /** The subscription owning an entry key (cache backends are per feed). */
+  findSubscriptionOfKey(key) {
+    return this.store.data.subscriptions.find((sub) => (sub.entries ?? []).some((entry) => entry.key === key));
+  }
+  async hasTranslation(key) {
+    const sub = this.findSubscriptionOfKey(key);
+    if (!sub) return false;
+    await this.translations.feedMap(sub.id, (sub.entries ?? []).map((entry) => entry.key));
+    return this.translations.get(sub.id, key) !== void 0;
+  }
+  /** Cached per-feed favicons as { [feedId]: dataUrl } for the badges. */
+  async feedIcons() {
+    await this.ready;
+    return { icons: await this.icons.all() };
+  }
+  /**
+   * Generate (or return the cached) Chinese translation of one entry.
+   * Cache hit → no model request; miss → stream the article text through
+   * the profile's default model and persist the Markdown result.
+   */
+  async translateEntry(request) {
+    const { key } = request ?? {};
+    if (typeof key !== "string" || key === "") throw new Error("\u65E0\u6548\u6761\u76EE");
+    await this.ready;
+    if (this.config.enableTranslation === false) {
+      throw new Error("\u7FFB\u8BD1\u5DF2\u5728\u63D2\u4EF6\u914D\u7F6E\u4E2D\u505C\u7528\uFF08enableTranslation\uFF09");
+    }
+    const sub = this.findSubscriptionOfKey(key);
+    const entry = sub ? (sub.entries ?? []).find((candidate) => candidate.key === key) : void 0;
+    if (!sub || !entry) throw new Error(`droplets: unknown entry ${key}`);
+    const liveKeys = (sub.entries ?? []).map((candidate) => candidate.key);
+    const map = await this.translations.feedMap(sub.id, liveKeys);
+    const cached = map[key];
+    if (cached) return { translation: cached, cached: true };
+    const markdown = await completeWithLlm(this.ctx, {
+      system: TRANSLATE_SYSTEM_PROMPT,
+      user: translationInputOf(entry, htmlToText)
+    });
+    const record = {
+      title: titleOfTranslation(markdown, entry.title),
+      markdown,
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    await this.translations.put(sub.id, key, record);
+    return { translation: record, cached: false };
   }
   async searchEntries(request) {
     const { query, limit } = request ?? {};
@@ -141284,9 +141628,10 @@ var DropletsService = class extends TypertRemoteService {
     let status = "ok";
     let lastError;
     let feedTitle;
+    let parsed;
     try {
       const xml = await this.fetchFeedText(trimmed);
-      const parsed = parseFeed(xml, trimmed);
+      parsed = parseFeed(xml, trimmed);
       entries = parsed.entries;
       feedTitle = parsed.title;
     } catch (error) {
@@ -141307,6 +141652,15 @@ var DropletsService = class extends TypertRemoteService {
     this.store.data.subscriptions.push(sub);
     this.store.touch();
     await this.store.flush();
+    if (parsed) {
+      const job = ensureFeedIcon(sub, parsed, this.fetcher, this.icons).then((outcome) => {
+        if (outcome) this.store.touch();
+      }).catch(() => {
+      }).finally(() => {
+        this.iconJobs.delete(job);
+      });
+      this.iconJobs.add(job);
+    }
     return { id: sub.id, name: sub.name, entryCount: (sub.entries ?? []).length, status, lastError };
   }
   async removeSubscription(request) {
@@ -141320,6 +141674,8 @@ var DropletsService = class extends TypertRemoteService {
     for (const entry of target.entries ?? []) {
       this.store.bodies.delete([entry.key]);
     }
+    void this.icons.remove(id);
+    void this.translations.remove(id);
     this.store.touch();
     await this.store.flush();
     return true;
@@ -141490,6 +141846,13 @@ var DropletsService = class extends TypertRemoteService {
       sub.status = "ok";
       sub.entries = merged;
       if (changed) this.store.touch();
+      const job = ensureFeedIcon(sub, parsed, this.fetcher, this.icons).then((outcome) => {
+        if (outcome) this.store.touch();
+      }).catch(() => {
+      }).finally(() => {
+        this.iconJobs.delete(job);
+      });
+      this.iconJobs.add(job);
       return parsed.entries.length;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -141727,7 +142090,7 @@ var DropletsService = class extends TypertRemoteService {
     await this.ready;
     const rel = typeof request === "string" ? request : request?.path;
     const vault = this.vaultService();
-    const absolute = join4(vault.root, rel);
+    const absolute = join6(vault.root, rel);
     const text2 = request?.relative ? rel : absolute;
     const { execFile } = await import("node:child_process");
     const candidates = process.platform === "darwin" ? ["pbcopy"] : process.platform === "win32" ? ["clip"] : ["xclip", "-selection", "clipboard"];
@@ -141752,11 +142115,11 @@ var DropletsService = class extends TypertRemoteService {
   async vaultTrashList() {
     await this.ready;
     const entries = [];
-    const names = await readdir4(join4(this.vaultRoot(), ".trash")).catch(() => []);
+    const names = await readdir5(join6(this.vaultRoot(), ".trash")).catch(() => []);
     for (const name2 of names) {
       if (name2.startsWith(".")) continue;
-      const dir = join4(this.vaultRoot(), ".trash", name2);
-      const metaRaw = await readFile7(join4(dir, "trash-meta.json"), "utf8").catch(() => null);
+      const dir = join6(this.vaultRoot(), ".trash", name2);
+      const metaRaw = await readFile9(join6(dir, "trash-meta.json"), "utf8").catch(() => null);
       let meta;
       try {
         meta = JSON.parse(metaRaw);
@@ -141767,7 +142130,7 @@ var DropletsService = class extends TypertRemoteService {
         id: name2,
         title: meta?.title ?? name2,
         deletedAt: meta?.deletedAt,
-        entryKind: meta?.entryKind ?? (existsSync(join4(dir, "payload")) && statSync(join4(dir, "payload")).isDirectory() ? "directory" : "file"),
+        entryKind: meta?.entryKind ?? (existsSync(join6(dir, "payload")) && statSync(join6(dir, "payload")).isDirectory() ? "directory" : "file"),
         sizeBytes: meta?.sizeBytes,
         fileCount: meta?.fileCount
       });
@@ -141780,8 +142143,8 @@ var DropletsService = class extends TypertRemoteService {
     await this.ready;
     const id = typeof request === "string" ? request : request?.id;
     if (typeof id !== "string" || id === "" || id.includes("/") || id.startsWith(".")) throw new Error("\u65E0\u6548\u56DE\u6536\u7AD9\u6761\u76EE");
-    const trashDir = join4(this.vaultRoot(), ".trash", id);
-    const metaRaw = await readFile7(join4(trashDir, "trash-meta.json"), "utf8").catch(() => null);
+    const trashDir = join6(this.vaultRoot(), ".trash", id);
+    const metaRaw = await readFile9(join6(trashDir, "trash-meta.json"), "utf8").catch(() => null);
     let meta = null;
     try {
       meta = metaRaw ? JSON.parse(metaRaw) : null;
@@ -141791,10 +142154,10 @@ var DropletsService = class extends TypertRemoteService {
     const original = String(meta?.originalRelPath ?? "");
     const rel = original.startsWith("vault/") ? original.slice("vault/".length).replace(/\/+$/, "") : "";
     if (rel === "") throw new Error("\u8BE5\u6761\u76EE\u7F3A\u5C11\u539F\u59CB\u8DEF\u5F84\u4FE1\u606F\uFF0C\u65E0\u6CD5\u81EA\u52A8\u6062\u590D");
-    const target = join4(this.vaultRoot(), rel);
+    const target = join6(this.vaultRoot(), rel);
     if (existsSync(target)) throw new Error(`\u76EE\u6807\u5DF2\u5B58\u5728\uFF0C\u65E0\u6CD5\u6062\u590D\uFF1A${rel}`);
-    await mkdir7(path4.dirname(target), { recursive: true });
-    await rename6(join4(trashDir, "payload"), target);
+    await mkdir9(path4.dirname(target), { recursive: true });
+    await rename8(join6(trashDir, "payload"), target);
     await rm(trashDir, { recursive: true, force: true });
     return { restored: rel };
   }
@@ -141904,7 +142267,7 @@ var DropletsService = class extends TypertRemoteService {
   /** Read the persisted workspace pointer (null = private storage). */
   async readWorkspacePointer() {
     try {
-      const raw = await readFile7(this.workspacePointer, "utf8");
+      const raw = await readFile9(this.workspacePointer, "utf8");
       const parsed = JSON.parse(raw);
       return typeof parsed?.path === "string" && parsed.path.trim() !== "" ? parsed.path : null;
     } catch {
@@ -141924,8 +142287,8 @@ var DropletsService = class extends TypertRemoteService {
     if (requested !== "") {
       const resolved = path4.resolve(requested);
       const checks = await Promise.all([
-        stat6(join4(resolved, "state", "app.sqlite")).catch(() => null),
-        stat6(join4(resolved, "droplets.json")).catch(() => null)
+        stat6(join6(resolved, "state", "app.sqlite")).catch(() => null),
+        stat6(join6(resolved, "droplets.json")).catch(() => null)
       ]);
       if (!checks[0] && !checks[1]) {
         throw new Error("droplets\uFF1A\u8FD9\u4E2A\u76EE\u5F55\u4E0D\u50CF Droplets \u5DE5\u4F5C\u533A\uFF08\u7F3A\u5C11 state/app.sqlite \u6216 droplets.json\uFF09");
@@ -141942,15 +142305,16 @@ var DropletsService = class extends TypertRemoteService {
     this.store = target ? new WorkspaceStore(this.ctx.logger, target, this.config.maxBodies ?? 300) : new DropletsStore(this.ctx.logger, this.config.maxBodies ?? 300);
     this.vaultInstance = void 0;
     this.inbox = this.createInbox();
+    this.translations = new TranslationStore(join6(storageDir(), "translations"), this.ctx.logger);
     this.ready = this.store.load().then(async () => {
       this.store.setMaxBodies(this.config.maxBodies ?? 300);
       await ensureDefaultVault(this.vaultRoot());
     });
     await this.ready;
-    await mkdir7(storageDir(), { recursive: true });
+    await mkdir9(storageDir(), { recursive: true });
     const temp = this.workspacePointer + "." + process.pid + ".tmp";
-    await writeFile7(temp, JSON.stringify({ path: target ?? "" }), { encoding: "utf8", mode: 384 });
-    await rename6(temp, this.workspacePointer);
+    await writeFile9(temp, JSON.stringify({ path: target ?? "" }), { encoding: "utf8", mode: 384 });
+    await rename8(temp, this.workspacePointer);
     return this.getWorkspace();
   }
   /** Workspace screen: where the data actually lives, its layout and git state. */
@@ -141962,7 +142326,7 @@ var DropletsService = class extends TypertRemoteService {
       const stats = await this.store.stats().catch(() => null);
       const directory2 = [];
       const probe2 = async (relPath, label, kind) => {
-        const full = join4(root, relPath);
+        const full = join6(root, relPath);
         const info3 = await stat6(full).catch(() => null);
         directory2.push({
           path: relPath,
@@ -142008,7 +142372,7 @@ var DropletsService = class extends TypertRemoteService {
     const entryDir = entriesDir();
     const directory = [];
     const probe = async (relPath, label, kind) => {
-      const full = join4(root, relPath);
+      const full = join6(root, relPath);
       const info3 = await stat6(full).catch(() => null);
       directory.push({
         path: relPath,
@@ -142034,10 +142398,10 @@ var DropletsService = class extends TypertRemoteService {
     } catch {
     }
     try {
-      for (const name2 of await readdir4(entryDir)) {
+      for (const name2 of await readdir5(entryDir)) {
         if (!name2.endsWith(".json")) continue;
         entryFiles += 1;
-        entryBytes += (await stat6(join4(entryDir, name2))).size;
+        entryBytes += (await stat6(join6(entryDir, name2))).size;
       }
     } catch {
     }
@@ -142154,6 +142518,8 @@ var DropletsService = class extends TypertRemoteService {
     "opmlImport",
     "opmlExport",
     "refresh",
+    "feedIcons",
+    "translateEntry",
     // inbox
     "inboxAddUrl",
     "inboxList",

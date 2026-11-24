@@ -157,6 +157,7 @@ function parseXmlFeed(xmlText, feedUrl) {
   let title = '';
   let link;
   let description;
+  let iconCandidates = [];
   let items;
 
   if (channel) {
@@ -166,12 +167,19 @@ function parseXmlFeed(xmlText, feedUrl) {
     items = findAll(channel, 'item');
     // RSS 1.0 RDF keeps <item> as a sibling of <channel>.
     if (items.length === 0 && rdf) items = findAll(rdf, 'item');
+    // <image><url> is often a banner, but for many feeds it is the only
+    // artwork — it is the last-resort icon candidate.
+    iconCandidates = [textOf(find(find(channel, 'image'), 'url')).trim()].filter(Boolean);
   } else if (atomFeed) {
     title = textOf(find(atomFeed, 'title')).trim();
     link = linkOf(atomFeed, true);
     const subtitle = find(atomFeed, 'subtitle');
     description = subtitle ? textOf(subtitle).trim() || undefined : undefined;
     items = findAll(atomFeed, 'entry');
+    iconCandidates = [
+      textOf(find(atomFeed, 'icon')).trim(), // square icon per spec
+      textOf(find(atomFeed, 'logo')).trim(), // often a wide logo
+    ].filter(Boolean);
   } else {
     throw new Error('feed contains no channel/entry records');
   }
@@ -180,6 +188,7 @@ function parseXmlFeed(xmlText, feedUrl) {
     title: title || feedUrl,
     link,
     description,
+    iconCandidates,
     entries: collectEntries(items.map((item) => normalizeItem(item, Boolean(atomFeed), feedId))),
   };
 }
@@ -227,6 +236,8 @@ function parseJsonFeed(sourceText, feedUrl) {
     title: String(parsed.title ?? '').trim() || feedUrl,
     link: homeUrl,
     description: typeof parsed.description === 'string' ? parsed.description : undefined,
+    // JSON Feed v1.1 has both `favicon` (square) and `icon` (artwork).
+    iconCandidates: [parsed.favicon, parsed.icon].filter((value) => typeof value === 'string' && value !== ''),
     entries: collectEntries(entries),
   };
 }

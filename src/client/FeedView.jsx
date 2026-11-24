@@ -10,6 +10,7 @@ import { AuxRail, htmlHeadings } from './feed/AuxRail.jsx';
 import { partitionFeedItems, snapshotReadItems } from './feed/feed-sorting.js';
 import { formatWhen, formatWhenFull } from './feed/format.js';
 import { SafeHtml } from './components.jsx';
+import { markdownToHtml } from './md.js';
 import { t } from './i18n.js';
 
 // droplets D09: open-on-hover is an opt-in setting; the default is click.
@@ -52,6 +53,19 @@ export function FeedView({ api, onMaterial, onJumpSpace }) {
     } catch { /* surfaced by list load */ }
   }, [api]);
 
+  // Per-feed favicons: one batched RPC (id → data URL), cached in state.
+  // Reloaded after feeds change and once more shortly after a refresh so
+  // icons acquired in the background during that refresh show up too.
+  const [icons, setIcons] = useState({});
+  const loadIcons = useCallback(async () => {
+    try {
+      const result = await api.feedIcons?.();
+      if (result?.icons) setIcons(result.icons);
+    } catch { /* icons are decorative */ }
+  }, [api]);
+  useEffect(() => { void loadIcons(); }, [loadIcons]);
+  useEffect(() => { void loadIcons(); }, [loadIcons, feeds]);
+
   // Settings → 信息流「鼠标悬停自动打开阅读」
   const [hoverPreviewEnabled, setHoverPreviewEnabled] = useState(false);
   useEffect(() => {
@@ -74,10 +88,13 @@ export function FeedView({ api, onMaterial, onJumpSpace }) {
       await api.refresh();
       if (tick !== refreshTick.current) return;
       await loadFeeds();
+      // Icons are fetched best-effort in the background during refresh;
+      // give them a moment, then pick up whatever landed.
+      setTimeout(() => { if (tick === refreshTick.current) void loadIcons(); }, 12_000);
     } finally {
       if (tick === refreshTick.current) setSpinning(false);
     }
-  }, [api, loadFeeds]);
+  }, [api, loadFeeds, loadIcons]);
 
   const onChanged = useCallback(async () => { await loadFeeds(); }, [loadFeeds]);
 
@@ -88,7 +105,7 @@ export function FeedView({ api, onMaterial, onJumpSpace }) {
         panels={[
           { id: 'sources', initialWidth: 240, minWidth: 205, collapsible: true, render: ({ collapsed, expand, collapse }) => (
             <SourcesPane
-              api={api} feeds={feeds} sourceId={sourceId} selectedGroup={selectedGroup}
+              api={api} feeds={feeds} icons={icons} sourceId={sourceId} selectedGroup={selectedGroup}
               spinning={spinning} onRefresh={() => void refresh()}
               onManage={() => setManaging(false)}
               onSelectSource={selectSource} onSelectGroup={selectGroup}
@@ -109,7 +126,7 @@ export function FeedView({ api, onMaterial, onJumpSpace }) {
       panels={[
         { id: 'sources', initialWidth: 240, minWidth: 205, collapsible: true, render: ({ collapsed, expand, collapse }) => (
           <SourcesPane
-            api={api} feeds={feeds} sourceId={sourceId} selectedGroup={selectedGroup}
+            api={api} feeds={feeds} icons={icons} sourceId={sourceId} selectedGroup={selectedGroup}
             spinning={spinning} onRefresh={() => void refresh()}
             onManage={() => setManaging(true)}
             onSelectSource={selectSource} onSelectGroup={selectGroup}
@@ -118,7 +135,7 @@ export function FeedView({ api, onMaterial, onJumpSpace }) {
         ) },
         { id: 'items', initialWidth: 320, minWidth: 240, collapsible: true, render: ({ collapsed, expand, collapse }) => (
           <ItemList
-            api={api} feeds={feeds} sourceId={sourceId} selectedGroup={selectedGroup}
+            api={api} feeds={feeds} icons={icons} sourceId={sourceId} selectedGroup={selectedGroup}
             selected={selected} onSelect={setSelected} onMaterial={onMaterial}
             onUnreadChange={bumpUnread}
             spinning={spinning} onRefresh={() => void refresh()} onFeedsChanged={loadFeeds}
@@ -127,7 +144,7 @@ export function FeedView({ api, onMaterial, onJumpSpace }) {
           />
         ) },
         { id: 'preview', initialWidth: 700, minWidth: 420, collapsible: false, render: () => (
-          <Preview api={api} feeds={feeds} item={selected} onMaterial={onMaterial} onJumpSpace={onJumpSpace} onMarked={loadFeeds} onUnreadChange={bumpUnread} />
+          <Preview api={api} feeds={feeds} icons={icons} item={selected} onMaterial={onMaterial} onJumpSpace={onJumpSpace} onMarked={loadFeeds} onUnreadChange={bumpUnread} />
         ) },
       ]}
     />
@@ -136,7 +153,7 @@ export function FeedView({ api, onMaterial, onJumpSpace }) {
 
 /** Items pane: title + pill + refresh + three-state filter + mark-all + «. */
 function ItemList(props) {
-  const { api, feeds, sourceId, selectedGroup, selected, onSelect, onMaterial, onUnreadChange, spinning, onRefresh, onFeedsChanged, onManage, collapsed, onExpand, onCollapse } = props;
+  const { api, feeds, icons, sourceId, selectedGroup, selected, onSelect, onMaterial, onUnreadChange, spinning, onRefresh, onFeedsChanged, onManage, collapsed, onExpand, onCollapse } = props;
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewFilter, setViewFilter] = useState('all');
@@ -329,7 +346,7 @@ function ItemList(props) {
               onClick={() => { clearHoverTimer(); openItem(item); }}
             >
               <div className="dpl-entry-src">
-                {feed ? <FeedBadge feed={feed} /> : null}
+                {feed ? <FeedBadge feed={feed} icon={icons?.[feed.id]} /> : null}
                 <span className="dpl-truncate">{feed?.title ?? ''}</span>
                 {item.publishedAt ? <>, <span>{formatWhen(Date.parse(item.publishedAt))}</span></> : null}
               </div>
@@ -359,23 +376,36 @@ function ItemList(props) {
 }
 
 /** Preview pane: sticky round actions + header meta + body + AuxRail. */
-function Preview({ api, feeds, item, onMaterial, onJumpSpace, onMarked, onUnreadChange }) {
+function Preview({ api, feeds, icons, item, onMaterial, onJumpSpace, onMarked, onUnreadChange }) {
   const [html, setHtml] = useState('');
   const [notice, setNotice] = useState('');
   const [busyAction, setBusyAction] = useState('');
   const scrollRef = useRef(null);
+  // Translation state: cached record (from host), the 生成/查看 toggle, and
+  // the in-flight generation flag. `hasTranslation` comes with getEntry so
+  // the button can offer 查看 without a round-trip.
+  const [translation, setTranslation] = useState(null);
+  const [hasTranslation, setHasTranslation] = useState(false);
+  const [showTranslation, setShowTranslation] = useState(false);
+  const [translating, setTranslating] = useState(false);
   const feed = useMemo(() => feeds.find((f) => f.id === item?.sourceId) ?? null, [feeds, item?.sourceId]);
 
   useEffect(() => {
     setHtml('');
     setNotice('');
+    setTranslation(null);
+    setHasTranslation(false);
+    setShowTranslation(false);
+    setTranslating(false);
     scrollRef.current?.scrollTo({ top: 0 });
     if (!item) return undefined;
     let cancelled = false;
     void (async () => {
       try {
         const result = await api.getEntry(item.key);
-        if (!cancelled) setHtml(result.html ?? '');
+        if (cancelled) return;
+        setHtml(result.html ?? '');
+        setHasTranslation(result.hasTranslation === true);
         onMaterial({ space: 'feed', key: item.key, title: item.title, url: item.link, content: plainOf(result.html ?? '') });
       } catch { /* keep header; body stays empty */ }
     })();
@@ -383,7 +413,24 @@ function Preview({ api, feeds, item, onMaterial, onJumpSpace, onMarked, onUnread
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item?.sourceId, item?.key]);
 
-  const headings = useMemo(() => htmlHeadings(html), [html]);
+  // 翻译: first click generates (spinner), later clicks toggle 原文↔译文.
+  const translate = async () => {
+    if (!item || translating) return;
+    if (translation) { setShowTranslation((value) => !value); return; }
+    setTranslating(true);
+    try {
+      const result = await api.translateEntry(item.key);
+      setTranslation(result?.translation ?? null);
+      setHasTranslation(true);
+      setShowTranslation(true);
+    } catch (cause) {
+      setNotice(String(cause?.message ?? cause));
+    } finally {
+      setTranslating(false);
+    }
+  };
+
+  const headings = useMemo(() => htmlHeadings(showTranslation && translation ? markdownToHtml(translation.markdown) : html), [html, showTranslation, translation]);
   const plainLength = html ? html.replace(/<[^>]+>/g, '').replace(/\s+/g, '').length : 0;
   const shortKind = item && !html ? 'empty' : (item && plainLength > 0 && plainLength < 80 ? 'short' : null);
 
@@ -419,12 +466,27 @@ function Preview({ api, feeds, item, onMaterial, onJumpSpace, onMarked, onUnread
     return <div className="dpl-preview-empty">在中间列表选择一条内容预览</div>;
   }
 
+  const translateTitle = translating
+    ? t('feed.translating')
+    : translation
+      ? (showTranslation ? t('feed.showOriginal') : t('feed.showTranslation'))
+      : (hasTranslation ? t('feed.showTranslation') : t('feed.translate'));
+
   return (
     <div className="dpl-pane dpl-preview">
       <div className="dpl-preview-scroll" ref={scrollRef} onMouseUp={captureSelection}>
         <div className="dpl-reader-actions-float">
-          <button type="button" className="dpl-round-btn" disabled title={t('feed.translatePending')} aria-label={t('feed.translatePending')}>
-            <span className="dpl-lang-mark">文</span>
+          <button
+            type="button"
+            data-testid="feed-translate"
+            className={'dpl-round-btn' + (showTranslation ? ' is-on' : '')}
+            disabled={translating}
+            title={translateTitle}
+            aria-label={translateTitle}
+            data-tip={translateTitle}
+            onClick={() => void translate()}
+          >
+            {translating ? <Loader2 size={14} className="dpl-spin" /> : <span className="dpl-lang-mark">文</span>}
           </button>
           {item.link ? (
             <a className="dpl-round-btn" href={item.link} target="_blank" rel="noreferrer" title="打开原文" aria-label="打开原文">
@@ -439,12 +501,18 @@ function Preview({ api, feeds, item, onMaterial, onJumpSpace, onMarked, onUnread
           </button>
         </div>
         {notice ? <div className="dpl-notice dpl-reader-notice" role="status">{notice}</div> : null}
+        {showTranslation && translation ? (
+          <div className="dpl-translation-notice" role="status">
+            {t('feed.translationNotice')} · {new Date(translation.generatedAt).toLocaleString('zh-Hans-CN')}
+            <button type="button" className="dpl-inline-btn" onClick={() => setShowTranslation(false)}>{t('feed.showOriginal')}</button>
+          </div>
+        ) : null}
         <header className="dpl-article-head">
-          <h1>{item.title}</h1>
+          <h1>{showTranslation && translation ? (translation.title || item.title) : item.title}</h1>
           <div className="dpl-article-meta">
             {feed ? (
               <>
-                <FeedBadge feed={feed} />
+                <FeedBadge feed={feed} icon={icons?.[feed.id]} />
                 <span className="dpl-meta-source">{feed.title}</span>
                 <span aria-hidden>，</span>
               </>
@@ -462,7 +530,9 @@ function Preview({ api, feeds, item, onMaterial, onJumpSpace, onMarked, onUnread
           </div>
         ) : null}
         <div className="dpl-article-body-wrap">
-          {html ? (
+          {showTranslation && translation ? (
+            <article><SafeHtml className="dpl-article-body" html={markdownToHtml(translation.markdown)} /></article>
+          ) : html ? (
             <article><SafeHtml className="dpl-article-body" html={html} /></article>
           ) : (
             <div className="dpl-article-plain">{item.summary || '（无内容）'}</div>

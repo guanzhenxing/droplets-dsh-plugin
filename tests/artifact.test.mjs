@@ -128,3 +128,24 @@ test('client bundle exports the inbox UI against the new remote methods', () => 
     assert.ok(client.includes(rule), `stylesheet must carry ${rule} (交互对齐样式不可缺)`);
   }
 });
+
+test('feed fixes are frozen in the bundle: hit-test dots, aux rail, translation UI', () => {
+  const client = readFileSync(new URL('../client.js', import.meta.url), 'utf8');
+  // The dots placeholder is a full-row overlay that stays in the hit-test
+  // tree at opacity:0 — without pointer-events:none the two buttons painted
+  // under it (自动定位 / 全部折叠) can never be clicked.
+  assert.ok(
+    /\.dpl-toolbar-dots\s*\{[^}]*pointer-events:\s*none/.test(client),
+    'dots overlay must be pointer-events:none',
+  );
+  // Aux rail: idle ticks visible against the page (not border-faint) and a
+  // compact rhythm (12px pitch, 3px gap).
+  assert.ok(/\.dpl-aux-bar\s*\{[^}]*background:\s*var\(--dpl-faint\)/.test(client), 'aux tick idle color');
+  assert.ok(/\.dpl-aux-tick\s*\{[^}]*height:\s*12px/.test(client), 'aux tick height');
+  // Translation + favicon styles must ship with the panel.
+  for (const rule of ['.dpl-translation-notice {', '.dpl-inline-btn {', '.dpl-badge-img {', '.dpl-round-btn.is-on {']) {
+    assert.ok(client.includes(rule), `stylesheet must carry ${rule}`);
+  }
+  assert.ok(client.includes('translateEntry'), 'translation remote wired');
+  assert.ok(client.includes('feedIcons'), 'favicon remote wired');
+});

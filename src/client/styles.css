@@ -454,7 +454,12 @@
   padding: 0 10px;
   flex: none;
 }
-.dpl-toolbar-dots { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 16px; transition: opacity 0.12s; }
+/* pointer-events:none is load-bearing: the dots are a full-row overlay
+   (inset:0) that stays in the hit-test tree even at opacity:0 — without
+   this, the two non-positioned toolbar buttons under it (自动定位/全部折叠)
+   can never receive a click. Only the sort button survived, because its
+   .dpl-relative wrapper happens to paint above this overlay. */
+.dpl-toolbar-dots { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 16px; transition: opacity 0.12s; pointer-events: none; }
 .dpl-toolbar-dots span { width: 4px; height: 4px; border-radius: 50%; background: var(--dpl-faint); }
 .dpl-sources-toolbar:hover .dpl-toolbar-dots { opacity: 0; }
 .dpl-toolbar-actions {
@@ -630,7 +635,27 @@
 }
 .dpl-round-btn:hover:not(:disabled) { background: var(--dpl-bg-hover); color: var(--dpl-fg); }
 .dpl-round-btn:disabled { opacity: 0.4; cursor: default; }
+/* The 文 button while the translated version is on screen. */
+.dpl-round-btn.is-on { color: var(--dpl-accent); background: color-mix(in srgb, var(--dpl-accent) 12%, transparent); }
 .dpl-lang-mark { font-size: 12.5px; font-weight: 600; }
+/* Favicon badge: same 16px box as the letter mark, square-cropped. */
+.dpl-badge-img { object-fit: cover; display: inline-block; }
+/* Translation banner shown between actions and the article head. */
+.dpl-translation-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 auto 8px;
+  width: 100%;
+  max-width: var(--dpl-measure);
+  padding: 5px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--dpl-accent) 7%, transparent);
+  color: var(--dpl-muted);
+  font-size: 12px;
+}
+.dpl-inline-btn { border: none; background: transparent; padding: 2px 6px; border-radius: 5px; color: var(--dpl-accent); font-size: 12px; cursor: pointer; }
+.dpl-inline-btn:hover { background: var(--dpl-bg-hover); }
 .dpl-notice { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; padding: 6px 10px; border-radius: 8px; background: color-mix(in srgb, var(--dpl-accent) 10%, transparent); color: var(--dpl-accent); font-size: 12.5px; }
 .dpl-article-head { margin: 0 auto; width: 100%; max-width: var(--dpl-measure); padding: 0 32px 16px; }
 .dpl-article-head h1 { font-size: 20px; font-weight: 700; line-height: 1.4; color: var(--dpl-fg); margin: 0; }
@@ -1408,12 +1433,12 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 3px;
   z-index: 6;
 }
-.dpl-aux-tick { display: flex; height: 14px; align-items: center; justify-content: center; padding: 0 4px; border: none; background: transparent; cursor: pointer; }
-.dpl-aux-bar { display: block; height: 2px; border-radius: 1px; background: var(--dpl-border); transition: background-color 0.12s; }
-.dpl-aux-tick:hover .dpl-aux-bar { background: var(--dpl-muted); }
+.dpl-aux-tick { display: flex; height: 12px; align-items: center; justify-content: center; padding: 0 4px; border: none; background: transparent; cursor: pointer; }
+.dpl-aux-bar { display: block; height: 2px; border-radius: 1px; background: var(--dpl-faint); transition: background-color 0.12s; }
+.dpl-aux-tick:hover .dpl-aux-bar { background: var(--dpl-fg); }
 .dpl-aux-tick.is-active .dpl-aux-bar { background: var(--dpl-accent); }
 .dpl-aux-round, .dpl-aux-ask {
   display: grid;
@@ -1449,9 +1474,9 @@
   box-shadow: 0 10px 32px rgba(15, 23, 42, 0.2);
   z-index: 7;
 }
-.dpl-aux-pop { display: block; width: 100%; text-align: left; border: none; background: transparent; padding: 5px 8px; border-radius: 6px; font-size: 12.5px; color: var(--dpl-muted); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dpl-aux-pop { display: block; width: 100%; text-align: left; border: none; background: transparent; padding: 3px 8px; border-radius: 6px; font-size: 12.5px; color: var(--dpl-muted); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dpl-aux-pop:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }
-.dpl-aux-pop.is-active { color: var(--dpl-accent); }
+.dpl-aux-pop.is-active { color: var(--dpl-accent); font-weight: 600; }
 
 .dpl-search-results h2 { display: flex; align-items: center; gap: 10px; }
 .dpl-search-results h2 .dpl-btn { margin-left: auto; }
