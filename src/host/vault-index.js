@@ -139,6 +139,53 @@ export class NativeVaultIndex {
     return out;
   }
 
+  /**
+   * Unlinked mentions (plan §7): notes whose text says the note's stem/title
+   * but carry no matching wiki_links row. FTS on the stem (≥3 chars) or a
+   * LIKE scan; the wiki-links membership check filters true mentions.
+   */
+  async unlinkedMentions(rel, title) {
+    if (!(await this.available())) return [];
+    const normalized = relOfDocId(rel);
+    const targets = linkTargetsFor(normalized, title);
+    const linkedRows = this.db.prepare(
+      'SELECT source_doc_id FROM wiki_links WHERE target IN (' + targets.map(() => '?').join(',') + ')',
+    ).all(...targets);
+    const linked = new Set(linkedRows.map((row) => relOfDocId(row.source_doc_id)));
+
+    const candidates = new Map();
+    const stem = path.basename(normalized, '.md');
+    if (stem.length >= 3) {
+      for (const target of targets) {
+        if (target.length < 3) continue;
+        const rows = this.db.prepare(
+          `SELECT ci.path, ci.title FROM content_fts f
+           JOIN content_index ci ON ci.path = f.path
+           WHERE content_fts MATCH ? LIMIT 60`,
+        ).all(ftsQuote(target));
+        for (const row of rows) {
+          const relPath = relOfIndexPath(row.path);
+          if (relPath === normalized || linked.has(relPath)) continue;
+          if (!candidates.has(relPath)) candidates.set(relPath, { path: relPath, title: row.title || path.basename(relPath) });
+        }
+      }
+    } else {
+      // Short stem (<3 chars): LIKE scan, capped.
+      const like = '%' + stem.replace(/[%_]/g, '\\$&') + '%';
+      const rows = this.db.prepare(
+        `SELECT ci.path, ci.title FROM content_fts f
+         JOIN content_index ci ON ci.path = f.path
+         WHERE f.body LIKE ? ESCAPE '\\' LIMIT 40`,
+      ).all(like);
+      for (const row of rows) {
+        const relPath = relOfIndexPath(row.path);
+        if (relPath === normalized || linked.has(relPath)) continue;
+        candidates.set(relPath, { path: relPath, title: row.title || path.basename(relPath) });
+      }
+    }
+    return [...candidates.values()].slice(0, 40);
+  }
+
   async tags() {
     if (!(await this.available())) return [];
     return this.db.prepare('SELECT tag, COUNT(*) AS count FROM doc_tags GROUP BY tag ORDER BY count DESC, tag').all()

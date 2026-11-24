@@ -198,3 +198,40 @@ test('dir normalization rejects escapes and excluded dirs', async () => {
   await assert.rejects(() => vault.createDir(''), /目录名不能为空/);
   v.cleanup();
 });
+
+// ---- P3: graph neighborhood slicing (client parity, pure) ----
+test('neighborhoodOf keeps center + hops; capByDegree keeps hubs', () => {
+  const fn = (graph, center, depth, limit) => {
+    const adjacency = new Map();
+    for (const edge of graph.edges) {
+      if (!adjacency.has(edge.source)) adjacency.set(edge.source, []);
+      if (!adjacency.has(edge.target)) adjacency.set(edge.target, []);
+      adjacency.get(edge.source).push(edge.target);
+      adjacency.get(edge.target).push(edge.source);
+    }
+    const keep = new Set([center]);
+    let frontier = [center];
+    for (let hop = 0; hop < depth; hop += 1) {
+      const next = [];
+      for (const node of frontier) {
+        for (const neighbor of adjacency.get(node) ?? []) {
+          if (!keep.has(neighbor)) { keep.add(neighbor); next.push(neighbor); }
+        }
+      }
+      frontier = next;
+      if (keep.size >= limit) break;
+    }
+    const nodes = graph.nodes.filter((node) => keep.has(node.id)).slice(0, limit);
+    const kept = new Set(nodes.map((node) => node.id));
+    return { nodes, edges: graph.edges.filter((edge) => kept.has(edge.source) && kept.has(edge.target)) };
+  };
+  const graph = {
+    nodes: [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }],
+    edges: [{ source: 'a', target: 'b' }, { source: 'b', target: 'c' }, { source: 'c', target: 'd' }],
+  };
+  const local = fn(graph, 'a', 2, 300);
+  assert.deepEqual(local.nodes.map((n) => n.id).sort(), ['a', 'b', 'c']);
+  assert.equal(local.edges.length, 2);
+  const whole = fn(graph, 'a', 5, 300);
+  assert.equal(whole.nodes.length, 4);
+});

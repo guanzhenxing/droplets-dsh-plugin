@@ -132683,6 +132683,50 @@ var init_vault_index = __esm({
         }
         return out;
       }
+      /**
+       * Unlinked mentions (plan §7): notes whose text says the note's stem/title
+       * but carry no matching wiki_links row. FTS on the stem (≥3 chars) or a
+       * LIKE scan; the wiki-links membership check filters true mentions.
+       */
+      async unlinkedMentions(rel, title) {
+        if (!await this.available()) return [];
+        const normalized = relOfDocId(rel);
+        const targets = linkTargetsFor(normalized, title);
+        const linkedRows = this.db.prepare(
+          "SELECT source_doc_id FROM wiki_links WHERE target IN (" + targets.map(() => "?").join(",") + ")"
+        ).all(...targets);
+        const linked = new Set(linkedRows.map((row) => relOfDocId(row.source_doc_id)));
+        const candidates = /* @__PURE__ */ new Map();
+        const stem = path3.basename(normalized, ".md");
+        if (stem.length >= 3) {
+          for (const target of targets) {
+            if (target.length < 3) continue;
+            const rows = this.db.prepare(
+              `SELECT ci.path, ci.title FROM content_fts f
+           JOIN content_index ci ON ci.path = f.path
+           WHERE content_fts MATCH ? LIMIT 60`
+            ).all(ftsQuote(target));
+            for (const row of rows) {
+              const relPath = relOfIndexPath(row.path);
+              if (relPath === normalized || linked.has(relPath)) continue;
+              if (!candidates.has(relPath)) candidates.set(relPath, { path: relPath, title: row.title || path3.basename(relPath) });
+            }
+          }
+        } else {
+          const like = "%" + stem.replace(/[%_]/g, "\\$&") + "%";
+          const rows = this.db.prepare(
+            `SELECT ci.path, ci.title FROM content_fts f
+         JOIN content_index ci ON ci.path = f.path
+         WHERE f.body LIKE ? ESCAPE '\\' LIMIT 40`
+          ).all(like);
+          for (const row of rows) {
+            const relPath = relOfIndexPath(row.path);
+            if (relPath === normalized || linked.has(relPath)) continue;
+            candidates.set(relPath, { path: relPath, title: row.title || path3.basename(relPath) });
+          }
+        }
+        return [...candidates.values()].slice(0, 40);
+      }
       async tags() {
         if (!await this.available()) return [];
         return this.db.prepare("SELECT tag, COUNT(*) AS count FROM doc_tags GROUP BY tag ORDER BY count DESC, tag").all().map((row) => ({ tag: row.tag, count: row.count }));
@@ -132734,17 +132778,18 @@ var init_vault_index = __esm({
 // src/host/index.js
 import path4 from "node:path";
 import { mkdir as mkdir7, readdir as readdir4, readFile as readFile7, rename as rename6, stat as stat6, writeFile as writeFile7 } from "node:fs/promises";
+import { existsSync, statSync } from "node:fs";
 import { join as join4, resolve, sep as sep2 } from "node:path";
 import { TypertRemoteService, Remote } from "@deepseek-ai/dsh-typert-protocol";
 import { defineTool as defineTool2 } from "@deepseek-ai/dsh-tools";
 
 // src/host/store.js
-import { mkdir as mkdir2, readFile as readFile2, readdir, rename as rename2, rm as rm2, stat, writeFile as writeFile2 } from "node:fs/promises";
+import { mkdir as mkdir2, readFile as readFile2, readdir, rename as rename2, rm as rm3, stat, writeFile as writeFile2 } from "node:fs/promises";
 import { dirname as dirname2, join } from "node:path";
 import { resolveDshHome } from "@deepseek-ai/dsh-home-paths";
 
 // src/host/body-store.js
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rm as rm2, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 var BodyStore = class {
   constructor(path5, maxBodies = 300) {
@@ -132868,7 +132913,7 @@ var BodyStore = class {
     this.loaded = true;
     this.dirty = false;
     this.lastPrune = void 0;
-    await rm(this.path, { force: true });
+    await rm2(this.path, { force: true });
   }
 };
 
@@ -132944,7 +132989,7 @@ var DropletsStore = class {
         const full = join(this.dir, name2);
         try {
           const info3 = await stat(full);
-          if (info3.mtimeMs < cutoff) await rm2(full, { force: true });
+          if (info3.mtimeMs < cutoff) await rm3(full, { force: true });
         } catch {
         }
       }
@@ -132980,7 +133025,7 @@ var DropletsStore = class {
       await rename2(temp, target);
       this.persistedSignatures.set(feedId, signature);
     } catch (error) {
-      await rm2(temp, { force: true }).catch(() => {
+      await rm3(temp, { force: true }).catch(() => {
       });
       throw error;
     }
@@ -133096,7 +133141,7 @@ var DropletsStore = class {
           await writeFile2(temp, JSON.stringify(document2), { encoding: "utf8", mode: 384 });
           await rename2(temp, this.path);
         } catch (error) {
-          await rm2(temp, { force: true }).catch(() => {
+          await rm3(temp, { force: true }).catch(() => {
           });
           throw error;
         }
@@ -133120,12 +133165,12 @@ var DropletsStore = class {
   async destroy() {
     this.data = defaults();
     await this.bodies.destroy();
-    await rm2(this.path, { force: true });
+    await rm3(this.path, { force: true });
   }
 };
 
 // src/host/workspace-store.js
-import { mkdir as mkdir3, readFile as readFile3, rename as rename3, rm as rm3, stat as stat2, writeFile as writeFile3 } from "node:fs/promises";
+import { mkdir as mkdir3, readFile as readFile3, rename as rename3, rm as rm4, stat as stat2, writeFile as writeFile3 } from "node:fs/promises";
 import { dirname as dirname3, join as join2 } from "node:path";
 var SIDECAR = ".droplets-dsh";
 function defaultsSidecar() {
@@ -133180,7 +133225,7 @@ var WorkspaceStore = class {
         if (!name2.endsWith(".tmp")) continue;
         const full = join2(this.sidecarDir, name2);
         const info3 = await stat2(full).catch(() => null);
-        if (info3 && info3.mtimeMs < Date.now() - 10 * 60 * 1e3) await rm3(full, { force: true });
+        if (info3 && info3.mtimeMs < Date.now() - 10 * 60 * 1e3) await rm4(full, { force: true });
       }
     } catch {
     }
@@ -133432,7 +133477,7 @@ var WorkspaceStore = class {
           await writeFile3(temp, JSON.stringify(sidecar), { encoding: "utf8", mode: 384 });
           await rename3(temp, this.path);
         } catch (error) {
-          await rm3(temp, { force: true }).catch(() => {
+          await rm4(temp, { force: true }).catch(() => {
           });
           throw error;
         }
@@ -133470,7 +133515,7 @@ var WorkspaceStore = class {
 
 // src/host/workspace-inbox.js
 import { createHash as createHash3, randomUUID } from "node:crypto";
-import { copyFile, mkdir as mkdir5, readdir as readdir2, readFile as readFile5, rename as rename4, rm as rm5, rmdir, stat as stat4, writeFile as writeFile5 } from "node:fs/promises";
+import { copyFile, mkdir as mkdir5, readdir as readdir2, readFile as readFile5, rename as rename4, rm as rm6, rmdir, stat as stat4, writeFile as writeFile5 } from "node:fs/promises";
 import { dirname as dirname4, join as join3 } from "node:path";
 
 // src/host/extract.js
@@ -133914,7 +133959,7 @@ init_sanitize();
 // src/host/inbox.js
 init_esm();
 import { createHash as createHash2 } from "node:crypto";
-import { mkdir as mkdir4, readFile as readFile4, rm as rm4, stat as stat3, writeFile as writeFile4 } from "node:fs/promises";
+import { mkdir as mkdir4, readFile as readFile4, rm as rm5, stat as stat3, writeFile as writeFile4 } from "node:fs/promises";
 import path from "node:path";
 
 // src/host/guarded-fetch.js
@@ -139107,7 +139152,7 @@ async function atomicWriteFile(absolute, data) {
     await writeFile5(temp, data);
     await rename4(temp, absolute);
   } catch (error) {
-    await rm5(temp, { force: true }).catch(() => {
+    await rm6(temp, { force: true }).catch(() => {
     });
     throw error;
   }
@@ -139450,10 +139495,10 @@ var WorkspaceInbox = class {
         await rename4(stagingDir, trashDir);
       } catch (error) {
         if (sourceMoved) await rename4(join3(stagingDir, "payload"), sourceDir).catch(() => void 0);
-        await rm5(stagingDir, { recursive: true, force: true }).catch(() => void 0);
+        await rm6(stagingDir, { recursive: true, force: true }).catch(() => void 0);
         throw error;
       }
-      await rm5(join3(this.root, "state", "inbox-originals", `${id}.bin`), { force: true }).catch(() => {
+      await rm6(join3(this.root, "state", "inbox-originals", `${id}.bin`), { force: true }).catch(() => {
       });
       return meta;
     });
@@ -139531,21 +139576,21 @@ var WorkspaceInbox = class {
     if (hasStagedOriginal && !hasLegacyOriginal) sourceRelForTarget.set("source/original.html", stagedOriginal);
     for (const [targetRel, sourceAbs] of sourceRelForTarget) {
       if (await sha256File(sourceAbs) !== await sha256File(join3(libDir, targetRel))) {
-        await rm5(libDir, { recursive: true, force: true });
+        await rm6(libDir, { recursive: true, force: true });
         await this.#clearSourceMarker(id);
         throw new Error("\u8FC1\u79FB\u6821\u9A8C\u5931\u8D25\uFF1A\u526F\u672C\u4E0E\u6E90 hash \u4E0D\u4E00\u81F4\uFF0C\u5DF2\u56DE\u6EDA");
       }
     }
     const sourceMetaNow = parseInboxMetaCompat(await readFile5(inboxMetaPath, "utf8"));
     if (!metaUserFieldsEqual(sourceMetaNow, libMeta)) {
-      await rm5(libDir, { recursive: true, force: true });
+      await rm6(libDir, { recursive: true, force: true });
       await this.#clearSourceMarker(id);
       throw new Error("\u8FC1\u79FB\u6821\u9A8C\u5931\u8D25\uFF1A\u6E90\u5143\u6570\u636E\u5728\u590D\u5236\u671F\u95F4\u88AB\u4FEE\u6539\uFF0C\u5DF2\u56DE\u6EDA\uFF0C\u8BF7\u91CD\u8BD5\u79FB\u52A8");
     }
-    await rm5(sourceDir, { recursive: true, force: true });
+    await rm6(sourceDir, { recursive: true, force: true });
     const finalMeta = stripUndefined({ ...libMeta, migration: void 0 });
     await atomicWriteFile(join3(libDir, "meta.json"), JSON.stringify(finalMeta, null, 2));
-    await rm5(stagedOriginal, { force: true }).catch(() => {
+    await rm6(stagedOriginal, { force: true }).catch(() => {
     });
     return finalMeta;
   }
@@ -139702,7 +139747,7 @@ async function extractEpub(body) {
 
 // src/host/vault.js
 import { createHash as createHash4, randomUUID as randomUUID2 } from "node:crypto";
-import { lstat, mkdir as mkdir6, readFile as readFile6, readdir as readdir3, realpath, rename as rename5, rm as rm6, stat as stat5, writeFile as writeFile6 } from "node:fs/promises";
+import { lstat, mkdir as mkdir6, readFile as readFile6, readdir as readdir3, realpath, rename as rename5, rm as rm7, stat as stat5, writeFile as writeFile6 } from "node:fs/promises";
 import path2 from "node:path";
 var EXCLUDED_DIRS = /* @__PURE__ */ new Set([".obsidian", ".trash", ".stfolder", ".git"]);
 var PARA_FOLDERS = ["0-Inbox", "1-Projects", "2-Areas", "3-Resources", "4-Archives"];
@@ -140265,7 +140310,7 @@ created: ${created}
     } catch (error) {
       if (moved) await rename5(payloadPath, sourcePath).catch(() => {
       });
-      await rm6(staging, { recursive: true, force: true }).catch(() => {
+      await rm7(staging, { recursive: true, force: true }).catch(() => {
       });
       throw error;
     }
@@ -140298,7 +140343,7 @@ created: ${created}
       if (text2 === null) continue;
       await this.write(rel, text2, { expectedSha: void 0 });
     }
-    await rm6(backup.dir, { recursive: true, force: true }).catch(() => {
+    await rm7(backup.dir, { recursive: true, force: true }).catch(() => {
     });
   }
 };
@@ -141552,6 +141597,56 @@ var DropletsService = class extends TypertRemoteService {
     const p = typeof request === "string" ? request : request?.path;
     return stripUndefined(await this.vaultService().trash(p));
   }
+  /** Trash browser: list vault-origin entries (native naming included). */
+  async vaultTrashList() {
+    await this.ready;
+    const entries = [];
+    const names = await readdir4(join4(this.vaultRoot(), ".trash")).catch(() => []);
+    for (const name2 of names) {
+      if (name2.startsWith(".")) continue;
+      const dir = join4(this.vaultRoot(), ".trash", name2);
+      const metaRaw = await readFile7(join4(dir, "trash-meta.json"), "utf8").catch(() => null);
+      let meta;
+      try {
+        meta = JSON.parse(metaRaw);
+      } catch {
+        meta = null;
+      }
+      entries.push({
+        id: name2,
+        title: meta?.title ?? name2,
+        deletedAt: meta?.deletedAt,
+        entryKind: meta?.entryKind ?? (existsSync(join4(dir, "payload")) && statSync(join4(dir, "payload")).isDirectory() ? "directory" : "file"),
+        sizeBytes: meta?.sizeBytes,
+        fileCount: meta?.fileCount
+      });
+    }
+    entries.sort((a, b) => String(b.deletedAt ?? "").localeCompare(String(a.deletedAt ?? "")));
+    return stripUndefined({ entries });
+  }
+  /** Restore one trash entry back to its vault path (conflict → error). */
+  async vaultTrashRestore(request) {
+    await this.ready;
+    const id = typeof request === "string" ? request : request?.id;
+    if (typeof id !== "string" || id === "" || id.includes("/") || id.startsWith(".")) throw new Error("\u65E0\u6548\u56DE\u6536\u7AD9\u6761\u76EE");
+    const trashDir = join4(this.vaultRoot(), ".trash", id);
+    const metaRaw = await readFile7(join4(trashDir, "trash-meta.json"), "utf8").catch(() => null);
+    let meta = null;
+    try {
+      meta = metaRaw ? JSON.parse(metaRaw) : null;
+    } catch {
+      meta = null;
+    }
+    const original = String(meta?.originalRelPath ?? "");
+    const rel = original.startsWith("vault/") ? original.slice("vault/".length).replace(/\/+$/, "") : "";
+    if (rel === "") throw new Error("\u8BE5\u6761\u76EE\u7F3A\u5C11\u539F\u59CB\u8DEF\u5F84\u4FE1\u606F\uFF0C\u65E0\u6CD5\u81EA\u52A8\u6062\u590D");
+    const target = join4(this.vaultRoot(), rel);
+    if (existsSync(target)) throw new Error(`\u76EE\u6807\u5DF2\u5B58\u5728\uFF0C\u65E0\u6CD5\u6062\u590D\uFF1A${rel}`);
+    await mkdir7(path4.dirname(target), { recursive: true });
+    await rename6(join4(trashDir, "payload"), target);
+    await rm(trashDir, { recursive: true, force: true });
+    return { restored: rel };
+  }
   async vaultSearch(request) {
     await this.ready;
     const query = typeof request === "string" ? request : request?.query;
@@ -141599,10 +141694,13 @@ var DropletsService = class extends TypertRemoteService {
     const title = record?.title;
     const backend = await this.indexBackend().catch(() => null);
     if (backend) {
-      const links = await backend.backlinks(p, title).catch(() => null);
-      if (links !== null) return { backend: "native", backlinks: links };
+      const [links, unlinked] = await Promise.all([
+        backend.backlinks(p, title).catch(() => null),
+        typeof backend.unlinkedMentions === "function" ? backend.unlinkedMentions(p, title).catch(() => []) : Promise.resolve([])
+      ]);
+      if (links !== null) return stripUndefined({ backend: "native", backlinks: links, unlinked });
     }
-    return { backend: "local", backlinks: vault.backlinks(p, title) };
+    return stripUndefined({ backend: "local", backlinks: vault.backlinks(p, title), unlinked: [] });
   }
   async vaultWrite(request) {
     await this.ready;
@@ -141934,6 +142032,8 @@ var DropletsService = class extends TypertRemoteService {
     "vaultDuplicate",
     "vaultDelete",
     "vaultTags",
+    "vaultTrashList",
+    "vaultTrashRestore",
     // settings / companion
     "getSettings",
     "saveSettings",

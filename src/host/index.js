@@ -11,6 +11,7 @@
  */
 import path from 'node:path';
 import { mkdir, readdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
+import { existsSync, statSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 import { TypertRemoteService, Remote } from '@deepseek-ai/dsh-typert-protocol';
 import { defineTool } from '@deepseek-ai/dsh-tools';
@@ -1043,6 +1044,51 @@ export class DropletsService extends TypertRemoteService {
     return stripUndefined(await this.vaultService().trash(p));
   }
 
+  /** Trash browser: list vault-origin entries (native naming included). */
+  async vaultTrashList() {
+    await this.ready;
+    const entries = [];
+    const names = await readdir(join(this.vaultRoot(), '.trash')).catch(() => []);
+    for (const name of names) {
+      if (name.startsWith('.')) continue;
+      const dir = join(this.vaultRoot(), '.trash', name);
+      const metaRaw = await readFile(join(dir, 'trash-meta.json'), 'utf8').catch(() => null);
+      let meta;
+      try { meta = JSON.parse(metaRaw); } catch { meta = null; }
+      entries.push({
+        id: name,
+        title: meta?.title ?? name,
+        deletedAt: meta?.deletedAt,
+        entryKind: meta?.entryKind ?? (existsSync(join(dir, 'payload')) && statSync(join(dir, 'payload')).isDirectory() ? 'directory' : 'file'),
+        sizeBytes: meta?.sizeBytes,
+        fileCount: meta?.fileCount,
+      });
+    }
+    entries.sort((a, b) => String(b.deletedAt ?? '').localeCompare(String(a.deletedAt ?? '')));
+    return stripUndefined({ entries });
+  }
+
+  /** Restore one trash entry back to its vault path (conflict → error). */
+  async vaultTrashRestore(request) {
+    await this.ready;
+    const id = typeof request === 'string' ? request : request?.id;
+    if (typeof id !== 'string' || id === '' || id.includes('/') || id.startsWith('.')) throw new Error('无效回收站条目');
+    const trashDir = join(this.vaultRoot(), '.trash', id);
+    const metaRaw = await readFile(join(trashDir, 'trash-meta.json'), 'utf8').catch(() => null);
+    let meta = null;
+    try { meta = metaRaw ? JSON.parse(metaRaw) : null; } catch { meta = null; }
+    // originalRelPath was stored as 'vault/<rel>' or 'vault/<rel>/' by trash().
+    const original = String(meta?.originalRelPath ?? '');
+    const rel = original.startsWith('vault/') ? original.slice('vault/'.length).replace(/\/+$/, '') : '';
+    if (rel === '') throw new Error('该条目缺少原始路径信息，无法自动恢复');
+    const target = join(this.vaultRoot(), rel);
+    if (existsSync(target)) throw new Error(`目标已存在，无法恢复：${rel}`);
+    await mkdir(path.dirname(target), { recursive: true });
+    await rename(join(trashDir, 'payload'), target);
+    await rm(trashDir, { recursive: true, force: true });
+    return { restored: rel };
+  }
+
   async vaultSearch(request) {
     await this.ready;
     const query = typeof request === 'string' ? request : request?.query;
@@ -1094,10 +1140,13 @@ export class DropletsService extends TypertRemoteService {
     const title = record?.title;
     const backend = await this.indexBackend().catch(() => null);
     if (backend) {
-      const links = await backend.backlinks(p, title).catch(() => null);
-      if (links !== null) return { backend: 'native', backlinks: links };
+      const [links, unlinked] = await Promise.all([
+        backend.backlinks(p, title).catch(() => null),
+        typeof backend.unlinkedMentions === 'function' ? backend.unlinkedMentions(p, title).catch(() => []) : Promise.resolve([]),
+      ]);
+      if (links !== null) return stripUndefined({ backend: 'native', backlinks: links, unlinked });
     }
-    return { backend: 'local', backlinks: vault.backlinks(p, title) };
+    return stripUndefined({ backend: 'local', backlinks: vault.backlinks(p, title), unlinked: [] });
   }
 
   async vaultWrite(request) {
@@ -1410,7 +1459,7 @@ export class DropletsService extends TypertRemoteService {
     'inboxMoveToLibrary', 'inboxMoveToTrash', 'inboxMarkDone',
     // vault
     'vaultStatus', 'vaultReindex', 'vaultTree', 'vaultRead', 'vaultSearch', 'vaultGraph', 'vaultBacklinks', 'vaultWrite',
-    'vaultList', 'vaultCreate', 'vaultCreateDir', 'vaultRename', 'vaultDuplicate', 'vaultDelete', 'vaultTags',
+    'vaultList', 'vaultCreate', 'vaultCreateDir', 'vaultRename', 'vaultDuplicate', 'vaultDelete', 'vaultTags', 'vaultTrashList', 'vaultTrashRestore',
     // settings / companion
     'getSettings', 'saveSettings', 'getStorageInfo', 'getWorkspace', 'setWorkspace', 'openPath', 'clearData', 'setReadingContext', 'prepareChat',
   ];

@@ -1945,3 +1945,47 @@
 .dpl-vault2-quicklist button { display: flex; align-items: center; gap: 10px; width: 100%; border: none; background: transparent; text-align: left; padding: 7px 10px; border-radius: 7px; font-size: 13px; color: var(--dpl-fg); cursor: pointer; }
 .dpl-vault2-quicklist button:hover, .dpl-vault2-quicklist button.is-first { background: var(--dpl-bg-hover); }
 .dpl-vault2-empty { display: grid; place-items: center; padding: 16px; font-size: 12px; color: var(--dpl-faint); gap: 6px; }
+
+/* ---- vault2 P1: CM6 editor + live preview decorations ---- */
+.dpl-vault2-viewswitch { display: flex; gap: 1px; background: var(--dpl-bg-2); border-radius: 7px; padding: 2px; }
+.dpl-vault2-viewswitch button { border: none; background: transparent; border-radius: 5px; padding: 2px 10px; font-size: 11.5px; color: var(--dpl-muted); cursor: pointer; }
+.dpl-vault2-viewswitch button:hover { color: var(--dpl-fg); }
+.dpl-vault2-viewswitch button.is-active { background: var(--dpl-bg); color: var(--dpl-fg); font-weight: 600; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.1); }
+.dpl-btn.is-on { color: var(--dpl-accent); }
+.dpl-vault2-editwrap { flex: 1; min-height: 0; display: flex; }
+.dpl-vault2-cmhost { flex: 1; min-width: 0; overflow: hidden; }
+.dpl-vault2-cmhost .cm-editor { height: 100%; font-size: 13.5px; background: var(--dpl-bg); }
+.dpl-vault2-cmhost .cm-editor.cm-focused { outline: none; }
+.dpl-vault2-cmhost .cm-scroller { font-family: var(--dsw-alias-font-mono, ui-monospace, 'SF Mono', monospace); line-height: 1.7; padding-bottom: 48px; }
+.dpl-vault2-cmhost .cm-content { caret-color: var(--dpl-accent); }
+.dpl-vault2-cmhost .cm-gutters { background: var(--dpl-bg); border-right: 1px solid var(--dpl-border); color: var(--dpl-faint); }
+.dpl-vault2-cmhost .cm-activeLineGutter { background: transparent; color: var(--dpl-muted); }
+.dpl-vault2-cmhost .cm-activeLine { background: color-mix(in srgb, var(--dpl-fg) 3%, transparent); }
+
+/* live preview: rendered weight where the caret isn't */
+.cm-live-h1 { font-size: 1.55em; font-weight: 700; }
+.cm-live-h2 { font-size: 1.32em; font-weight: 700; }
+.cm-live-h3 { font-size: 1.16em; font-weight: 650; }
+.cm-live-h4 { font-size: 1em; font-weight: 650; }
+.cm-live-strong { font-weight: 700; }
+.cm-live-em { font-style: italic; }
+.cm-live-strike { text-decoration: line-through; }
+.cm-live-code { font-family: var(--dsw-alias-font-mono, ui-monospace, monospace); font-size: 0.9em; background: var(--dpl-bg-2); border-radius: 4px; padding: 0 3px; }
+.cm-live-wikilink { color: var(--dpl-link); cursor: pointer; }
+.cm-live-wikilink:hover { text-decoration: underline; }
+
+/* vault2 P2: unlinked mentions + rename preview */
+.dpl-vault2-unlinkedhead { margin-top: 8px; padding: 0 4px 2px; font-size: 10.5px; font-weight: 600; color: #b98a1d; }
+.dpl-vault2-unlinked { position: relative; display: flex; align-items: center; }
+.dpl-vault2-unlinked .dpl-vault2-backlink { flex: 1; }
+.dpl-vault2-unlinkbtn { position: absolute; right: 4px; display: grid; place-items: center; width: 20px; height: 20px; border: none; background: var(--dpl-bg); border-radius: 4px; color: var(--dpl-faint); cursor: pointer; opacity: 0; }
+.dpl-vault2-unlinked:hover .dpl-vault2-unlinkbtn { opacity: 1; }
+.dpl-vault2-unlinkbtn:hover { background: var(--dpl-bg-active); color: var(--dpl-accent); }
+.dpl-vault2-hit mark { background: color-mix(in srgb, var(--dpl-accent) 22%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }
+
+/* vault2 P3: trash browser */
+.dpl-vault2-trash { width: min(560px, 92%); }
+.dpl-vault2-trashhead { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 8px; font-size: 13px; }
+.dpl-vault2-trashrow { display: flex; align-items: center; gap: 8px; padding: 5px 10px; border-radius: 7px; }
+.dpl-vault2-trashrow:hover { background: var(--dpl-bg-hover); }
+.dpl-vault2-trashinfo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; font-size: 12.5px; }

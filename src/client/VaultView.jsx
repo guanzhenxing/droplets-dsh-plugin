@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import { ChevronDown, ChevronRight, FileText, Folder, FolderOpen, Loader2, RefreshCw, Search, Tag, X, GitBranch, CircleDot, Plus, FolderPlus, Pencil, Copy, Trash2, ArrowLeftRight, ArrowUp, Sparkles } from 'lucide-react';
 import { t } from './i18n.js';
 import { MarkdownView, Modal } from './components.jsx';
@@ -6,6 +6,7 @@ import { computeLayout } from './wiki-graph-layout.js';
 import { PanelCollapseButton } from './feed/PanelGroup.jsx';
 import { AuxRail } from './feed/AuxRail.jsx';
 import { formatWhen } from './feed/format.js';
+import { createVaultEditor, outlineOf, scrollToHeading, activeOutlineIndex } from './vault-editor.js';
 
 /**
  * The vault space, P0 of the Obsidian workbench plan:
@@ -69,12 +70,14 @@ export function VaultView({ api, onMaterial }) {
   const [conflict, setConflict] = useState(null);
   const [creating, setCreating] = useState(null); // { name, dir, kind: 'note'|'dir' }
   const [renaming, setRenaming] = useState(null); // { path, name }
+  const [renamePreview, setRenamePreview] = useState(null); // inbound link count or null while counting
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [stats, setStats] = useState({ files: 0 });
   const [sortKey, setSortKey] = useState('name');
   const [filter, setFilter] = useState('');
   const readerRef = useRef(null);
+  const notePaneRef = useRef(null); // exposes jumpToHeading per view
   const dirty = tabs.some((tab) => tab.dirty);
 
   // Persist tab/expand/sidePane state (restored when the panel is unmounted).
@@ -156,16 +159,37 @@ export function VaultView({ api, onMaterial }) {
   const loadSideData = useCallback(async (path) => {
     try {
       const [links, tags] = await Promise.all([
-        api.vaultBacklinks(path).catch(() => ({ backlinks: [] })),
+        api.vaultBacklinks(path).catch(() => ({ backlinks: [], unlinked: [] })),
         api.vaultTags().catch(() => ({ tags: [] })),
       ]);
-      setSideData({ backlinks: links.backlinks ?? [], unlinked: [], tags: tags.tags ?? [] });
+      setSideData({ backlinks: links.backlinks ?? [], unlinked: links.unlinked ?? [], tags: tags.tags ?? [] });
     } catch { /* pane degrades to empty */ }
   }, [api]);
 
   useEffect(() => {
     if (activeTab?.path) void loadSideData(activeTab.path);
   }, [activeTab?.path, loadSideData]);
+
+  /** Convert the first bare mention in a note into a real wikilink. */
+  const linkMention = useCallback(async (mention) => {
+    if (!activeTab) return;
+    try {
+      const note = await api.vaultRead(mention.path);
+      const stem = activeTab.path.split('/').pop().replace(/\.md$/i, '');
+      const text = note.content;
+      // First occurrence of the stem outside code/link contexts.
+      const pattern = new RegExp(`(^|[^\\[\\w])${stem.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}($|[^\\w])`);
+      const match = pattern.exec(text);
+      if (!match) { setNotice(`「${mention.title}」里没找到「${stem}」原文`); return; }
+      const at = match.index + match[1].length;
+      const next = text.slice(0, at) + `[[${stem}]]` + text.slice(at);
+      const write = await api.vaultWrite({ path: mention.path, content: next, expectedSha: note.sha });
+      if (write.conflict) { setNotice(`「${mention.title}」有冲突，未改写`); return; }
+      setNotice(`已在「${mention.title}」建立链接`);
+      await loadSideData(activeTab.path);
+    } catch (cause) { setNotice(String(cause?.message ?? cause)); }
+  }, [activeTab, api, loadSideData]);
+
 
   const setDraft = useCallback((tabId, draft) => {
     setTabs((current) => current.map((tab) => (tab.id === tabId ? { ...tab, draft } : tab)));
@@ -258,6 +282,18 @@ export function VaultView({ api, onMaterial }) {
     } catch (cause) { setNotice(String(cause?.message ?? cause)); }
   }, [creating, api, refreshIndex, openPath]);
 
+  /** Open the rename dialog with an async preview of inbound links. */
+  const startRename = useCallback((path) => {
+    setRenaming({ path, name: path.split('/').pop() });
+    setRenamePreview(null);
+    void (async () => {
+      try {
+        const outcome = await api.vaultBacklinks(path);
+        setRenamePreview((outcome.backlinks ?? []).length);
+      } catch { setRenamePreview(0); }
+    })();
+  }, [api]);
+
   const submitRename = useCallback(async (nextPath) => {
     if (!renaming) return;
     try {
@@ -290,10 +326,106 @@ export function VaultView({ api, onMaterial }) {
     } catch (cause) { setNotice(String(cause?.message ?? cause)); }
   }, [api, refreshIndex, openPath]);
 
+  // ------- keyboard: ⌘P quick switcher, ⌘⇧F search, ⌘⇧P palette (plan §6) -------
+
+  const [palette, setPalette] = useState(null); // { query }
+
+  const paletteActions = useMemo(() => ([
+    { id: 'new-note', label: '新建笔记', run: () => setCreating({ kind: 'note', name: '', dir: activeTab ? ancestorsOf(activeTab.path)[0] ?? '' : '' }) },
+    { id: 'new-folder', label: '新建文件夹', run: () => setCreating({ kind: 'dir', name: '', dir: activeTab ? ancestorsOf(activeTab.path)[0] ?? '' : '' }) },
+    { id: 'search', label: '全库搜索', run: () => setSearchOpen(true) },
+    { id: 'graph', label: (graph ? '关闭图谱' : '打开图谱'), run: () => void toggleGraph() },
+    { id: 'backlinks', label: '查看反链', run: () => setSidePane('backlinks') },
+    { id: 'tags', label: '查看标签', run: () => setSidePane('tags') },
+    { id: 'trash', label: '回收站（浏览与恢复）', run: () => void openTrash() },
+    { id: 'export-md', label: '导出当前笔记 (.md)', run: () => exportActive('md') },
+    { id: 'export-html', label: '导出当前笔记 (.html)', run: () => exportActive('html') },
+    { id: 'reindex', label: '重扫索引', run: () => void api.vaultReindex().then(refreshIndex) },
+    { id: 'close-tab', label: '关闭当前标签', run: () => { if (activeTabId) void closeTab(activeTabId); } },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  ]), [graph, activeTab, activeTabId]);
+
+  useEffect(() => {
+    const onKey = (event) => {
+      const mod = event.metaKey || event.ctrlKey;
+      if (!mod) return;
+      const key = event.key.toLowerCase();
+      if (key === 'p' && !event.shiftKey) { event.preventDefault(); setQuick({ query: '' }); }
+      else if (key === 'f' && event.shiftKey) { event.preventDefault(); setSearchOpen(true); }
+      else if (key === 'p' && event.shiftKey) { event.preventDefault(); setPalette({ query: '' }); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // ------- trash browser + export (P3b) -------
+
+  const [trash, setTrash] = useState(null); // { entries }
+
+  const openTrash = useCallback(async () => {
+    try {
+      const outcome = await api.vaultTrashList();
+      setTrash(outcome.entries ?? []);
+    } catch (cause) { setNotice(String(cause?.message ?? cause)); }
+  }, [api]);
+
+  const restoreTrash = useCallback(async (id) => {
+    try {
+      const result = await api.vaultTrashRestore(id);
+      setNotice(`已恢复：${result.restored}`);
+      setTrash((current) => (current ?? []).filter((entry) => entry.id !== id));
+      await refreshIndex();
+    } catch (cause) { setNotice(String(cause?.message ?? cause)); }
+  }, [api, refreshIndex]);
+
+  const exportActive = useCallback(async (format) => {
+    if (!activeTab) { setNotice('先打开一篇笔记'); return; }
+    const text = activeTab.draft ?? activeTab.content;
+    const stem = activeTab.name.replace(/\.md$/i, '');
+    if (format === 'md') {
+      const blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `${stem}.md`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      setNotice('已导出 .md');
+      return;
+    }
+    // html: inline the rendered body for a portable single file.
+    const rendered = readerRef.current?.querySelector('.dpl-vault2-body');
+    if (!rendered) { setNotice('请切到阅读视图再导出 HTML'); return; }
+    const html = `<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>${escapeHtml(stem)}</title><style>body{max-width:720px;margin:40px auto;padding:0 24px;font:15px/1.75 -apple-system,'PingFang SC',sans-serif;color:#1a1a1a}h1,h2,h3{line-height:1.4}pre{background:#f5f5f5;padding:12px;border-radius:8px;overflow:auto}code{background:#f5f5f5;border-radius:4px;padding:1px 5px}img{max-width:100%}blockquote{border-left:3px solid #ddd;margin:0;padding:2px 14px;color:#555}table{border-collapse:collapse}th,td{border:1px solid #ddd;padding:5px 10px}</style></head><body>${rendered.innerHTML}</body></html>`;
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `${stem}.html`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setNotice('已导出 .html');
+  }, [activeTab]);
+
+  const paletteResults = useMemo(
+    () => (palette && palette.query.trim() !== '' ? paletteActions.filter((action) => action.label.toLowerCase().includes(palette.query.trim().toLowerCase())) : paletteActions),
+    [palette, paletteActions],
+  );
+
   // ------- render -------
 
   const activeDirty = Boolean(activeTab?.dirty);
-  const headings = useMemo(() => markdownHeadings(activeTab?.content ?? ''), [activeTab?.content]);
+  // Outline source switching: null while reading (derive from content), the
+  // CM6 outline while the editor is mounted (live-updates as you type).
+  const [editOutline, setEditOutline] = useState(null);
+  const [, setEditorScrollTick] = useState(0);
+  useEffect(() => { setEditOutline(null); }, [activeTab?.id]);
+  const headings = useMemo(() => {
+    // Editing: outline comes from the CM6 document model (plan §5.2); read:
+    // from the markdown text (same levels h2–h6, fence-aware).
+    if (editOutline !== null) return editOutline;
+    return markdownHeadings(activeTab?.content ?? '');
+  }, [editOutline, activeTab?.content]);
 
   const filteredIndex = useMemo(
     () => (filter.trim() === '' ? [] : filterFiles(fileIndex, filter, 30)),
@@ -319,6 +451,27 @@ export function VaultView({ api, onMaterial }) {
     if (!activeTab || selection === '') return;
     onMaterial({ space: 'vault', path: activeTab.path, title: activeTab.title, selection, content: '' });
   };
+
+  /** Wikilink resolution shared by read view and editor popovers. */
+  const onVaultLink = useCallback((target) => {
+    const wanted = String(target).replace(/\.md$/i, '').replace(/^\.?\//, '').split('#')[0];
+    if (wanted === '') return;
+    const hit = fileIndex.find((file) => file.path === `${wanted}.md`)
+      ?? fileIndex.find((file) => file.path.replace(/\.md$/i, '').endsWith('/' + wanted) || file.path.replace(/\.md$/i, '') === wanted);
+    if (hit) void openPath(hit.path);
+    else {
+      const base = activeTab?.path ? activeTab.path.split('/').slice(0, -1).join('/') : '';
+      void openPath((base === '' ? '' : base + '/') + wanted + '.md');
+    }
+  }, [fileIndex, openPath, activeTab?.path]);
+
+  /** Resolve a relative image path in a note to a fetchable URL. */
+  const resolveVaultImage = useCallback((src) => {
+    if (!src || /^(https?:|data:|blob:)/i.test(src)) return /^https?:/i.test(src) ? src : (src.startsWith('/') ? src : null);
+    const baseDir = activeTab?.path ? activeTab.path.split('/').slice(0, -1).join('/') : '';
+    // vault.js 没有静态文件服务；attachments 与本目录图片先走占位（P3 接 vaultRead 原件通道）。
+    return null;
+  }, [activeTab?.path]);
 
   if (stats.files === 0 && fileIndex.length === 0) {
     // First paint while the index warms up.
@@ -368,7 +521,7 @@ export function VaultView({ api, onMaterial }) {
               activePath={activeTab?.path}
               sortKey={sortKey}
               onOpen={(path) => void openPath(path)}
-              onRename={(path) => setRenaming({ path, name: path.split('/').pop() })}
+              onRename={(path) => { startRename(path); }}
               onDuplicate={(path) => void duplicatePath(path)}
               onTrash={trashPath}
               onNewNote={(dir) => setCreating({ kind: 'note', name: '', dir })}
@@ -384,12 +537,33 @@ export function VaultView({ api, onMaterial }) {
           {sidePane === 'backlinks' ? (
             <div className="dpl-vault2-sidebody">
               {activeTab ? (
-                sideData.backlinks.length > 0 ? sideData.backlinks.map((item) => (
-                  <button key={item.path} type="button" className="dpl-vault2-backlink" onClick={() => void openPath(item.path)}>
-                    <span className="dpl-truncate">{item.title}</span>
-                    <span className="dpl-vault2-filedir">{item.path}</span>
-                  </button>
-                )) : <div className="dpl-vault2-empty">暂无反链</div>
+                <>
+                  {sideData.backlinks.length > 0 ? sideData.backlinks.map((item) => (
+                    <button key={item.path} type="button" className="dpl-vault2-backlink" onClick={() => void openPath(item.path)}>
+                      <span className="dpl-truncate">{item.title}</span>
+                      <span className="dpl-vault2-filedir">{item.path}</span>
+                    </button>
+                  )) : <div className="dpl-vault2-empty">暂无反链</div>}
+                  {sideData.unlinked.length > 0 ? (
+                    <>
+                      <div className="dpl-vault2-unlinkedhead">未链接提及 · {sideData.unlinked.length}</div>
+                      {sideData.unlinked.map((item) => (
+                        <div key={item.path} className="dpl-vault2-unlinked">
+                          <button type="button" className="dpl-vault2-backlink" onClick={() => void openPath(item.path)}>
+                            <span className="dpl-truncate">{item.title}</span>
+                            <span className="dpl-vault2-filedir">{item.path}</span>
+                          </button>
+                          <button
+                            type="button" className="dpl-vault2-unlinkbtn" title={`在 ${item.title} 里加 [[链接]]`}
+                            onClick={() => void linkMention(item)}
+                          >
+                            <ArrowLeftRight size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </>
+                  ) : null}
+                </>
               ) : <div className="dpl-vault2-empty">先打开一篇笔记</div>}
             </div>
           ) : (
@@ -455,7 +629,7 @@ export function VaultView({ api, onMaterial }) {
                 <button key={hit.path} type="button" className="dpl-vault2-hit" onClick={() => void openPath(hit.path)}>
                   <strong>{hit.title}</strong>
                   <span className="dpl-vault2-filedir">{hit.path}</span>
-                  {hit.excerpt ? <p>{hit.excerpt}</p> : null}
+                  {hit.excerpt ? <p dangerouslySetInnerHTML={{ __html: highlightSnippet(hit.excerpt) }} /> : null}
                 </button>
               ))}
               {searchResults.results.length === 0 ? <div className="dpl-vault2-empty">无结果</div> : null}
@@ -463,18 +637,17 @@ export function VaultView({ api, onMaterial }) {
           ) : activeTab ? (
             <NoteReadPane
               key={activeTab.id}
+              ref={notePaneRef}
               tab={activeTab}
               onDraft={(draft) => setDraft(activeTab.id, draft)}
               onSave={() => void flushSave(activeTab.id)}
               onDiscard={() => setDraft(activeTab.id, null)}
-              onWikilink={(target) => {
-                const wanted = String(target).replace(/\.md$/i, '').replace(/^\.?\//, '');
-                const hit = fileIndex.find((file) => file.path === `${wanted}.md`)
-                  ?? fileIndex.find((file) => file.path.replace(/\.md$/i, '').endsWith('/' + wanted) || file.path.replace(/\.md$/i, '') === wanted);
-                if (hit) void openPath(hit.path);
-                else void openPath((activeTab.path.split('/').slice(0, -1).join('/') === '' ? '' : activeTab.path.split('/').slice(0, -1).join('/') + '/') + wanted + '.md');
-              }}
+              onWikilink={onVaultLink}
               onMaterial={onMaterial}
+              onOutlineChange={setEditOutline}
+              onEditorScroll={() => setEditorScrollTick((tick) => tick + 1)}
+              resolveImage={resolveVaultImage}
+              noteFiles={fileIndex}
               readerRef={readerRef}
             />
           ) : (
@@ -491,11 +664,12 @@ export function VaultView({ api, onMaterial }) {
         </div>
       </section>
 
-      {/* 右缘大纲：只在 read 面存在时 */}
+      {/* 右缘大纲：编辑与阅读三视图共用，跳转由 NoteReadPane 按视图分发 */}
       {activeTab && !graph && !searchResults ? (
         <AuxRail
           headings={headings}
           containerRef={readerRef}
+          onJumpToHeading={(index) => { notePaneRef.current?.jumpToHeading?.(index); }}
           onAskAi={() => {
             if (!activeTab) return;
             onMaterial({ space: 'vault', path: activeTab.path, title: activeTab.title, content: (activeTab.draft ?? activeTab.content).slice(0, 60000) }, { reveal: true });
@@ -526,6 +700,56 @@ export function VaultView({ api, onMaterial }) {
                 </button>
               ))}
               {quick && quick.query.trim() !== '' && quickResults.length === 0 ? <div className="dpl-vault2-empty">无匹配</div> : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {palette ? (
+        <div className="dpl-vault2-scrim" onClick={() => setPalette(null)}>
+          <div className="dpl-vault2-quick" onClick={(event) => event.stopPropagation()}>
+            <input
+              autoFocus placeholder="命令：输入名称…" value={palette.query}
+              onChange={(event) => setPalette({ query: event.target.value })}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') setPalette(null);
+                if (event.key === 'Enter' && paletteResults[0]) { const action = paletteResults[0]; setPalette(null); action.run(); }
+              }}
+            />
+            <div className="dpl-vault2-quicklist">
+              {paletteResults.map((action, index) => (
+                <button
+                  key={action.id} type="button"
+                  className={index === 0 ? 'is-first' : ''}
+                  onClick={() => { setPalette(null); action.run(); }}
+                >
+                  <span className="dpl-truncate">{action.label}</span>
+                </button>
+              ))}
+              {palette && palette.query.trim() !== '' && paletteResults.length === 0 ? <div className="dpl-vault2-empty">无匹配命令</div> : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {trash ? (
+        <div className="dpl-vault2-scrim" onClick={() => setTrash(null)}>
+          <div className="dpl-vault2-quick dpl-vault2-trash" onClick={(event) => event.stopPropagation()}>
+            <div className="dpl-vault2-trashhead">
+              <strong>回收站 · {trash.length} 条</strong>
+              <button type="button" className="dpl-icon-btn" onClick={() => setTrash(null)} aria-label="关闭"><X size={14} /></button>
+            </div>
+            <div className="dpl-vault2-quicklist">
+              {trash.map((entry) => (
+                <div key={entry.id} className="dpl-vault2-trashrow">
+                  <div className="dpl-vault2-trashinfo">
+                    <span className="dpl-truncate">{entry.title}</span>
+                    <span className="dpl-vault2-filedir">{entry.entryKind === 'directory' ? '文件夹' : '文件'} · {entry.deletedAt ? new Date(entry.deletedAt).toLocaleString('zh-Hans-CN') : ''}</span>
+                  </div>
+                  <button type="button" className="dpl-btn dpl-sm" onClick={() => void restoreTrash(entry.id)}>恢复</button>
+                </div>
+              ))}
+              {trash.length === 0 ? <div className="dpl-vault2-empty">回收站是空的</div> : null}
             </div>
           </div>
         </div>
@@ -581,7 +805,13 @@ export function VaultView({ api, onMaterial }) {
                 }}
               />
             </div>
-            <p className="dpl-hint">改名后将全库更新指向它的 [[链接]]。</p>
+            <p className="dpl-hint">
+              {renamePreview === null
+                ? '正在统计引用…'
+                : renamePreview > 0
+                  ? `将全库更新 ${renamePreview} 处指向它的 [[链接]]。`
+                  : '没有别的笔记引用它。'}
+            </p>
           </div>
           <div className="dpl-form-row dpl-end">
             <button type="button" className="dpl-btn" onClick={() => setRenaming(null)}>取消</button>
@@ -601,9 +831,67 @@ export function VaultView({ api, onMaterial }) {
   async function toggleGraph() {
     if (graph) { setGraph(null); return; }
     try {
-      setGraph(await api.vaultGraph());
+      const full = await api.vaultGraph();
+      // Neighborhood view: with an open note, show it plus 2 hops (≤300 nodes);
+      // otherwise a degree-capped global slice. The full graph stays one click
+      // away via the command palette's data (plan §9 performance budget).
+      setGraph(activeTab ? neighborhoodOf(full, activeTab.path, 2, 300) : capByDegree(full, 300));
     } catch (cause) { setError(String(cause?.message ?? cause)); }
   }
+}
+
+/** Extract the subgraph within `depth` hops of `center` (plan P3a). */
+export function neighborhoodOf(graph, center, depth = 2, limit = 300) {
+  const adjacency = new Map();
+  for (const edge of graph.edges) {
+    if (!adjacency.has(edge.source)) adjacency.set(edge.source, []);
+    if (!adjacency.has(edge.target)) adjacency.set(edge.target, []);
+    adjacency.get(edge.source).push(edge.target);
+    adjacency.get(edge.target).push(edge.source);
+  }
+  const keep = new Set([center]);
+  let frontier = [center];
+  for (let hop = 0; hop < depth; hop += 1) {
+    const next = [];
+    for (const node of frontier) {
+      for (const neighbor of adjacency.get(node) ?? []) {
+        if (!keep.has(neighbor)) { keep.add(neighbor); next.push(neighbor); }
+      }
+    }
+    frontier = next;
+    if (keep.size >= limit) break;
+  }
+  return sliceGraph(graph, keep, limit);
+}
+
+/** Global slice keeping the most-connected nodes. */
+export function capByDegree(graph, limit = 300) {
+  const degree = new Map();
+  for (const edge of graph.edges) {
+    degree.set(edge.source, (degree.get(edge.source) ?? 0) + 1);
+    degree.set(edge.target, (degree.get(edge.target) ?? 0) + 1);
+  }
+  const ranked = graph.nodes.filter((node) => !node.dangling).sort((a, b) => (degree.get(b.id) ?? 0) - (degree.get(a.id) ?? 0));
+  const keep = new Set(ranked.slice(0, limit).map((node) => node.id));
+  return sliceGraph(graph, keep, limit);
+}
+
+function sliceGraph(graph, keep, limit) {
+  const nodes = graph.nodes.filter((node) => keep.has(node.id)).slice(0, limit);
+  const kept = new Set(nodes.map((node) => node.id));
+  const edges = graph.edges.filter((edge) => kept.has(edge.source) && kept.has(edge.target));
+  return { nodes, edges };
+}
+
+/** Highlight the «…» snippet markers from the FTS backend (escaped first). */
+function highlightSnippet(snippet) {
+  const escaped = String(snippet)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return escaped.replace(/«([^»]*)»/g, '<mark>$1</mark>');
+}
+
+function escapeHtml(text) {
+  return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 /** h2–h6 outline from markdown source (vault parses deeper than feed/inbox). */
@@ -708,21 +996,130 @@ function TreePane({ api, expanded, setExpanded, activePath, sortKey, onOpen, onR
   );
 }
 
-/** Read view of one tab: rendered markdown + wikilink click + dirty editing. */
-function NoteReadPane({ tab, onDraft, onSave, onDiscard, onWikilink, onMaterial, readerRef }) {
-  const [editing, setEditing] = useState(false);
-  const editingRef = useRef(false);
-  useEffect(() => { editingRef.current = editing; }, [editing]);
+/** One tab: CM6 live/source editing + read view, outline anchored per view. */
+const NoteReadPane = forwardRef(function NoteReadPane({ tab, onDraft, onSave, onDiscard, onWikilink, onMaterial, onOutlineChange, onEditorScroll, resolveImage, noteFiles, readerRef }, forwardedRef) {
+  // view: read | live | source (droplets VaultEditorMode 口径；默认 read)
+  const [view, setView] = useState('read');
+  const [lineNumbers, setLineNumbers] = useState(true);
+  const [wrap, setWrap] = useState(true);
+  const hostRef = useRef(null);
+  const editorRef = useRef(null); // { view, setDoc, setMode, ... }
+  const outlineRef = useRef([]);
 
   const dirty = tab.dirty !== null && tab.dirty !== undefined;
   const text = dirty ? tab.draft : tab.content;
 
+  // Mount/unmount CM6 when entering an editing view.
+  useEffect(() => {
+    if (view === 'read' || !hostRef.current) {
+      if (editorRef.current) { editorRef.current.destroy(); editorRef.current = null; }
+      onOutlineChange(null);
+      return undefined;
+    }
+    const editor = createVaultEditor(hostRef.current, {
+      doc: text,
+      mode: view,
+      lineNumbers,
+      wrap,
+      resolveImage,
+      noteFiles,
+      onWikilink,
+      onChange: (next) => {
+        // Outline updates first (cheap), then the debounced save upstream.
+        outlineRef.current = outlineOf(editorRef.current?.view.state ?? editor.view.state);
+        onOutlineChange(outlineRef.current);
+        onEditorScroll();
+        onDraft(next);
+      },
+    });
+    editorRef.current = editor;
+    outlineRef.current = outlineOf(editor.view.state);
+    onOutlineChange(outlineRef.current);
+    return () => {
+      editor.destroy();
+      editorRef.current = null;
+      onOutlineChange(null);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view]);
+
+  // External doc replacement (reload / conflict re-read) while editing.
+  useEffect(() => {
+    if (editorRef.current && !dirty && editorRef.current.view.state.doc.toString() !== text) {
+      editorRef.current.setDoc(text);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text, dirty]);
+
+  const setMode = (next) => {
+    if (next === view) return;
+    if (next !== 'read' && dirty) {
+      // Carry the dirty buffer into the new editor instance.
+      setView(next);
+      // The mount effect reads `text` which already includes the dirty draft.
+      requestAnimationFrame(() => {
+        if (editorRef.current) editorRef.current.setDoc(text);
+      });
+      return;
+    }
+    setView(next);
+  };
+
+  // ⌘E cycles read → live → source → read (plan §4.1).
+  useEffect(() => {
+    const onKey = (event) => {
+      if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'e') {
+        event.preventDefault();
+        setMode(view === 'read' ? 'live' : view === 'live' ? 'source' : 'read');
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [view]);
+
+  /** AuxRail jump: read → DOM scroll; editing → CM6 document position. */
+  const jumpTo = (index) => {
+    if (view === 'read') {
+      const heading = markdownHeadings(text)[index];
+      if (!heading || !readerRef?.current) return;
+      const nodes = readerRef.current.querySelectorAll('h2, h3, h4, h5, h6');
+      const node = [...nodes].find((candidate) => candidate.textContent === heading.text)
+        ?? [...nodes][index] ?? null;
+      node?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (editorRef.current) {
+      const entry = outlineRef.current[index];
+      if (entry) {
+        scrollToHeading(editorRef.current.view, entry.from);
+        onEditorScroll();
+      }
+    }
+  };
+
+  useImperativeHandle(forwardedRef, () => ({ jumpToHeading: jumpTo }), [jumpTo]);
+
   return (
-    <div className="dpl-vault2-note">
+    <div className="dpl-vault2-note" data-view={view}>
       <div className="dpl-vault2-notehead">
         <h1>{tab.title}</h1>
         <div className="dpl-vault2-noteactions">
-          <button type="button" className="dpl-btn dpl-sm" onClick={() => setEditing(!editing)}>{editing ? '预览' : '编辑'}</button>
+          <div className="dpl-vault2-viewswitch">
+            {(['read', 'live', 'source']).map((mode) => (
+              <button
+                key={mode} type="button"
+                className={view === mode ? 'is-active' : ''}
+                onClick={() => setMode(mode)}
+                title={mode === 'read' ? '阅读' : mode === 'live' ? '实时预览 (⌘E)' : '源码 (⌘E)'}
+              >
+                {mode === 'read' ? '阅读' : mode === 'live' ? '实时' : '源码'}
+              </button>
+            ))}
+          </div>
+          {view !== 'read' ? (
+            <>
+              <button type="button" className={'dpl-btn dpl-sm' + (lineNumbers ? ' is-on' : '')} onClick={() => { setLineNumbers(!lineNumbers); editorRef.current?.setLineNumbers(!lineNumbers); }}>行号</button>
+              <button type="button" className={'dpl-btn dpl-sm' + (wrap ? ' is-on' : '')} onClick={() => { setWrap(!wrap); editorRef.current?.setWrap(!wrap); }}>换行</button>
+            </>
+          ) : null}
           {dirty ? (
             <>
               <button type="button" className="dpl-btn dpl-sm dpl-primary-solid" onClick={onSave}>保存</button>
@@ -731,27 +1128,20 @@ function NoteReadPane({ tab, onDraft, onSave, onDiscard, onWikilink, onMaterial,
           ) : null}
         </div>
       </div>
-      <div className="dpl-vault2-notemeta">{tab.path}{tab.tags.length > 0 ? ' · ' + tab.tags.map((tag) => '#' + tag).join(' ') : ''}</div>
-      {editing ? (
-        <textarea
-          className="dpl-vault2-editor"
-          value={text}
-          onChange={(event) => onDraft(event.target.value)}
-          onKeyDown={(event) => {
-            if ((event.metaKey || event.ctrlKey) && event.key === 's') { event.preventDefault(); onSave(); }
-          }}
-          spellCheck={false}
-          data-testid="vault-editor"
-        />
-      ) : (
+      <div className="dpl-vault2-notemeta">{tab.path}{tab.tags.length > 0 ? ' · ' + tab.tags.map((tag) => '#' + tag).join(' ') : ''}{view === 'live' ? ' · 实时预览' : view === 'source' ? ' · 源码' : ''}</div>
+      {view === 'read' ? (
         <div ref={readerRef} className="dpl-vault2-readerscroll">
           <MarkdownView className="dpl-note-body dpl-vault2-body" markdown={text} onWikilink={onWikilink} />
           <div className="dpl-vault2-bodyend" />
         </div>
+      ) : (
+        <div className="dpl-vault2-editwrap">
+          <div ref={hostRef} className="dpl-vault2-cmhost" data-testid="vault-editor" />
+        </div>
       )}
     </div>
   );
-}
+});
 
 function GraphPane({ graph, layout, onOpen, onClose }) {
   const width = 900;
