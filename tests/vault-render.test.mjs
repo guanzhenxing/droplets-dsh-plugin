@@ -159,6 +159,13 @@ test('vault renders tree/tabs/read + native menus + graph', { skip: !existsSync(
   assert.ok(container.querySelector('[data-testid="vault-ask-ai"]'), '整库问 AI button');
   assert.ok(container.querySelector('[data-testid="vault-tree-toolbar"]'), 'dot toolbar row');
 
+  // 展开目录触发懒加载（点击 chevron 所在的 dir 按钮）
+  const dirButton = [...container.querySelectorAll('.dpl-vault2-dir')].find((b) => b.textContent.includes('0-Drafts'));
+  assert.ok(dirButton, 'dir row present');
+  dirButton.click();
+  await new Promise((resolve) => setTimeout(resolve, 250));
+  assert.ok(container.innerHTML.includes('nested'), 'expanding a dir lazy-loads its children');
+
   // Open a note.
   const fileButton = [...container.querySelectorAll('.dpl-vault2-file')].find((button) => button.textContent.includes('hello'));
   assert.ok(fileButton, 'file button present');

@@ -1165,11 +1165,25 @@ function PopMenu({ onClose, children, wide }) {
 function TreePane({ api, expanded, setExpanded, activePath, sortKey, onOpen, onContextMenu }) {
   const [roots, setRoots] = useState(null);
   const load = useCallback(async (dir) => {
-    const { entries } = await api.vaultList(dir);
-    setRoots((current) => ({ ...current, [dir]: entries }));
+    try {
+      const { entries } = await api.vaultList(dir);
+      setRoots((current) => ({ ...current, [dir]: entries }));
+    } catch {
+      // 失败也给空数组：spinner 不能永远转（重试走折叠再展开）。
+      setRoots((current) => ({ ...current, [dir]: [] }));
+    }
   }, [api]);
 
   useEffect(() => { void load(''); }, [load]);
+
+  // 持久化恢复 / autoreveal 直接往 expanded 里加目录，但从未触发加载——
+  // 任何「已展开但未加载」的目录都在这里补一次 load（幂等，roots 命中即跳过）。
+  useEffect(() => {
+    if (!roots) return;
+    for (const dir of expanded) {
+      if (roots[dir] === undefined) void load(dir);
+    }
+  }, [expanded, roots, load]);
 
   const toggle = (dir) => {
     setExpanded((current) => {
@@ -1178,7 +1192,6 @@ function TreePane({ api, expanded, setExpanded, activePath, sortKey, onOpen, onC
       else next.add(dir);
       return next;
     });
-    if (!expanded.has(dir)) void load(dir);
   };
 
   const sortEntries = (entries) => {

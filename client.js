@@ -138538,12 +138538,22 @@ function PopMenu({ onClose, children, wide }) {
 function TreePane({ api, expanded, setExpanded, activePath, sortKey, onOpen, onContextMenu }) {
   const [roots, setRoots] = (0, import_react11.useState)(null);
   const load = (0, import_react11.useCallback)(async (dir) => {
-    const { entries: entries2 } = await api.vaultList(dir);
-    setRoots((current) => ({ ...current, [dir]: entries2 }));
+    try {
+      const { entries: entries2 } = await api.vaultList(dir);
+      setRoots((current) => ({ ...current, [dir]: entries2 }));
+    } catch {
+      setRoots((current) => ({ ...current, [dir]: [] }));
+    }
   }, [api]);
   (0, import_react11.useEffect)(() => {
     void load("");
   }, [load]);
+  (0, import_react11.useEffect)(() => {
+    if (!roots) return;
+    for (const dir of expanded) {
+      if (roots[dir] === void 0) void load(dir);
+    }
+  }, [expanded, roots, load]);
   const toggle = (dir) => {
     setExpanded((current) => {
       const next = new Set(current);
@@ -138551,7 +138561,6 @@ function TreePane({ api, expanded, setExpanded, activePath, sortKey, onOpen, onC
       else next.add(dir);
       return next;
     });
-    if (!expanded.has(dir)) void load(dir);
   };
   const sortEntries = (entries2) => {
     const dirs = entries2.filter((entry) => entry.kind === "dir").sort((a2, b) => a2.name.localeCompare(b.name, "zh-Hans-CN"));
