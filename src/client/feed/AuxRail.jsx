@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ArrowUp, Sparkles } from 'lucide-react';
+import { planTicks, visibleActiveIndex, RAIL_CHROME } from './tick-plan.js';
 
 /** Tick length per heading level (h2 longest → h6 shortest). */
 const TICK_LEVEL = [4, 2.5, 2, 1.5, 1];
@@ -9,17 +10,43 @@ const TICK_LEVEL = [4, 2.5, 2, 1.5, 1];
  * for the headings of the rendered article, back-to-top, and ask-AI. Overlay
  * position matches the original: absolute, vertically centered, no border
  * column or separate background.
+ *
+ * Beyond the original: the tick column is density-adaptive (planTicks) —
+ * when the outline is too long for the available height it first drops the
+ * deep levels (a dated work log collapses to its date ticks; every heading
+ * stays one hover away in the popover) and compresses the rhythm rather
+ * than overflowing past the viewport. `onJumpToHeading`, when provided
+ * (the vault), replaces the DOM scroll so ticks also work in edit mode.
  */
-export function AuxRail({ headings, containerRef, onAskAi }) {
+export function AuxRail({ headings, containerRef, onAskAi, onJumpToHeading }) {
   const [activeIdx, setActiveIdx] = useState(-1);
   const [hoverIdx, setHoverIdx] = useState(-1);
   const [popover, setPopover] = useState(false);
+  const [railBudget, setRailBudget] = useState(0);
   const scrollRef = useRef(null);
+  const popoverRef = useRef(null);
 
   const headingSelector = useMemo(
     () => [...new Set(headings.map((h) => 'h' + h.level))].join(','),
     [headings],
   );
+
+  // The budget is whatever height the scroll container actually has (minus
+  // the rail's round buttons), re-measured on resize so window changes adapt.
+  // Layout effect: measure before paint so ticks never pop in a frame late.
+  useLayoutEffect(() => {
+    const el = containerRef?.current;
+    if (!el) return undefined;
+    const measure = () => setRailBudget(Math.max(160, el.clientHeight - RAIL_CHROME));
+    measure();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', measure);
+      return () => window.removeEventListener('resize', measure);
+    }
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [containerRef]);
 
   useEffect(() => {
     const container = containerRef?.current;
@@ -48,20 +75,45 @@ export function AuxRail({ headings, containerRef, onAskAi }) {
     node?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  // The vault provides its own jump (CM6 offsets in edit mode); everyone
+  // else falls back to the DOM scroll above.
+  const jumpTo = (index) => {
+    if (typeof onJumpToHeading === 'function') onJumpToHeading(index);
+    else scrollToHeading(index);
+  };
+
   const scrollTop = () => {
     (scrollRef.current ?? containerRef?.current)?.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  const plan = useMemo(() => planTicks(headings, railBudget), [headings, railBudget]);
+  const activeTick = useMemo(() => visibleActiveIndex(plan.items, activeIdx), [plan.items, activeIdx]);
+
+  // Opening the popover scrolls it to the current heading so a 45-entry
+  // outline starts where you are reading.
+  useEffect(() => {
+    if (!popover) return undefined;
+    const frame = requestAnimationFrame(() => {
+      const row = popoverRef.current?.querySelector?.('.is-active');
+      row?.scrollIntoView?.({ block: 'center' });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [popover, headings]);
 
   if (headings.length === 0 && !onAskAi) return null;
 
   return (
     <div
       className={'dpl-aux-rail' + (popover ? ' has-popover' : '')}
+      style={{ gap: plan.gap + 'px' }}
       onMouseEnter={() => setPopover(true)}
       onMouseLeave={() => { setPopover(false); setHoverIdx(-1); }}
     >
       {popover && headings.length > 0 ? (
-        <div className="dpl-aux-popover" role="list">
+        <div className="dpl-aux-popover" ref={popoverRef} role="list">
+          {plan.filtered ? (
+            <div className="dpl-aux-popcount">共 {plan.total} 个标题 · 轨道显示 {plan.items.length} 个</div>
+          ) : null}
           {headings.map((heading, index) => (
             <button
               key={index}
@@ -69,22 +121,23 @@ export function AuxRail({ headings, containerRef, onAskAi }) {
               className={'dpl-aux-pop' + (index === activeIdx ? ' is-active' : '')}
               style={{ paddingLeft: 8 + (heading.level - 2) * 12 }}
               onMouseEnter={() => setHoverIdx(index)}
-              onClick={() => scrollToHeading(index)}
+              onClick={() => jumpTo(index)}
             >{heading.text}</button>
           ))}
         </div>
       ) : null}
-      {headings.map((heading, index) => (
+      {plan.items.map((item) => (
         <button
-          key={index}
+          key={item.index}
           type="button"
-          className={'dpl-aux-tick' + (index === activeIdx ? ' is-active' : '')}
-          aria-label={'跳转到 ' + heading.text}
-          aria-current={index === activeIdx ? 'true' : 'false'}
-          onMouseEnter={() => setHoverIdx(index)}
-          onClick={() => scrollToHeading(index)}
+          className={'dpl-aux-tick' + (item.index === activeTick ? ' is-active' : '')}
+          style={{ height: plan.tickH + 'px' }}
+          aria-label={'跳转到 ' + item.text}
+          aria-current={item.index === activeTick ? 'true' : 'false'}
+          onMouseEnter={() => setHoverIdx(item.index)}
+          onClick={() => jumpTo(item.index)}
         >
-          <span className="dpl-aux-bar" style={{ width: TICK_LEVEL[Math.min(Math.max(heading.level - 2, 0), 4)] * 4 }} />
+          <span className="dpl-aux-bar" style={{ width: TICK_LEVEL[Math.min(Math.max(item.level - 2, 0), 4)] * 4 }} />
         </button>
       ))}
       {headings.length > 0 ? (
