@@ -21,6 +21,11 @@ export async function openPdf(base64) {
       canvas.height = Math.floor(viewport.height);
       await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
     },
+    /** scale=1 时的页宽（pt/px），适宽缩放的基准（InboxView PdfPane 用）。 */
+    async pageWidth(pageNumber) {
+      const page = await pdf.getPage(pageNumber);
+      return page.getViewport({ scale: 1 }).width;
+    },
     async textOf(pageNumber) {
       const page = await pdf.getPage(pageNumber);
       const content = await page.getTextContent();

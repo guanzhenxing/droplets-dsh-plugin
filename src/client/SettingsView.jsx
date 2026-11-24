@@ -342,9 +342,8 @@ export function SettingsView({ api, onClose }) {
                   />
                 </label>
                 <div className="dpl-settings-presets">
-                  <button type="button" className="dpl-btn dpl-sm" onClick={() => setPickerPath('/Users/' + 'jesen' + '/WorkSpace/DropletsSpace')}>
-                    填入 DropletsSpace
-                  </button>
+                  {/* Fix L: dropped the hardcoded personal DropletsSpace path
+                      preset — the generic 选择目录 flow above covers it. */}
                   <button type="button" className="dpl-btn dpl-sm" onClick={() => setPickerPath('')}>
                     改回插件独立存储
                   </button>

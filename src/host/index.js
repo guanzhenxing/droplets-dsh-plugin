@@ -804,10 +804,10 @@ export class DropletsService extends TypertRemoteService {
   }
 
   async refresh(request) {
-    const { channel } = request ?? {};
+    const { channel, channels } = request ?? {};
     await this.ready;
     const outcome = { feeds: 0, entries: 0, errors: 0 };
-    const subs = this.selectSubscriptions(channel);
+    const subs = this.selectSubscriptions(channel, channels);
     this.refreshProgress = { running: true, total: subs.length, done: 0, ok: 0, failed: 0, startedAt: Date.now(), errors: [] };
     const workers = Math.min(8, Math.max(1, Number(this.store.data.settings.refreshWorkers) || REFRESH_WORKERS));
     await this.forEachWithPool(subs, workers, async (sub) => {
@@ -832,9 +832,22 @@ export class DropletsService extends TypertRemoteService {
     return outcome;
   }
 
-  selectSubscriptions(channel) {
+  selectSubscriptions(channel, channels) {
     // Disabled feeds never auto-refresh (droplets refresh strategy minimum).
     const subs = this.store.data.subscriptions.filter((sub) => sub.enabled !== false);
+    // channels: string[] — the batch-retry scope: refresh exactly these feed
+    // ids. The array may arrive through either slot or wrapped as
+    // { channels } (the client bridge forwards its single argument as the
+    // request's `channel`), so normalize all shapes before the single-value
+    // branches. An empty array refreshes nothing — never falls back to all.
+    const list = Array.isArray(channels) ? channels
+      : Array.isArray(channel) ? channel
+        : (channel && typeof channel === 'object' && Array.isArray(channel.channels)) ? channel.channels
+          : null;
+    if (list) {
+      const wanted = new Set(list.filter((id) => typeof id === 'string'));
+      return subs.filter((sub) => wanted.has(sub.id));
+    }
     if (typeof channel === 'string' && channel !== 'all' && !channel.startsWith('group:')) {
       const sub = subs.find((candidate) => candidate.id === channel);
       return sub ? [sub] : [];
@@ -1426,6 +1439,19 @@ export class DropletsService extends TypertRemoteService {
     if (patch.fetchTimeoutSec !== undefined) {
       const seconds = Number(patch.fetchTimeoutSec);
       if (Number.isFinite(seconds) && seconds >= 5 && seconds <= 300) settings.fetchTimeoutSec = Math.floor(seconds);
+    }
+    // Sources-pane state (O): sort mode + collapsed group names. Same shape
+    // as the other settings keys — plain values in store.data.settings.
+    if (patch.sourcesSortMode !== undefined) {
+      const mode = String(patch.sourcesSortMode);
+      if (mode === 'unread-desc' || mode === 'default' || mode === 'name-asc' || mode === 'name-desc') {
+        settings.sourcesSortMode = mode;
+      }
+    }
+    if (patch.sourcesCollapsedGroups !== undefined) {
+      if (Array.isArray(patch.sourcesCollapsedGroups)) {
+        settings.sourcesCollapsedGroups = patch.sourcesCollapsedGroups.filter((group) => typeof group === 'string');
+      }
     }
     this.store.touch();
     await this.store.flush();

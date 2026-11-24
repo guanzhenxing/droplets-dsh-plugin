@@ -49,6 +49,11 @@ export function ancestorsOf(path) {
   return dirs;
 }
 
+/** Pure (fix J): the note's own directory — 新建笔记 defaults here. */
+export function dirOf(path) {
+  return String(path ?? '').split('/').slice(0, -1).join('/');
+}
+
 /** Pure: exact > prefix > substring filename ranking (dsh-notes-plugin parity). */
 export function filterFiles(files, query, limit = 40) {
   const needle = String(query ?? '').trim().toLowerCase();
@@ -134,13 +139,24 @@ function sliceGraph(graph, keep, limit) {
 // ---------------------------------------------------------------------------
 
 export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }) {
-  const [tabs, setTabs] = useState(() => loadJson(TABS_KEY, []));
+  // Root-cause fix behind A/B: nothing ever assigned `tab.dirty` — every
+  // reader (autosave, conflict poll, flushSave guard, dirty dot, read-view
+  // draft rendering) saw undefined, so drafts never saved and never raised
+  // the conflict dialog. setDraft now keeps dirty in sync with the draft;
+  // persisted tabs from older sessions are normalized here.
+  const [tabs, setTabs] = useState(() => loadJson(TABS_KEY, []).map((tab) => ({
+    ...tab,
+    dirty: tab.dirty === true || (tab.dirty == null && tab.draft != null),
+  })));
   const [activeTabId, setActiveTabId] = useState(() => loadJson(TABS_KEY + '.active', null));
   const [expanded, setExpanded] = useState(() => new Set(loadJson(EXPANDED_KEY, [])));
   const [leftMode, setLeftMode] = useState('tree'); // tree | graph | tags
   const [backlinksOpen, setBacklinksOpen] = useState(false);
   const [sideData, setSideData] = useState({ backlinks: [], unlinked: [], tags: [] });
-  const [graphData, setGraphData] = useState(null);
+  // Fix H: two-layer graph cache — `graphFull` is the raw vaultGraph payload
+  // (invalidated on mutations), the rendered slice is memoized off it so the
+  // active note's neighborhood is always fresh without refetching.
+  const [graphFull, setGraphFull] = useState(null);
   const [filterOpen, setFilterOpen] = useState(false);
   const [filter, setFilter] = useState('');
   const [sortKey, setSortKey] = useState('name-asc');
@@ -160,6 +176,7 @@ export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }
   const [renamePreview, setRenamePreview] = useState(null);
   const [moveTarget, setMoveTarget] = useState(null); // { path, name, dir }
   const [notice, setNotice] = useState('');
+  const [noticeIsError, setNoticeIsError] = useState(false); // fix C: danger-tinted notices
   const [error, setError] = useState('');
   const [stats, setStats] = useState({ files: 0 });
   const [fileIndex, setFileIndex] = useState([]);
@@ -170,16 +187,25 @@ export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }
   const readerRef = useRef(null);
   const notePaneRef = useRef(null);
   const dirty = tabs.some((tab) => tab.dirty);
+  const dirtyCount = tabs.filter((tab) => tab.dirty).length; // fix B: statusbar badge
 
   useEffect(() => { saveJson(TABS_KEY, tabs); }, [tabs]);
   useEffect(() => { saveJson(TABS_KEY + '.active', activeTabId); }, [activeTabId]);
   useEffect(() => { saveJson(EXPANDED_KEY, [...expanded]); }, [expanded]);
 
+  // Mirrors `tabs` into a ref for async readers (flushSave, reloadTab, the
+  // poll). Declared BEFORE the poll effect on purpose: when tabSignature
+  // changes, React runs this sync first, so the poll's re-check compares
+  // against the *new* tab state instead of a stale pre-reload sha/dirty —
+  // otherwise a just-resolved conflict would be re-raised.
+  const tabsRef = useRef(tabs);
+  useEffect(() => { tabsRef.current = tabs; }, [tabs]);
+
   // External change watch (plan §3.4): poll the open tabs' on-disk stamps.
   // A foreign write (Obsidian, the Droplets desktop app, the agent tool)
   // with no local draft reloads the tab silently; a draft present raises
   // the standard conflict dialog instead of overwriting anything.
-  const tabSignature = tabs.map((tab) => `${tab.id}:${tab.sha}:${tab.dirty != null ? 'd' : 'c'}`).join('|');
+  const tabSignature = tabs.map((tab) => `${tab.id}:${tab.sha}:${tab.dirty ? 'd' : 'c'}`).join('|');
   useEffect(() => {
     if (tabs.length === 0) return undefined;
     let stopped = false;
@@ -191,7 +217,7 @@ export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }
           if (stopped || !stat || stat.sha === tab.sha) continue;
           const note = await api.vaultRead(tab.path);
           if (stopped) return;
-          if (tab.dirty != null) {
+          if (tab.dirty) {
             setConflict((current) => (current?.path === tab.path ? current : {
               path: tab.path,
               tabId: tab.id,
@@ -200,7 +226,7 @@ export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }
             }));
           } else {
             setTabs((current) => current.map((item) => (item.id === tab.id
-              ? { ...item, content: note.content, sha: note.sha, title: note.title, tags: note.tags ?? [], wordCount: note.wordCount ?? 0, savedAt: null }
+              ? { ...item, content: note.content, sha: note.sha, title: note.title, tags: note.tags ?? [], wordCount: note.wordCount ?? 0, savedAt: null, draft: null, dirty: false }
               : item)));
           }
         } catch { /* stat hiccups are non-fatal */ }
@@ -263,7 +289,19 @@ export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }
 
   const flashNotice = useCallback((message) => {
     setNotice(message);
+    setNoticeIsError(false);
     setTimeout(() => { setNotice((current) => (current === message ? '' : current)); }, 3500);
+  }, []);
+
+  /**
+   * Fix C: failure feedback. Failures used to ride the same permanent green
+   * notice as successes; they now tint danger and auto-clear after 8 s
+   * (manual close still works — same dismiss button as flashNotice).
+   */
+  const flashError = useCallback((message) => {
+    setNotice(message);
+    setNoticeIsError(true);
+    setTimeout(() => { setNotice((current) => (current === message ? '' : current)); }, 8000);
   }, []);
 
   const openPath = useCallback(async (path, { forceNew = false } = {}) => {
@@ -281,11 +319,17 @@ export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }
         name: path.split('/').pop(),
         content: note.content,
         draft: null,
+        dirty: false,
         sha: note.sha,
         title: note.title,
         tags: note.tags ?? [],
         wordCount: note.wordCount ?? 0,
         savedAt: null,
+        // fix G: editor prefs live on the tab so switching back restores the
+        // same view/lineNumbers/wrap without remounting the note pane.
+        view: 'read',
+        lineNumbers: true,
+        wrap: true,
       };
       setTabs((current) => [...current.filter((item) => item.id !== tab.id), tab]);
       setActiveTabId(tab.id);
@@ -300,6 +344,74 @@ export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }
       onMaterial({ space: 'vault', path: note.path, title: note.title, content: note.content.slice(0, 60000) });
     } catch (cause) { setError(String(cause?.message ?? cause)); }
   }, [api, tabs, onMaterial]);
+
+  /**
+   * Fix A: reload a tab straight from disk. The conflict dialog's「重载」used
+   * to call openPath, which early-returns for an open tab — the button was a
+   * no-op and the disk version never landed. This bypasses the early return:
+   * fresh content/sha/title/tags/wordCount, draft cleared.
+   */
+  const reloadTab = useCallback(async (tabId) => {
+    const tab = tabsRef.current.find((item) => item.id === tabId || item.path === tabId);
+    if (!tab) return;
+    // The tab is about to become clean: kill the pending autosave timer
+    // first (it may be milliseconds from firing) so a mid-reload flush
+    // cannot re-raise a conflict for a tab the user just resolved.
+    clearTimeout(saveTimer.current);
+    try {
+      const note = await api.vaultRead(tab.path);
+      setTabs((current) => current.map((item) => (item.id === tab.id ? {
+        ...item,
+        content: note.content,
+        draft: null,
+        dirty: false,
+        sha: note.sha,
+        title: note.title,
+        tags: note.tags ?? [],
+        wordCount: note.wordCount ?? 0,
+        savedAt: null,
+      } : item)));
+      // A flush that was already in flight when the reload started may have
+      // re-raised a conflict during the await — drop it: the tab now matches
+      // disk, so any conflict for this path is stale by construction.
+      setConflict((current) => (current && (current.tabId === tab.id || current.path === tab.path) ? null : current));
+    } catch (cause) { setError(String(cause?.message ?? cause)); }
+  }, [api]);
+
+  /**
+   * Fix A: conflict「另存副本」— keep both sides. Writes the local draft to a
+   * 「xx 副本」sibling (create-only, incrementing, matching the service's
+   * naming), then reloads the original tab from disk so the conflict is fully
+   * resolved, and opens the copy. Chosen over vaultDuplicate-first because
+   * duplicating the disk version would still leave the draft conflicting.
+   */
+  const saveConflictCopy = useCallback(async (conflictInfo) => {
+    const tab = tabsRef.current.find((item) => item.id === conflictInfo.tabId || item.path === conflictInfo.path);
+    if (!tab) return;
+    const draft = tab.draft ?? tab.content;
+    const dir = dirOf(tab.path);
+    const stem = tab.name.replace(/\.md$/i, '');
+    try {
+      let copyPath = null;
+      for (let attempt = 1; attempt <= 8; attempt += 1) {
+        const suffix = attempt === 1 ? ' 副本' : ` 副本 ${attempt}`;
+        const candidate = (dir === '' ? '' : dir + '/') + stem + suffix + '.md';
+        const result = await api.vaultWrite({ path: candidate, content: draft, expectedSha: null });
+        if (!result.conflict) { copyPath = result.path ?? candidate; break; }
+      }
+      if (!copyPath) { flashError('副本路径都被占用，请手动另存'); return; }
+      setConflict(null);
+      await reloadTab(tab.id);
+      await openPath(copyPath);
+      flashNotice(`草稿已另存：${copyPath}`);
+      void refreshIndex();
+    } catch (cause) { flashError(String(cause?.message ?? cause)); }
+  }, [api, reloadTab, openPath, refreshIndex, flashError, flashNotice]);
+
+  /** Fix G: write editor prefs (view/lineNumbers/wrap) back onto the tab. */
+  const setTabPrefs = useCallback((tabId, patch) => {
+    setTabs((current) => current.map((tab) => (tab.id === tabId ? { ...tab, ...patch } : tab)));
+  }, []);
 
   // Cross-space hand-off: another space saved an article as a note and asks
   // the vault to open it (信息流/收件箱 → 知识库, plan 差异化 #3).
@@ -341,7 +453,7 @@ export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }
   }, [leftMode]);
 
   const setDraft = useCallback((tabId, draft) => {
-    setTabs((current) => current.map((tab) => (tab.id === tabId ? { ...tab, draft } : tab)));
+    setTabs((current) => current.map((tab) => (tab.id === tabId ? { ...tab, draft, dirty: draft != null } : tab)));
   }, []);
 
   const closeTab = useCallback(async (tabId) => {
@@ -356,14 +468,23 @@ export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }
     });
   }, [tabs, activeTabId]);
 
-  const tabsRef = useRef(tabs);
-  useEffect(() => { tabsRef.current = tabs; }, [tabs]);
   const saveTimer = useRef(null);
+  // Render-time mirror of the active tab id: lets the autosave cleanup tell
+  // «torn down because we switched tabs» (flush the outgoing draft — fix B)
+  // from «torn down because the draft changed» (keep the 800 ms debounce —
+  // a naive unconditional flush would save on every keystroke).
+  const activeTabIdAtRender = useRef(null);
+  activeTabIdAtRender.current = activeTab?.id ?? null;
   useEffect(() => {
     if (!activeTab?.dirty) return undefined;
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => { void flushSave(activeTab.id); }, 800);
-    return () => clearTimeout(saveTimer.current);
+    return () => {
+      clearTimeout(saveTimer.current);
+      // Fix B: only flush when the teardown is a tab switch. `activeTab` here
+      // is the one this effect run was bound to — exactly the tab leaving.
+      if (activeTab?.dirty && activeTabIdAtRender.current !== activeTab.id) void flushSave(activeTab.id);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab?.draft, activeTab?.id]);
 
@@ -373,7 +494,11 @@ export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }
     try {
       const result = await api.vaultWrite({ path: tab.path, content: tab.draft ?? tab.content, expectedSha: force ? undefined : tab.sha });
       if (result.conflict) {
-        setConflict({ path: tab.path, currentSha: result.currentSha, currentExcerpt: result.currentExcerpt });
+        // The tab may have been reloaded/discarded while the write was in
+        // flight — a conflict for an already-clean tab is stale, drop it.
+        if (!tabsRef.current.find((item) => item.id === tabId)?.dirty) return;
+        // Fix A: carry the tab id so「重载/另存副本」resolve the right tab.
+        setConflict({ path: tab.path, tabId: tab.id, currentSha: result.currentSha, currentExcerpt: result.currentExcerpt });
         return;
       }
       setTabs((current) => current.map((item) => (item.id === tabId ? {
@@ -381,9 +506,11 @@ export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }
         sha: result.sha,
         content: item.draft ?? item.content,
         draft: null,
+        dirty: false,
         savedAt: new Date().toLocaleTimeString('zh-Hans-CN', { hour: '2-digit', minute: '2-digit' }),
       } : item)));
       setConflict(null);
+      setGraphFull(null); // fix H: a saved note can change links — refetch the graph
     } catch (cause) { setError(String(cause?.message ?? cause)); }
   }, [api]);
 
@@ -396,16 +523,30 @@ export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }
     } catch (cause) { setError(String(cause?.message ?? cause)); }
   }, [api, searchQuery]);
 
+  // Fix H: the rendered graph slice is a memo of the raw payload — switching
+  // notes re-scopes without refetching; mutations null the raw payload so the
+  // next open rebuilds instead of showing a stale slice.
+  const graphData = useMemo(
+    () => (graphFull ? (activeTab?.path ? neighborhoodOf(graphFull, activeTab.path, 2, 300) : capByDegree(graphFull, 300)) : null),
+    [graphFull, activeTab?.path],
+  );
+  const graphFetching = useRef(false);
   const loadGraph = useCallback(async () => {
-    if (graphData) return graphData;
-    const full = await api.vaultGraph();
-    const scoped = activeTab ? neighborhoodOf(full, activeTab.path, 2, 300) : capByDegree(full, 300);
-    setGraphData(scoped);
-    return scoped;
-  }, [api, graphData, activeTab?.path]);
+    if (graphFull || graphFetching.current) return;
+    graphFetching.current = true;
+    try { setGraphFull(await api.vaultGraph()); } finally { graphFetching.current = false; }
+  }, [api, graphFull]);
+
+  // Graph mode with an invalidated payload refetches (fix H: a save/rename
+  // during graph view used to leave the pane spinning forever after the
+  // invalidation, because only switchLeft ever triggered a fetch).
+  useEffect(() => {
+    if (leftMode === 'graph' && !graphFull) void loadGraph();
+  }, [leftMode, graphFull, loadGraph]);
 
   const switchLeft = useCallback(async (mode) => {
     setLeftMode((current) => (current === mode ? 'tree' : mode));
+    if (mode !== 'tree') setFilterOpen(false); // fix I: the filter row only exists in tree mode
     if (mode === 'graph') {
       try { await loadGraph(); } catch (cause) { setError(String(cause?.message ?? cause)); }
     }
@@ -422,19 +563,31 @@ export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }
   const submitCreate = useCallback(async () => {
     if (!creating) return;
     try {
+      const name = creating.name.trim() || '未命名';
+      const dir = (creating.dir ?? '').trim(); // fix J: 位置 is editable + datalist now
       if (creating.kind === 'dir') {
-        await api.vaultCreateDir({ dir: creating.path });
+        // Adjacent fix found while adding the error field: this branch read
+        // `creating.path`, which never exists in this flow — folder creation
+        // always failed. Build the dir path like the note branch does.
+        await api.vaultCreateDir({ dir: dir === '' ? name : `${dir}/${name}` });
       } else {
-        const name = creating.name.trim() || '未命名';
-        const path = (creating.dir === '' ? name : `${creating.dir}/${name}`) + '.md';
+        const path = (dir === '' ? name : `${dir}/${name}`) + '.md';
         const result = await api.vaultWrite({ path, content: `---\nid: ${crypto.randomUUID()}\ntitle: ${name}\ncreated: ${new Date().toISOString()}\n---\n\n# ${name}\n\n`, expectedSha: null, createOnly: true });
-        if (result.conflict) { setNotice(`已存在：${path}`); return; }
+        if (result.conflict) {
+          // Fix D: the failure used to surface as a statusbar notice that the
+          // modal covered; show it inline so the user can pick a new name.
+          setCreating({ ...creating, error: `已存在：${path}` });
+          return;
+        }
         void openPath(path);
       }
       setCreating(null);
       await refreshIndex();
-    } catch (cause) { setNotice(String(cause?.message ?? cause)); }
-  }, [creating, api, refreshIndex, openPath]);
+    } catch (cause) {
+      setCreating({ ...creating, error: String(cause?.message ?? cause) });
+      flashError(String(cause?.message ?? cause));
+    }
+  }, [creating, api, refreshIndex, openPath, flashError]);
 
   const startRename = useCallback((path) => {
     setRenaming({ path, name: path.split('/').pop() });
@@ -455,36 +608,39 @@ export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }
     if (!renaming) return;
     try {
       const result = await api.vaultRename({ from: renaming.path, to: nextPath, updateLinks: true });
-      setNotice(`已重命名${result.updatedLinks > 0 ? `，更新 ${result.updatedLinks} 处链接` : ''}`);
+      flashNotice(`已重命名${result.updatedLinks > 0 ? `，更新 ${result.updatedLinks} 处链接` : ''}`);
       setRenaming(null);
       setTabs((current) => current.map((tab) => (tab.path === renaming.path ? { ...tab, path: result.path, name: result.path.split('/').pop(), id: result.path } : tab)));
       if (activeTabId === renaming.path) setActiveTabId(result.path);
+      setGraphFull(null); // fix H: links moved — rebuild the graph slice
       await refreshIndex();
-    } catch (cause) { setNotice(String(cause?.message ?? cause)); }
-  }, [renaming, api, refreshIndex, activeTabId]);
+    } catch (cause) { flashError(String(cause?.message ?? cause)); }
+  }, [renaming, api, refreshIndex, activeTabId, flashNotice, flashError]);
 
   const submitMove = useCallback(async (dir) => {
     if (!moveTarget) return;
     const to = (dir === '' ? moveTarget.name : `${dir}/${moveTarget.name}`);
     try {
       const result = await api.vaultRename({ from: moveTarget.path, to, updateLinks: moveTarget.path.toLowerCase().endsWith('.md') });
-      setNotice(`已移动到 ${dir || '根目录'}${result.updatedLinks > 0 ? `，更新 ${result.updatedLinks} 处链接` : ''}`);
+      flashNotice(`已移动到 ${dir || '根目录'}${result.updatedLinks > 0 ? `，更新 ${result.updatedLinks} 处链接` : ''}`);
       setMoveTarget(null);
       setTabs((current) => current.map((tab) => (tab.path === moveTarget.path ? { ...tab, path: result.path, name: result.path.split('/').pop(), id: result.path } : tab)));
       if (activeTabId === moveTarget.path) setActiveTabId(result.path);
+      setGraphFull(null); // fix H
       await refreshIndex();
-    } catch (cause) { setNotice(String(cause?.message ?? cause)); }
-  }, [moveTarget, api, refreshIndex, activeTabId]);
+    } catch (cause) { flashError(String(cause?.message ?? cause)); }
+  }, [moveTarget, api, refreshIndex, activeTabId, flashNotice, flashError]);
 
   const trashPath = useCallback(async (path, name) => {
     if (!window.confirm(`把「${name}」移入回收站？可在 Droplets 回收站恢复。`)) return;
     try {
       await api.vaultDelete({ path });
       setTabs((current) => current.filter((tab) => tab.path !== path));
-      setNotice('已移入回收站');
+      flashNotice('已移入回收站');
+      setGraphFull(null); // fix H
       await refreshIndex();
-    } catch (cause) { setNotice(String(cause?.message ?? cause)); }
-  }, [api, refreshIndex]);
+    } catch (cause) { flashError(String(cause?.message ?? cause)); }
+  }, [api, refreshIndex, flashNotice, flashError]);
 
   const duplicatePath = useCallback(async (path) => {
     try {
@@ -495,10 +651,11 @@ export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }
         const dir = path.split('/').slice(0, -1).join('/');
         await api.vaultCopyDirTo({ from: path, toDir: dir });
       }
-      setNotice('已创建副本');
+      flashNotice('已创建副本');
+      setGraphFull(null); // fix H
       await refreshIndex();
-    } catch (cause) { setNotice(String(cause?.message ?? cause)); }
-  }, [api, refreshIndex, openPath]);
+    } catch (cause) { flashError(String(cause?.message ?? cause)); }
+  }, [api, refreshIndex, openPath, flashNotice, flashError]);
 
   const pasteInto = useCallback(async (dir) => {
     if (!clipboard) return;
@@ -509,18 +666,19 @@ export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }
         const result = await api.vaultRename({ from: clipboard.path, to, updateLinks: clipboard.path.toLowerCase().endsWith('.md') });
         setTabs((current) => current.map((tab) => (tab.path === clipboard.path ? { ...tab, path: result.path, name: result.path.split('/').pop(), id: result.path } : tab)));
         if (activeTabId === clipboard.path) setActiveTabId(result.path);
-        setNotice('已粘贴（移动）');
+        flashNotice('已粘贴（移动）');
+        setGraphFull(null); // fix H
       } else if (clipboard.path.toLowerCase().endsWith('.md')) {
         await api.vaultCopyTo({ from: clipboard.path, toDir: dir });
-        setNotice('已粘贴（复制）');
+        flashNotice('已粘贴（复制）');
       } else {
         await api.vaultCopyDirTo({ from: clipboard.path, toDir: dir });
-        setNotice('已粘贴（复制文件夹）');
+        flashNotice('已粘贴（复制文件夹）');
       }
       setClipboard(null);
       await refreshIndex();
-    } catch (cause) { setNotice(String(cause?.message ?? cause)); }
-  }, [clipboard, api, refreshIndex, activeTabId]);
+    } catch (cause) { flashError(String(cause?.message ?? cause)); }
+  }, [clipboard, api, refreshIndex, activeTabId, flashNotice, flashError]);
 
   /** Convert the first bare mention in a note into a real wikilink. */
   const linkMention = useCallback(async (mention) => {
@@ -531,23 +689,23 @@ export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }
       const text = note.content;
       const pattern = new RegExp(`(^|[^\\[\\w])${stem.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|[^\\w])`);
       const match = pattern.exec(text);
-      if (!match) { setNotice(`「${mention.title}」里没找到「${stem}」原文`); return; }
+      if (!match) { flashError(`「${mention.title}」里没找到「${stem}」原文`); return; }
       const at = match.index + match[1].length;
       const next = text.slice(0, at) + `[[${stem}]]` + text.slice(at);
       const write = await api.vaultWrite({ path: mention.path, content: next, expectedSha: note.sha });
-      if (write.conflict) { setNotice(`「${mention.title}」有冲突，未改写`); return; }
-      setNotice(`已在「${mention.title}」建立链接`);
+      if (write.conflict) { flashError(`「${mention.title}」有冲突，未改写`); return; }
+      flashNotice(`已在「${mention.title}」建立链接`);
       await loadSideData(activeTab.path);
-    } catch (cause) { setNotice(String(cause?.message ?? cause)); }
-  }, [activeTab, api, loadSideData]);
+    } catch (cause) { flashError(String(cause?.message ?? cause)); }
+  }, [activeTab, api, loadSideData, flashNotice, flashError]);
 
   /** Context-menu 问 AI（这篇）: open the companion with that note. */
   const askAiNote = useCallback(async (path) => {
     try {
       const note = await api.vaultRead(path);
       onMaterial({ space: 'vault', path: note.path, title: note.title, content: note.content.slice(0, 60000) }, { reveal: true });
-    } catch (cause) { setNotice(String(cause?.message ?? cause)); }
-  }, [api, onMaterial]);
+    } catch (cause) { flashError(String(cause?.message ?? cause)); }
+  }, [api, onMaterial, flashError]);
 
   /** 整库问 AI: native parity — a numbered library listing as the material. */
   const askWholeLibrary = useCallback(() => {
@@ -556,7 +714,7 @@ export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }
   }, [fileIndex, onMaterial]);
 
   const exportActive = useCallback(async (format) => {
-    if (!activeTab) { setNotice('先打开一篇笔记'); return; }
+    if (!activeTab) { flashError('先打开一篇笔记'); return; }
     const text = activeTab.draft ?? activeTab.content;
     const stem = activeTab.name.replace(/\.md$/i, '');
     if (format === 'md') {
@@ -567,11 +725,11 @@ export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }
       anchor.download = `${stem}.md`;
       anchor.click();
       URL.revokeObjectURL(url);
-      setNotice('已导出 .md');
+      flashNotice('已导出 .md');
       return;
     }
     const rendered = readerRef.current?.querySelector('.dpl-vault2-body');
-    if (!rendered) { setNotice('请切到阅读视图再导出'); return; }
+    if (!rendered) { flashError('请切到阅读视图再导出'); return; }
     const html = `<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>${escapeHtml(stem)}</title><style>body{max-width:720px;margin:40px auto;padding:0 24px;font:15px/1.75 -apple-system,'PingFang SC',sans-serif;color:#1a1a1a}h1,h2,h3{line-height:1.4}pre{background:#f5f5f5;padding:12px;border-radius:8px;overflow:auto}code{background:#f5f5f5;border-radius:4px;padding:1px 5px}img{max-width:100%}blockquote{border-left:3px solid #ddd;margin:0;padding:2px 14px;color:#555}table{border-collapse:collapse}th,td{border:1px solid #ddd;padding:5px 10px}@media print{body{margin:0}}</style></head><body>${rendered.innerHTML}</body></html>`;
     if (format === 'pdf') {
       const frame = document.createElement('iframe');
@@ -584,10 +742,10 @@ export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }
       document.body.appendChild(frame);
       frame.srcdoc = html;
       frame.onload = () => {
-        try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch { setNotice('打印面板不可用，请用导出 HTML'); }
+        try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch { flashError('打印面板不可用，请用导出 HTML'); }
         setTimeout(() => frame.remove(), 60000);
       };
-      setNotice('已打开打印面板（可选「存储为 PDF」）');
+      flashNotice('已打开打印面板（可选「存储为 PDF」）');
       return;
     }
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
@@ -597,12 +755,14 @@ export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }
     anchor.download = `${stem}.html`;
     anchor.click();
     URL.revokeObjectURL(url);
-    setNotice('已导出 .html');
-  }, [activeTab]);
+    flashNotice('已导出 .html');
+  }, [activeTab, flashNotice, flashError]);
 
   const paletteActions = useMemo(() => ([
-    { id: 'new-note', label: '新建笔记', run: () => setCreating({ kind: 'note', name: '', dir: activeTab ? ancestorsOf(activeTab.path)[0] ?? '' : '' }) },
-    { id: 'new-folder', label: '新建文件夹', run: () => setCreating({ kind: 'dir', name: '', dir: activeTab ? ancestorsOf(activeTab.path)[0] ?? '' : '' }) },
+    // fix J: default to the active note's own directory (was ancestorsOf()[0] —
+    // the top-level dir, one level too shallow).
+    { id: 'new-note', label: '新建笔记', run: () => setCreating({ kind: 'note', name: '', dir: activeTab ? dirOf(activeTab.path) : '' }) },
+    { id: 'new-folder', label: '新建文件夹', run: () => setCreating({ kind: 'dir', name: '', dir: activeTab ? dirOf(activeTab.path) : '' }) },
     { id: 'search', label: '全库搜索', run: () => setSearchOpen(true) },
     { id: 'graph', label: '图谱', run: () => void switchLeft('graph') },
     { id: 'tags', label: '标签云', run: () => void switchLeft('tags') },
@@ -623,9 +783,9 @@ export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }
       const mod = event.metaKey || event.ctrlKey;
       if (!mod) return;
       const key = event.key.toLowerCase();
-      if (key === 'p' && !event.shiftKey) { event.preventDefault(); setQuick({ query: '' }); }
+      if (key === 'p' && !event.shiftKey) { event.preventDefault(); setQuick({ query: '', active: 0 }); }
       else if (key === 'f' && event.shiftKey) { event.preventDefault(); setSearchOpen(true); }
-      else if (key === 'p' && event.shiftKey) { event.preventDefault(); setPalette({ query: '' }); }
+      else if (key === 'p' && event.shiftKey) { event.preventDefault(); setPalette({ query: '', active: 0 }); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -645,6 +805,16 @@ export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }
     () => (filterOpen && filter.trim() !== '' ? filterFiles(fileIndex, filter, 30) : []),
     [filterOpen, filter, fileIndex],
   );
+
+  /** Fix J: directory suggestions for the create dialog's 位置 datalist. */
+  const vaultDirs = useMemo(() => {
+    const dirs = new Set();
+    for (const file of fileIndex) {
+      const dir = dirOf(file.path);
+      if (dir !== '') dirs.add(dir);
+    }
+    return [...dirs].sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'));
+  }, [fileIndex]);
 
   const graphLayout = useMemo(
     () => (leftMode === 'graph' && graphData ? computeLayout(graphData, 640, 760) : null),
@@ -704,29 +874,33 @@ export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }
       const result = await api.vaultWriteAttachment?.({ bytes: base64, name });
       return result?.path ?? null;
     } catch (cause) {
-      setNotice(String(cause?.message ?? cause));
+      flashError(String(cause?.message ?? cause));
       return null;
     }
-  }, [api]);
+  }, [api, flashError]);
 
   const openTrash = useCallback(async () => {
     try {
       const outcome = await api.vaultTrashList();
       setTrash(outcome.entries ?? []);
-    } catch (cause) { setNotice(String(cause?.message ?? cause)); }
-  }, [api]);
+    } catch (cause) { flashError(String(cause?.message ?? cause)); }
+  }, [api, flashError]);
 
   const restoreTrash = useCallback(async (id) => {
     try {
       const result = await api.vaultTrashRestore(id);
-      setNotice(`已恢复：${result.restored}`);
+      flashNotice(`已恢复：${result.restored}`);
       setTrash((current) => (current ?? []).filter((entry) => entry.id !== id));
       await refreshIndex();
-    } catch (cause) { setNotice(String(cause?.message ?? cause)); }
-  }, [api, refreshIndex]);
+    } catch (cause) { flashError(String(cause?.message ?? cause)); }
+  }, [api, refreshIndex, flashNotice, flashError]);
 
   const captured = useRef(false);
-  const captureSelection = () => {
+  const captureSelection = (event) => {
+    // Fix F: selections made inside the CM6 editor serve editing (replace,
+    // wrap…), not the companion material — don't hijack them. Read view has
+    // no .cm-editor, so it keeps the material-switch behaviour.
+    if (event?.target?.closest?.('.cm-editor')) return;
     if (captured.current) return;
     const selection = String(window.getSelection?.() ?? '').trim();
     captured.current = true;
@@ -762,7 +936,13 @@ export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }
         </div>
         <TreeToolbar
           filterOpen={filterOpen}
-          onToggleFilter={() => setFilterOpen(!filterOpen)}
+          onToggleFilter={() => {
+            // Fix I: the filename filter only drives the tree — opening it in
+            // graph/tag mode did nothing. Snap back to the tree first.
+            const next = !filterOpen;
+            setFilterOpen(next);
+            if (next && leftMode !== 'tree') setLeftMode('tree');
+          }}
           sortKey={sortKey}
           onSort={(key) => { setSortKey(key); }}
           autoReveal={autoReveal}
@@ -778,8 +958,8 @@ export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }
             else flashNotice('当前没有打开的笔记可定位');
           }}
           onCollapseAll={() => setExpanded(new Set())}
-          onNewNote={() => setCreating({ kind: 'note', name: '', dir: activeTab ? ancestorsOf(activeTab.path)[0] ?? '' : '' })}
-          onNewFolder={() => setCreating({ kind: 'dir', name: '', dir: activeTab ? ancestorsOf(activeTab.path)[0] ?? '' : '' })}
+          onNewNote={() => setCreating({ kind: 'note', name: '', dir: activeTab ? dirOf(activeTab.path) : '' })}
+          onNewFolder={() => setCreating({ kind: 'dir', name: '', dir: activeTab ? dirOf(activeTab.path) : '' })}
         />
         {filterOpen ? (
           <div className="dpl-vault2-filter">
@@ -889,10 +1069,12 @@ export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }
               {searchResults.results.length === 0 ? <div className="dpl-vault2-empty">无结果</div> : null}
             </div>
           ) : activeTab ? (
+            // Fix G: no per-tab key — the pane persists across tab switches so
+            // view/scroll survive; text loads through the setDoc effect below.
             <NoteReadPane
-              key={activeTab.id}
               ref={notePaneRef}
               tab={activeTab}
+              onPrefChange={(patch) => setTabPrefs(activeTab.id, patch)}
               onDraft={(draft) => setDraft(activeTab.id, draft)}
               onSave={() => void flushSave(activeTab.id)}
               onDiscard={() => setDraft(activeTab.id, null)}
@@ -953,8 +1135,14 @@ export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }
         <div className="dpl-vault2-statusbar">
           <span>{activeTab ? `${activeTab.wordCount.toLocaleString()} 字` : `${stats.files} 篇笔记`}</span>
           <span>{activeTab?.dirty ? '未保存' : activeTab?.savedAt ? `已保存 ${activeTab.savedAt}` : ''}</span>
+          {dirtyCount > 1 ? <span className="dpl-vault2-statusbadge">{dirtyCount} 个未保存</span> : null}
           <button type="button" className="dpl-vault2-statuslink" onClick={() => setBacklinksOpen(!backlinksOpen)}>{sideData.backlinks.length} 反链</button>
-          {notice ? <span className="dpl-vault2-statusnotice">{notice}<button type="button" onClick={() => setNotice('')}><X size={11} /></button></span> : null}
+          {notice ? (
+            <span className={'dpl-vault2-statusnotice' + (noticeIsError ? ' is-error' : '')}>
+              {notice}
+              <button type="button" onClick={() => { setNotice(''); setNoticeIsError(false); }}><X size={11} /></button>
+            </span>
+          ) : null}
           {error ? <span className="dpl-vault2-statuserror">{error}<button type="button" onClick={() => setError('')}><X size={11} /></button></span> : null}
         </div>
       </section>
@@ -977,15 +1165,36 @@ export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }
           <div className="dpl-vault2-quick" onClick={(event) => event.stopPropagation()}>
             <input
               autoFocus placeholder="快速切换：输入文件名…" value={quick.query}
-              onChange={(event) => setQuick({ query: event.target.value })}
+              onChange={(event) => setQuick({ query: event.target.value, active: 0 })}
               onKeyDown={(event) => {
-                if (event.key === 'Escape') setQuick(null);
-                if (event.key === 'Enter' && quickResults[0]) { setQuick(null); void openPath(quickResults[0].path); }
+                if (event.key === 'Escape') { setQuick(null); return; }
+                // Fix E: arrow-key navigation (ring) + Enter runs the active row.
+                if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                  if (quickResults.length === 0) return;
+                  event.preventDefault();
+                  const delta = event.key === 'ArrowDown' ? 1 : -1;
+                  const count = quickResults.length;
+                  const next = (((quick.active ?? 0) + delta) % count + count) % count;
+                  setQuick({ ...quick, active: next });
+                  window.requestAnimationFrame?.(() => {
+                    document.querySelector('[data-testid="vault-quicklist"] button.is-active')?.scrollIntoView?.({ block: 'nearest' });
+                  });
+                  return;
+                }
+                if (event.key === 'Enter' && quickResults[quick.active ?? 0]) {
+                  const file = quickResults[quick.active ?? 0];
+                  setQuick(null);
+                  void openPath(file.path);
+                }
               }}
             />
-            <div className="dpl-vault2-quicklist">
+            <div className="dpl-vault2-quicklist" data-testid="vault-quicklist">
               {quickResults.map((file, index) => (
-                <button key={file.path} type="button" className={index === 0 ? 'is-first' : ''} onClick={() => { setQuick(null); void openPath(file.path); }}>
+                <button
+                  key={file.path} type="button"
+                  className={index === (quick.active ?? 0) ? 'is-active' : ''}
+                  onClick={() => { setQuick(null); void openPath(file.path); }}
+                >
                   <span className="dpl-truncate">{file.name.replace(/\.md$/i, '')}</span>
                   <span className="dpl-vault2-filedir">{file.path}</span>
                 </button>
@@ -1001,15 +1210,36 @@ export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }
           <div className="dpl-vault2-quick" onClick={(event) => event.stopPropagation()}>
             <input
               autoFocus placeholder="命令：输入名称…" value={palette.query}
-              onChange={(event) => setPalette({ query: event.target.value })}
+              onChange={(event) => setPalette({ query: event.target.value, active: 0 })}
               onKeyDown={(event) => {
-                if (event.key === 'Escape') setPalette(null);
-                if (event.key === 'Enter' && paletteResults[0]) { const action = paletteResults[0]; setPalette(null); action.run(); }
+                if (event.key === 'Escape') { setPalette(null); return; }
+                // Fix E: same ring navigation as the quick switcher.
+                if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                  if (paletteResults.length === 0) return;
+                  event.preventDefault();
+                  const delta = event.key === 'ArrowDown' ? 1 : -1;
+                  const count = paletteResults.length;
+                  const next = (((palette.active ?? 0) + delta) % count + count) % count;
+                  setPalette({ ...palette, active: next });
+                  window.requestAnimationFrame?.(() => {
+                    document.querySelector('[data-testid="vault-palettelist"] button.is-active')?.scrollIntoView?.({ block: 'nearest' });
+                  });
+                  return;
+                }
+                if (event.key === 'Enter' && paletteResults[palette.active ?? 0]) {
+                  const action = paletteResults[palette.active ?? 0];
+                  setPalette(null);
+                  action.run();
+                }
               }}
             />
-            <div className="dpl-vault2-quicklist">
+            <div className="dpl-vault2-quicklist" data-testid="vault-palettelist">
               {paletteResults.map((action, index) => (
-                <button key={action.id} type="button" className={index === 0 ? 'is-first' : ''} onClick={() => { setPalette(null); action.run(); }}>
+                <button
+                  key={action.id} type="button"
+                  className={index === (palette.active ?? 0) ? 'is-active' : ''}
+                  onClick={() => { setPalette(null); action.run(); }}
+                >
                   <span className="dpl-truncate">{action.label}</span>
                 </button>
               ))}
@@ -1047,7 +1277,11 @@ export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }
           <p>磁盘上的文件已被其他程序修改（可能是 Droplets 桌面端或 Agent）。</p>
           {conflict.currentExcerpt ? <blockquote className="dpl-conflict-excerpt">{conflict.currentExcerpt}</blockquote> : null}
           <div className="dpl-form-row">
-            <button type="button" className="dpl-btn" onClick={() => { const path = conflict.path; setConflict(null); void openPath(path); }}>重载</button>
+            {/* Fix A: 重载 now reads the disk version into the tab (was a no-op
+                openPath early-return); 另存副本 keeps both sides (see
+                saveConflictCopy). */}
+            <button type="button" className="dpl-btn" onClick={() => { const target = conflict.tabId ?? conflict.path; setConflict(null); void reloadTab(target); }}>重载</button>
+            <button type="button" className="dpl-btn" onClick={() => { void saveConflictCopy(conflict); }}>另存副本</button>
             <button type="button" className="dpl-btn is-danger" onClick={() => { const tabId = conflict.tabId ?? activeTabId; setConflict(null); void flushSave(tabId, { force: true }); }}>覆盖保存</button>
           </div>
         </Modal>
@@ -1058,16 +1292,27 @@ export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }
           <div className="dpl-form-col">
             <div className="dpl-field">
               <span>位置</span>
-              <input value={creating.dir === '' ? '(vault 根)' : creating.dir} readOnly />
+              {/* Fix J: editable with a datalist of indexed dirs (was read-only
+                  display). Empty string = vault 根. */}
+              <input
+                value={creating.dir ?? ''} placeholder="(vault 根)" list="vault-dirs" spellCheck={false}
+                onChange={(event) => setCreating({ ...creating, dir: event.target.value, error: null })}
+              />
+              <datalist id="vault-dirs">
+                {vaultDirs.map((dir) => <option key={dir} value={dir} />)}
+              </datalist>
             </div>
             <div className="dpl-field">
               <span>名称</span>
               <input
                 autoFocus value={creating.name}
-                onChange={(event) => setCreating({ ...creating, name: event.target.value })}
+                onChange={(event) => setCreating({ ...creating, name: event.target.value, error: null })}
                 onKeyDown={(event) => { if (event.key === 'Enter') void submitCreate(); }}
               />
             </div>
+            {/* Fix D: name collisions used to announce themselves only in the
+                statusbar, which this very modal covers. */}
+            {creating.error ? <p className="dpl-dialog-error">{creating.error}</p> : null}
           </div>
           <div className="dpl-form-row dpl-end">
             <button type="button" className="dpl-btn" onClick={() => setCreating(null)}>取消</button>
@@ -1149,10 +1394,11 @@ export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }
             move: (path) => setMoveTarget({ path, name: path.split('/').pop(), dir: path.split('/').slice(0, -1).join('/') }),
             cut: (path) => setClipboard({ mode: 'cut', path, name: path.split('/').pop() }),
             duplicate: (path) => void duplicatePath(path),
-            copyAbs: (path) => { void api.vaultCopyPath({ path, relative: false }).then(() => setNotice('已复制路径')).catch((cause) => setNotice(String(cause?.message ?? cause))); },
-            copyRel: (path) => { void api.vaultCopyPath({ path, relative: true }).then(() => setNotice('已复制相对路径')).catch((cause) => setNotice(String(cause?.message ?? cause))); },
+            copyAbs: (path) => { void api.vaultCopyPath({ path, relative: false }).then(() => flashNotice('已复制路径')).catch((cause) => flashError(String(cause?.message ?? cause))); },
+            copyRel: (path) => { void api.vaultCopyPath({ path, relative: true }).then(() => flashNotice('已复制相对路径')).catch((cause) => flashError(String(cause?.message ?? cause))); },
+            copy: (path) => setClipboard({ mode: 'copy', path, name: path.split('/').pop() }),
             paste: (dir) => void pasteInto(dir),
-            reveal: (path) => { void api.vaultReveal({ path }).catch((cause) => setNotice(String(cause?.message ?? cause))); },
+            reveal: (path) => { void api.vaultReveal({ path }).catch((cause) => flashError(String(cause?.message ?? cause))); },
             askAi: (path) => void askAiNote(path),
             delete: trashPath,
             newNote: (dir) => setCreating({ kind: 'note', name: '', dir }),
@@ -1189,7 +1435,11 @@ function VaultContextMenu({ menu, clipboard, onClose, actions }) {
       { label: '移动到…', run: () => actions.move(t.path) },
       { divider: true },
       { label: '剪切', run: () => actions.cut(t.path) },
-      { label: '复制', run: () => actions.duplicate(t.path) },
+      // Fix K: 复制 now means clipboard-copy (paste with the copy branch);
+      // the old behavior — materialize a duplicate right here — moved to its
+      // own 创建副本 item.
+      { label: '复制', run: () => actions.copy(t.path) },
+      { label: '创建副本', run: () => actions.duplicate(t.path) },
       { label: '复制路径', run: () => actions.copyAbs(t.path) },
       { label: '复制相对路径', run: () => actions.copyRel(t.path) },
       { divider: true },
@@ -1207,10 +1457,13 @@ function VaultContextMenu({ menu, clipboard, onClose, actions }) {
     if (!isRoot) items.push({ label: '重命名', run: () => actions.rename(t.path) });
     items.push({ divider: true });
     if (!isRoot) items.push({ label: '剪切', run: () => actions.cut(t.path) });
-    if (!isRoot) items.push({ label: '复制', run: () => actions.duplicate(t.path) });
+    if (!isRoot) items.push({ label: '复制', run: () => actions.copy(t.path) });
+    if (!isRoot) items.push({ label: '创建副本', run: () => actions.duplicate(t.path) });
     items.push({ label: '复制路径', run: () => actions.copyAbs(t.path) });
     if (!isRoot) items.push({ label: '复制相对路径', run: () => actions.copyRel(t.path) });
-    if (clipboard?.mode === 'cut') items.push({ label: '粘贴', run: () => actions.paste(t.path) });
+    // Fix K: paste works for any non-empty clipboard (copy included, not
+    // just cut) — pasteInto's copy branch handles both files and folders.
+    if (clipboard) items.push({ label: '粘贴', run: () => actions.paste(t.path) });
     items.push({ divider: true });
     items.push({ label: '在 Finder 中显示', run: () => actions.reveal(t.path) });
   }
@@ -1413,10 +1666,16 @@ const MODE_ITEMS = [
 const NoteReadPane = forwardRef(function NoteReadPane({
   tab, onDraft, onSave, onDiscard, onWikilink, onMaterial, onOutlineChange, onEditorScroll,
   resolveImage, pasteImage, noteFiles, readerRef, backlinksOpen, onToggleBacklinks, onExport,
+  onPrefChange,
 }, forwardedRef) {
-  const [view, setView] = useState('read');
-  const [lineNumbers, setLineNumbers] = useState(true);
-  const [wrap, setWrap] = useState(true);
+  // Fix G: view/lineNumbers/wrap live on the tab (written back through
+  // onPrefChange), so switching tabs preserves the editing mode instead of
+  // remounting this pane with `key`. Known limitation: CM6 undo history is
+  // NOT restored across tab switches — serializing EditorState is out of
+  // scope for this fix round.
+  const view = tab.view ?? 'read';
+  const lineNumbers = tab.lineNumbers ?? true;
+  const wrap = tab.wrap ?? true;
   const [toolbarVisible, setToolbarVisible] = useState(true);
   const [modeMenu, setModeMenu] = useState(false);
   const [moreMenu, setMoreMenu] = useState(false);
@@ -1424,10 +1683,32 @@ const NoteReadPane = forwardRef(function NoteReadPane({
   const editorRef = useRef(null);
   const outlineRef = useRef([]);
 
-  const dirty = tab.dirty !== null && tab.dirty !== undefined;
+  // Fix G: latest-callback indirection. The editor instance survives tab
+  // switches now, but its extensions capture the props from creation time —
+  // a stale onDraft would write the draft onto the *previous* tab. Routing
+  // through this ref always hits the current tab's closures.
+  const latestProps = useRef({});
+  latestProps.current = { onDraft, onOutlineChange, onEditorScroll, resolveImage, pasteImage, onWikilink, noteFiles };
+
+  /**
+   * Fix G: per-tab scroll memory. Read view saves on the readerscroll div's
+   * scroll event; editor modes save inside the (already debounced) CM6 scroll
+   * handler. Restored on [tab.id, view] once the new DOM settles. Limitation:
+   * memory lives in this component — leaving the vault space (unmount) drops
+   * it, and only scrollTop is restored, never the undo stack.
+   */
+  const scrollMemory = useRef(new Map());
+  const tabIdRef = useRef(tab.id);
+  // Programmatic setDoc swaps (tab switches / external reloads) must not be
+  // mistaken for user input — CM6's updateListener fires for dispatched
+  // changes too, which would dirty the incoming tab with its own content.
+  const suppressDocFeedback = useRef(false);
+
+  const dirty = tab.dirty === true; // see the root-cause note on `tabs` above
   const text = dirty ? tab.draft : tab.content;
   const segments = tab.path.split('/');
   const ModeIcon = view === 'source' ? SquareCode : view === 'live' ? Eye : BookOpen;
+  const viewLabel = MODE_ITEMS.find((item) => item.id === view)?.label ?? view;
 
   useEffect(() => {
     if (view === 'read' || !hostRef.current) {
@@ -1440,15 +1721,25 @@ const NoteReadPane = forwardRef(function NoteReadPane({
       mode: view,
       lineNumbers,
       wrap,
-      resolveImage,
-      pasteImage,
-      noteFiles,
-      onWikilink,
+      resolveImage: (src) => latestProps.current.resolveImage?.(src),
+      pasteImage: (base64, name) => latestProps.current.pasteImage?.(base64, name),
+      // Proxy: the completion source reads the note list only when the
+      // autocomplete runs, so forward property access to the latest array
+      // without recreating the editor on every index refresh.
+      noteFiles: new Proxy([], {
+        get(target, prop, receiver) {
+          const files = latestProps.current.noteFiles ?? [];
+          const value = Reflect.get(files, prop, files);
+          return typeof value === 'function' ? value.bind(files) : value;
+        },
+      }),
+      onWikilink: (target) => latestProps.current.onWikilink?.(target),
       onChange: (next) => {
+        if (suppressDocFeedback.current) return; // programmatic setDoc, not user input
         outlineRef.current = outlineOf(editorRef.current?.view.state ?? editor.view.state);
-        onOutlineChange(outlineRef.current);
+        latestProps.current.onOutlineChange?.(outlineRef.current);
         reportActive();
-        onDraft(next);
+        latestProps.current.onDraft?.(next);
       },
     });
     editorRef.current = editor;
@@ -1459,12 +1750,16 @@ const NoteReadPane = forwardRef(function NoteReadPane({
     // from the CM6 document model, never from DOM h-tags (CM6 renders none).
     // Debounced 120ms so fast scrolling stays cheap.
     const reportActive = () => {
-      onEditorScroll(activeOutlineIndex(editor.view, outlineRef.current ?? []));
+      latestProps.current.onEditorScroll?.(activeOutlineIndex(editor.view, outlineRef.current ?? []));
     };
     let scrollTimer = null;
     const onEditorScrollDom = () => {
       if (scrollTimer !== null) return;
-      scrollTimer = setTimeout(() => { scrollTimer = null; reportActive(); }, 120);
+      scrollTimer = setTimeout(() => {
+        scrollTimer = null;
+        scrollMemory.current.set(tabIdRef.current, editor.view.scrollDOM.scrollTop); // fix G
+        reportActive();
+      }, 120);
     };
     editor.view.scrollDOM.addEventListener('scroll', onEditorScrollDom, { passive: true });
     reportActive();
@@ -1479,17 +1774,45 @@ const NoteReadPane = forwardRef(function NoteReadPane({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view]);
 
+  // Fix G: swap the document when the tab changes even if it is dirty (the
+  // editor must never show another tab's text); while editing the same tab,
+  // the draft equals the doc so this stays a no-op and the debounce lives on.
+  const loadedTabIdRef = useRef(tab.id);
   useEffect(() => {
-    if (editorRef.current && !dirty && editorRef.current.view.state.doc.toString() !== text) {
-      editorRef.current.setDoc(text);
+    const editor = editorRef.current;
+    const docChanged = editor && editor.view.state.doc.toString() !== text;
+    const tabChanged = loadedTabIdRef.current !== tab.id;
+    if (docChanged && (!dirty || tabChanged)) {
+      suppressDocFeedback.current = true;
+      try { editor.setDoc(text); } finally { suppressDocFeedback.current = false; }
+      outlineRef.current = outlineOf(editor.view.state);
+      onOutlineChange(outlineRef.current);
+      onEditorScroll(activeOutlineIndex(editor.view, outlineRef.current ?? []));
     }
+    loadedTabIdRef.current = tab.id;
+    tabIdRef.current = tab.id;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [text, dirty]);
+  }, [text, dirty, tab.id]);
+
+  // Fix G: restore the incoming tab's scroll position (read view element is
+  // committed by now; the editor was created by the [view] effect above,
+  // which runs before this one).
+  useEffect(() => {
+    const apply = () => {
+      const el = view === 'read' ? readerRef?.current : editorRef.current?.view.scrollDOM;
+      const top = scrollMemory.current.get(tab.id);
+      if (el && typeof top === 'number') el.scrollTop = top;
+    };
+    apply();
+    const raf = window.requestAnimationFrame?.(apply);
+    return () => { if (raf) window.cancelAnimationFrame?.(raf); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab.id, view]);
 
   const setMode = (next) => {
     if (next === view) return;
     setModeMenu(false);
-    setView(next);
+    onPrefChange?.({ view: next });
   };
 
   // ⌘E cycles read → live → source → read.
@@ -1508,7 +1831,9 @@ const NoteReadPane = forwardRef(function NoteReadPane({
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [view, onSave]);
+    // tab.id: the pane now persists across tab switches (fix G) — resubscribe
+    // so ⌘E/⌘S act on the freshly active tab, not a stale closure.
+  }, [view, onSave, tab.id]);
 
   const jumpTo = (index) => {
     if (view === 'read') {
@@ -1560,7 +1885,7 @@ const NoteReadPane = forwardRef(function NoteReadPane({
           ) : null}
           <div className="dpl-relative">
             <button
-              type="button" className="dpl-vault2-crumbbtn" title="切换视图 (⌘E)"
+              type="button" className="dpl-vault2-crumbbtn" title={`切换视图 (⌘E) · 当前：${viewLabel}`}
               onClick={() => { setModeMenu(!modeMenu); setMoreMenu(false); }}
               data-testid="vault-mode"
             >
@@ -1603,10 +1928,10 @@ const NoteReadPane = forwardRef(function NoteReadPane({
                 </button>
                 {view !== 'read' ? (
                   <>
-                    <button type="button" className="dpl-vault2-ctxitem" onClick={() => { setLineNumbers(!lineNumbers); editorRef.current?.setLineNumbers(!lineNumbers); }} data-testid="vault-more-line-numbers">
+                    <button type="button" className="dpl-vault2-ctxitem" onClick={() => { onPrefChange?.({ lineNumbers: !lineNumbers }); editorRef.current?.setLineNumbers(!lineNumbers); }} data-testid="vault-more-line-numbers">
                       行号 {lineNumbers ? <Check size={12} /> : null}
                     </button>
-                    <button type="button" className="dpl-vault2-ctxitem" onClick={() => { setWrap(!wrap); editorRef.current?.setWrap(!wrap); }} data-testid="vault-more-wrap">
+                    <button type="button" className="dpl-vault2-ctxitem" onClick={() => { onPrefChange?.({ wrap: !wrap }); editorRef.current?.setWrap(!wrap); }} data-testid="vault-more-wrap">
                       自动换行 {wrap ? <Check size={12} /> : null}
                     </button>
                   </>
@@ -1664,7 +1989,10 @@ const NoteReadPane = forwardRef(function NoteReadPane({
       ) : null}
 
       {view === 'read' ? (
-        <div ref={readerRef} className="dpl-vault2-readerscroll">
+        <div
+          ref={readerRef} className="dpl-vault2-readerscroll"
+          onScroll={(event) => scrollMemory.current.set(tab.id, event.currentTarget.scrollTop)}
+        >
           <MarkdownView className="dpl-note-body dpl-vault2-body" markdown={text} onWikilink={onWikilink} resolveImage={resolveImage} />
           <div className="dpl-vault2-bodyend" />
         </div>

@@ -71,7 +71,11 @@ export function InboxView({ api, onMaterial, onOpenVaultNote }) {
   const [selectedId, setSelectedId] = useState(null);
   const [data, setData] = useState({ items: [], counts: { byStatus: {}, byTag: {}, total: 0 }, pendingIds: [] });
   const [loading, setLoading] = useState(true);
+  const [listError, setListError] = useState(null);
   const [retryingAll, setRetryingAll] = useState(false);
+  const [retryNotice, setRetryNotice] = useState('');
+  /** 详情刷新代：选中条目离开 pending 集合（抓取完成）时 +1，Reader 据此自动重读。 */
+  const [detailRev, setDetailRev] = useState(0);
   const everSelected = useRef(false);
   const listScrollTop = useRef(0);
 
@@ -81,21 +85,37 @@ export function InboxView({ api, onMaterial, onOpenVaultNote }) {
         status: filter.status,
         tag: filter.tag,
       });
-      setData(result ?? { items: [], counts: { byStatus: {}, byTag: {}, total: 0 }, pendingIds: [] });
-    } catch { /* list stays; errors surface where actionable */ }
-    finally { setLoading(false); }
+      const shaped = result ?? { items: [], counts: { byStatus: {}, byTag: {}, total: 0 }, pendingIds: [] };
+      setData(shaped);
+      setListError(null);
+      return shaped;
+    } catch (error) {
+      // 列表加载失败必须可见（fix I）：保留旧数据，列表顶部出错误条 + 重试。
+      setListError(String(error?.message ?? error));
+      return null;
+    } finally { setLoading(false); }
   }, [api, filter.status, filter.tag]);
 
   useEffect(() => { void load(); }, [load]);
 
   // Background fetch completion: poll while the host reports pending fetches
   // (the native app gets an inbox:updated push; the plugin polls instead).
-  const pendingIds = data.pendingIds ?? [];
+  const pending = useMemo(() => new Set(data.pendingIds ?? []), [data.pendingIds]);
+  const pendingRef = useRef(pending);
   useEffect(() => {
-    if (pendingIds.length === 0) return undefined;
+    if (pending.size === 0) return undefined;
     const timer = setInterval(() => { void load(); }, 1500);
     return () => clearInterval(timer);
-  }, [pendingIds.length > 0, load]);
+  }, [pending.size > 0, load]);
+
+  // 抓取完成检测：选中条目从 pending 集合移出时 bump detailRev，触发 Reader 刷新详情。
+  useEffect(() => {
+    const previous = pendingRef.current;
+    if (selectedId !== null && previous.has(selectedId) && !pending.has(selectedId)) {
+      setDetailRev((rev) => rev + 1);
+    }
+    pendingRef.current = pending;
+  }, [pending, selectedId]);
 
   // Window focus: pick up changes made by the Droplets desktop app itself.
   useEffect(() => {
@@ -119,7 +139,12 @@ export function InboxView({ api, onMaterial, onOpenVaultNote }) {
 
   const retryAll = async () => {
     setRetryingAll(true);
-    try { await api.inboxRetryAllFailed(); } catch { /* per-item failures already landed */ }
+    setRetryNotice('');
+    try {
+      // host 现在限并发并行重试，返回统计（fix G）；结果经横幅告知用户。
+      const result = await api.inboxRetryAllFailed();
+      setRetryNotice(`已重试 ${result?.retried ?? 0} 条，失败 ${result?.failed ?? 0} 条`);
+    } catch { /* per-item failures already landed */ }
     finally {
       setRetryingAll(false);
       await load();
@@ -151,7 +176,10 @@ export function InboxView({ api, onMaterial, onOpenVaultNote }) {
                 api={api}
                 items={data.items} loading={loading} filter={filter}
                 selectedId={selectedId} onSelect={select}
+                pending={pending} listError={listError}
+                onRetryLoad={() => { setListError(null); void load(); }}
                 retryingAll={retryingAll} onRetryAll={() => void retryAll()}
+                retryNotice={retryNotice} onDismissRetryNotice={() => setRetryNotice('')}
                 onChanged={load} scrollTopRef={listScrollTop} onCollapse={collapse}
               />
             )),
@@ -164,6 +192,7 @@ export function InboxView({ api, onMaterial, onOpenVaultNote }) {
           render: () => (
             <Reader
               api={api} selectedId={selectedId} items={data.items}
+              pending={pending} detailRev={detailRev} onSelect={select}
               onMaterial={onMaterial} onChanged={load} onOpenVaultNote={onOpenVaultNote}
             />
           ),
@@ -335,8 +364,8 @@ function TagEditor({ item, onClose, onCommit }) {
   );
 }
 
-/** 收件箱条目列：卡片 + 选中态 + 排序（最新）+ 标签弹层 + 滚动位置记忆。 */
-function ItemList({ api, items, loading, selectedId, onSelect, retryingAll, onRetryAll, onChanged, scrollTopRef, onCollapse }) {
+/** 收件箱条目列：卡片 + 选中态 + 排序（最新）+ 抓取中指示 + 标签弹层 + 滚动位置记忆。 */
+function ItemList({ api, items, loading, filter, selectedId, onSelect, pending, listError, onRetryLoad, retryingAll, onRetryAll, retryNotice, onDismissRetryNotice, onChanged, scrollTopRef, onCollapse }) {
   const listRef = useRef(null);
   const [tagEditorFor, setTagEditorFor] = useState(null);
 
@@ -348,6 +377,14 @@ function ItemList({ api, items, loading, selectedId, onSelect, retryingAll, onRe
   }, [loading, items, scrollTopRef]);
 
   const hasFailed = (items ?? []).some((item) => item.status === 'fetch_failed');
+  const pendingSet = pending ?? new Set();
+
+  // 空态按当前筛选分场景（fix I）：失败视图 / 标签视图 / 默认引导。
+  const emptyText = filter.status === 'fetch_failed'
+    ? '当前没有失败条目'
+    : filter.tag !== undefined
+      ? `标签 ${filter.tag} 下暂无条目`
+      : '暂无内容。左上角「添加 URL」或「导入」开始收集。';
 
   const commitTags = async (id, tags) => {
     try { await api.inboxUpdate({ id, patch: { tags } }); } catch { /* surfaced by refresh */ }
@@ -368,6 +405,18 @@ function ItemList({ api, items, loading, selectedId, onSelect, retryingAll, onRe
         ) : null}
         <PanelCollapseButton onClick={onCollapse} />
       </div>
+      {listError ? (
+        <div className="dpl-error dpl-ib-listerror" role="alert" data-testid="list-error">
+          <span>加载失败：{listError}</span>
+          <button type="button" className="dpl-inline-btn" onClick={onRetryLoad} data-testid="list-error-retry">重试</button>
+        </div>
+      ) : null}
+      {retryNotice ? (
+        <div className="dpl-notice dpl-ib-listnotice" data-testid="retry-all-notice">
+          <span>{retryNotice}</span>
+          <button type="button" onClick={onDismissRetryNotice} aria-label="关闭重试结果"><X size={12} /></button>
+        </div>
+      ) : null}
       <div
         ref={listRef}
         className="dpl-ib-listscroll"
@@ -375,7 +424,7 @@ function ItemList({ api, items, loading, selectedId, onSelect, retryingAll, onRe
         data-testid="item-scroll"
       >
         {!loading && (items ?? []).length === 0 ? (
-          <div className="dpl-ib-listempty">暂无内容。左上角「添加 URL」或「导入」开始收集。</div>
+          <div className="dpl-ib-listempty" data-testid="list-empty">{emptyText}</div>
         ) : null}
         {loading ? <div className="dpl-ib-listempty">加载中…</div> : null}
         {(items ?? []).map((item) => (
@@ -386,7 +435,13 @@ function ItemList({ api, items, loading, selectedId, onSelect, retryingAll, onRe
             data-testid={`item-${item.id}`}
           >
             <div className="dpl-ib-rowmain">
-              <span className={'dpl-dot ' + (STATUS_DOT[item.status] ?? 'is-gray')} />
+              {pendingSet.has(item.id) ? (
+                <span className="dpl-ib-rowpend" data-testid={`item-pending-${item.id}`}>
+                  <Loader2 size={12} className="dpl-spin" />
+                </span>
+              ) : (
+                <span className={'dpl-dot ' + (STATUS_DOT[item.status] ?? 'is-gray')} />
+              )}
               <div className="dpl-ib-rowbody">
                 <div
                   className={'dpl-ib-rowtitle' + (item.status === 'finished' ? ' is-done' : '')}
@@ -394,6 +449,7 @@ function ItemList({ api, items, loading, selectedId, onSelect, retryingAll, onRe
                   data-testid={`item-title-${item.id}`}
                 >
                   {item.title}
+                  {pendingSet.has(item.id) ? <em className="dpl-ib-pending">抓取中…</em> : null}
                 </div>
                 <div className="dpl-ib-rowmeta">
                   {item.source?.kind === 'url' ? <Link2 size={12} /> : <FileText size={12} />}
@@ -470,11 +526,58 @@ function TagEditPopup({ item, onCommit, onClose }) {
   );
 }
 
-/** PDF 阅读器（droplets PdfReader 形状：顶部页导航 + 滚动画布）。 */
+/** PDF 阅读器（droplets PdfReader 形状）：页导航 + 缩放（−/+/适应宽度）+ 适宽渲染 + 滚动画布。 */
+const PDF_ZOOM_STEP = 1.25;
+const PDF_ZOOM_MIN = 0.3;
+const PDF_ZOOM_MAX = 4;
+/** 适宽两侧留白（px），避免画布阴影顶到滚动容器边缘。 */
+const PDF_FIT_PADDING = 16;
+
 function PdfPane({ doc, setDoc }) {
   const canvasRef = useRef(null);
+  const scrollRef = useRef(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+  const [pageWidth, setPageWidth] = useState(0);
   const [rendering, setRendering] = useState(false);
+  const [pageError, setPageError] = useState('');
+  const [renderRev, setRenderRev] = useState(0);
 
+  const zoom = doc.zoom ?? 1;
+
+  // 容器宽度：挂载时同步量取一次，之后 ResizeObserver 跟踪（fix F）。
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return undefined;
+    setContainerWidth(el.clientWidth ?? 0);
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect?.width ?? el.clientWidth;
+      setContainerWidth(Math.max(0, width));
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // 适宽基准：当前页在 scale=1 下的 viewport 宽度（pdf-view 暴露）。
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const width = await doc.pdf.pageWidth(doc.page);
+        if (!cancelled) setPageWidth(width);
+      } catch { /* 测不到就退回固定 scale */ }
+    })();
+    return () => { cancelled = true; };
+  }, [doc.pdf, doc.page]);
+
+  const fitScale = pageWidth > 0 && containerWidth > 0
+    ? Math.max(0.05, (containerWidth - PDF_FIT_PADDING) / pageWidth)
+    : null;
+  const scale = fitScale !== null ? fitScale * zoom : 1.2 * zoom;
+
+  // 渲染 effect 依赖具体值（pdf / 页码 / 缩放 / 手动重试代）而不是整个 doc 对象：
+  // 旧实现 catch 里 setDoc({...doc, error}) 每次都是新对象 → effect 重跑 → 再失败，
+  // 无限循环（fix B）。失败只进 pageError state，不触发本 effect 重跑。
   useEffect(() => {
     let cancelled = false;
     setRendering(true);
@@ -482,19 +585,24 @@ function PdfPane({ doc, setDoc }) {
       const canvas = canvasRef.current;
       if (!canvas) return;
       try {
-        await doc.pdf.renderPage(doc.page, canvas);
-      } catch {
-        if (!cancelled) setDoc({ ...doc, error: 'PDF 渲染失败' });
+        await doc.pdf.renderPage(doc.page, canvas, scale);
+        if (!cancelled) setPageError('');
+      } catch (error) {
+        if (!cancelled) setPageError('PDF 渲染失败：' + String(error?.message ?? error));
       } finally {
         if (!cancelled) setRendering(false);
       }
     })();
     return () => { cancelled = true; };
-  }, [doc, setDoc]);
+  }, [doc.pdf, doc.page, scale, renderRev]);
 
   if (doc.error) {
     return <div className="dpl-ib-readercenter">{doc.error}</div>;
   }
+
+  const setZoom = (next) => {
+    setDoc({ ...doc, zoom: Math.min(PDF_ZOOM_MAX, Math.max(PDF_ZOOM_MIN, next)) });
+  };
 
   return (
     <div className="dpl-ib-docpane" data-testid="pdf-reader">
@@ -506,9 +614,19 @@ function PdfPane({ doc, setDoc }) {
         <button type="button" className="dpl-btn dpl-ib-docnavbtn" disabled={doc.page >= doc.pdf.numPages} onClick={() => setDoc({ ...doc, page: doc.page + 1 })} data-testid="pdf-next">
           下一页 <ChevronRight size={14} />
         </button>
+        <span className="dpl-ib-doczoom" data-testid="pdf-zoom-label">{Math.round(zoom * 100)}%</span>
+        <button type="button" className="dpl-btn dpl-ib-docnavbtn" aria-label="缩小" onClick={() => setZoom(zoom / PDF_ZOOM_STEP)} data-testid="pdf-zoom-out">−</button>
+        <button type="button" className="dpl-btn dpl-ib-docnavbtn" aria-label="放大" onClick={() => setZoom(zoom * PDF_ZOOM_STEP)} data-testid="pdf-zoom-in">+</button>
+        <button type="button" className="dpl-btn dpl-ib-docnavbtn" onClick={() => setDoc({ ...doc, zoom: 1 })} data-testid="pdf-zoom-fit">适应宽度</button>
         {rendering ? <Loader2 size={12} className="dpl-spin" /> : null}
       </div>
-      <div className="dpl-ib-docscroll">
+      {pageError ? (
+        <div className="dpl-error dpl-ib-listerror" role="alert" data-testid="pdf-render-error">
+          <span>{pageError}</span>
+          <button type="button" className="dpl-inline-btn" onClick={() => { setPageError(''); setRenderRev((rev) => rev + 1); }} data-testid="pdf-render-retry">重试</button>
+        </div>
+      ) : null}
+      <div ref={scrollRef} className="dpl-ib-docscroll">
         <canvas ref={canvasRef} className="dpl-ib-pdfcanvas" data-testid="pdf-canvas" />
       </div>
     </div>
@@ -540,23 +658,33 @@ function EpubPane({ doc, setDoc }) {
   );
 }
 
-/** 阅读器：Markdown 渲染 + 头部动作 + fetch_failed 占位 + 右缘辅助轨道 + 处理完成弹层。 */
-function Reader({ api, selectedId, onMaterial, onChanged, onOpenVaultNote }) {
-  const [detail, setDetail] = useState(null); // { item, content }
+/** 阅读器：Markdown 渲染 + 头部动作 + 抓取中/失败占位 + 右缘辅助轨道 + 处理完成弹层。 */
+const EMPTY_SET = new Set();
+
+function Reader({ api, selectedId, pending, detailRev, onSelect, onMaterial, onChanged, onOpenVaultNote }) {
+  const [detail, setDetail] = useState(null); // { item, content, error? }
   const [detailLoading, setDetailLoading] = useState(false);
   const [doc, setDoc] = useState(null); // pdf/epub viewer state
   const [docError, setDocError] = useState('');
   const [showDone, setShowDone] = useState(false);
   const [doneResult, setDoneResult] = useState(null);
+  /** 上次 archive 的目标（library/trash），失败重试按钮复用（fix D）。 */
+  const [doneTarget, setDoneTarget] = useState(null);
   const [tagEdit, setTagEdit] = useState(false);
   const [retrying, setRetrying] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [saveOk, setSaveOk] = useState(false);
+  const saveOkTimer = useRef(0);
   const contentScrollRef = useRef(null);
   const docRef = useRef(null);
+  /** 本次详情是在哪个 detailRev 代读到的：落后一代 = 抓取刚完成、详情待刷新。 */
+  const loadedRevRef = useRef(detailRev);
 
   const item = detail?.item ?? null;
   const content = detail?.content ?? '';
+  const pendingSet = pending ?? EMPTY_SET;
 
-  // 切换条目时正文回顶：滚动位置不跨条目残留
+  // 切换条目时正文回顶：滚动位置 / 弹层 / 临时反馈不跨条目残留
   useEffect(() => {
     contentScrollRef.current?.scrollTo?.({ top: 0 });
     docRef.current?.destroy?.();
@@ -566,6 +694,14 @@ function Reader({ api, selectedId, onMaterial, onChanged, onOpenVaultNote }) {
     setTagEdit(false);
     setShowDone(false);
     setDoneResult(null);
+    setDoneTarget(null);
+    setSaveError('');
+    setSaveOk(false);
+    if (saveOkTimer.current) { clearTimeout(saveOkTimer.current); saveOkTimer.current = 0; }
+  }, [selectedId]);
+
+  // 读取详情：切换条目，或后台抓取完成（detailRev 变化）时（重新）加载（fix A）。
+  useEffect(() => {
     if (selectedId === null) {
       setDetail(null);
       setDetailLoading(false);
@@ -581,13 +717,27 @@ function Reader({ api, selectedId, onMaterial, onChanged, onOpenVaultNote }) {
       } catch (error) {
         if (!cancelled) setDetail({ item: null, content: '', error: String(error?.message ?? error) });
       } finally {
+        loadedRevRef.current = detailRev;
         if (!cancelled) setDetailLoading(false);
       }
     })();
     return () => { cancelled = true; };
-  }, [api, selectedId]);
+  }, [api, selectedId, detailRev]);
 
-  useEffect(() => () => { docRef.current?.destroy?.(); }, []);
+  useEffect(() => () => {
+    docRef.current?.destroy?.();
+    if (saveOkTimer.current) clearTimeout(saveOkTimer.current);
+  }, []);
+
+  // 处理完成弹层：Escape 关闭（fix D）。
+  useEffect(() => {
+    if (!showDone) return undefined;
+    const onKey = (event) => {
+      if (event.key === 'Escape') { setShowDone(false); setDoneResult(null); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showDone]);
 
   // PDF/EPUB originals: fetch base64 and open the viewer.
   useEffect(() => {
@@ -600,7 +750,7 @@ function Reader({ api, selectedId, onMaterial, onChanged, onOpenVaultNote }) {
         if (item.objectType === 'pdf') {
           const pdf = await openPdf(original.base64);
           docRef.current = pdf;
-          setDoc({ kind: 'pdf', pdf, page: 1 });
+          setDoc({ kind: 'pdf', pdf, page: 1, zoom: 1 });
         } else {
           const epub = openEpub(original.base64);
           docRef.current = epub;
@@ -616,18 +766,26 @@ function Reader({ api, selectedId, onMaterial, onChanged, onOpenVaultNote }) {
   const headings = useMemo(() => markdownHeadings(content), [content]);
 
   const isFailed = item?.status === 'fetch_failed';
+  // 抓取中（fix A）：host 上报 pending，或抓取刚完成、详情还没刷新到新一代。
+  const detailStale = loadedRevRef.current !== detailRev;
+  const isPending = pendingSet.has(selectedId) || (detailStale && !detailLoading);
   const fetchError = item?.source?.kind === 'url' ? item.source.fetchError : undefined;
   const sourceUrl = sourceUrlOf(item);
   const enclosure = item?.source?.kind === 'rss' ? item.source.enclosure : undefined;
   const plainChars = content.replace(/\s+/g, '').length;
-  const shortKind = item && !isFailed ? classifyShortBody(item, plainChars) : null;
+  const shortKind = item && !isFailed && !isPending ? classifyShortBody(item, plainChars) : null;
   const isPdf = item?.objectType === 'pdf';
   const isEpub = item?.objectType === 'epub';
 
   const refreshDetail = async () => {
     if (!selectedId) return;
-    const result = await api.inboxGet(selectedId).catch(() => null);
-    setDetail(result?.item ? { item: result.item, content: result.content ?? '' } : null);
+    // 失败也要落到错误分支（fix C）：不能被「已离开收件箱」吞掉。
+    try {
+      const result = await api.inboxGet(selectedId);
+      setDetail(result?.item ? { item: result.item, content: result.content ?? '' } : null);
+    } catch (error) {
+      setDetail({ item: null, content: '', error: String(error?.message ?? error) });
+    }
   };
 
   const update = async (patch) => {
@@ -650,6 +808,7 @@ function Reader({ api, selectedId, onMaterial, onChanged, onOpenVaultNote }) {
 
   const archive = async (target) => {
     if (!item) return;
+    setDoneTarget(target);
     setDoneResult('moving');
     try {
       if (target === 'library') {
@@ -659,10 +818,17 @@ function Reader({ api, selectedId, onMaterial, onChanged, onOpenVaultNote }) {
         await api.inboxMoveToTrash(item.id);
         setDoneResult('已移入回收站');
       }
-      await onChanged();
     } catch (error) {
+      // 失败停留弹层（fix D）：两个按钮恢复可用，出现重试入口。
       setDoneResult(`操作失败：${String(error?.message ?? error)}`);
+      return;
     }
+    // 成功（fix E）：刷新阅读器与列表（对齐 update()），随后自动选中下一条未读；
+    // 没有下一条则回到阅读空态（选中切换本身会关闭本弹层）。
+    await refreshDetail().catch(() => {});
+    const fresh = await onChanged().catch(() => null);
+    const nextItem = (fresh?.items ?? []).find((entry) => entry.status === 'unread');
+    onSelect(nextItem ? nextItem.id : null);
   };
 
   const askAi = () => {
@@ -682,11 +848,18 @@ function Reader({ api, selectedId, onMaterial, onChanged, onOpenVaultNote }) {
   const saveAsNote = async () => {
     if (!item || savingNote) return;
     setSavingNote(true);
+    setSaveError('');
     try {
       const result = await api.saveAsNote({ source: 'inbox', id: item.id, title: item.title });
+      // 成功反馈（fix H）：3 秒确认条（onOpenVaultNote 可能不跳转，比如无 path）。
+      setSaveOk(true);
+      if (saveOkTimer.current) clearTimeout(saveOkTimer.current);
+      saveOkTimer.current = setTimeout(() => setSaveOk(false), 3000);
       onOpenVaultNote?.(result?.path);
-    } catch { /* surfaced through saveAsNote result-less failure: silent */ }
-    finally { setSavingNote(false); }
+    } catch (error) {
+      // 失败可见且可重试（fix H）：按钮保持可点，错误进 role=alert 条。
+      setSaveError(String(error?.message ?? error));
+    } finally { setSavingNote(false); }
   };
 
   let body;
@@ -694,6 +867,16 @@ function Reader({ api, selectedId, onMaterial, onChanged, onOpenVaultNote }) {
     body = <div className="dpl-ib-readercenter" data-testid="reader-empty">在中间列表选择一条内容开始阅读</div>;
   } else if (detailLoading) {
     body = <div className="dpl-ib-readercenter">载入中…</div>;
+  } else if (detail?.error) {
+    // inboxGet 失败必须可见（fix C）：不再落进「已离开收件箱」分支被吞掉。
+    body = (
+      <div className="dpl-ib-readercenter" data-testid="reader-error">
+        <div className="dpl-error dpl-ib-readererror" role="alert">
+          <p>读取条目失败：{detail.error}</p>
+          <button type="button" className="dpl-btn dpl-ib-retrybtn" onClick={() => void refreshDetail()} data-testid="reader-error-retry">重试</button>
+        </div>
+      </div>
+    );
   } else if (!item) {
     // 条目已归档/移入回收站：列表刷新后 item 为 null
     body = <div className="dpl-ib-readercenter" data-testid="reader-archived">该条目已离开收件箱</div>;
@@ -749,7 +932,24 @@ function Reader({ api, selectedId, onMaterial, onChanged, onOpenVaultNote }) {
           ) : null}
         </div>
 
-        {isFailed ? (
+        {saveError ? (
+          <div className="dpl-error dpl-ib-saveerror" role="alert" data-testid="save-note-error">
+            存为笔记失败：{saveError}
+          </div>
+        ) : null}
+        {saveOk ? (
+          <div className="dpl-notice dpl-ib-savenote" data-testid="save-note-ok">已存为笔记</div>
+        ) : null}
+
+        {isPending ? (
+          // 抓取中占位（fix A）：替代「普通未读 + 空正文 + 0 字警告」的错误观感。
+          <div className="dpl-ib-readercenter" data-testid="reader-pending">
+            <div className="dpl-ib-pendview">
+              <Loader2 size={20} className="dpl-spin" />
+              <span>正在抓取内容…（首字节 20s 超时）</span>
+            </div>
+          </div>
+        ) : isFailed ? (
           <div className="dpl-ib-readerfill" data-testid="reader-failed">
             <div className="dpl-ib-failedcard">
               <AlertTriangle size={30} className="dpl-ib-warnicon" />
@@ -818,16 +1018,27 @@ function Reader({ api, selectedId, onMaterial, onChanged, onOpenVaultNote }) {
     );
   }
 
+  // 弹层结果状态机（fix D）：'moving' | '已…'（成功） | '操作失败：…'（可重试）。
+  const doneFailed = typeof doneResult === 'string' && doneResult.startsWith('操作失败');
+  const doneMoving = doneResult === 'moving';
+
   return (
     <div className="dpl-pane dpl-ib-reader">
       <div className="dpl-ib-readerbody">{body}</div>
       {/* 右缘辅助轨道只在 Markdown 阅读面存在时渲染（droplets D12） */}
-      {item !== null && !isFailed && !isPdf && !isEpub ? (
+      {item !== null && !isFailed && !isPending && !isPdf && !isEpub ? (
         <AuxRail headings={headings} containerRef={contentScrollRef} onAskAi={askAi} />
       ) : null}
 
       {showDone ? (
-        <div className="dpl-ib-donescrim" data-testid="done-dialog">
+        <div
+          className="dpl-ib-donescrim"
+          data-testid="done-dialog"
+          onMouseDown={(event) => {
+            // scrim 空白处点击关闭（fix D）；点到弹层本体不关。
+            if (event.target === event.currentTarget) { setShowDone(false); setDoneResult(null); }
+          }}
+        >
           <div className="dpl-ib-donedialog">
             <div className="dpl-ib-donedialoghead">
               <h3>处理完成</h3>
@@ -844,22 +1055,35 @@ function Reader({ api, selectedId, onMaterial, onChanged, onOpenVaultNote }) {
                 <p className="dpl-ib-donesub">这条内容接下来去哪里？</p>
                 <div className="dpl-ib-donebtns">
                   <button
-                    type="button" className="dpl-btn dpl-primary-solid" disabled={doneResult !== null}
+                    type="button" className="dpl-btn dpl-primary-solid" disabled={doneResult !== null && !doneFailed}
                     onClick={() => void archive('library')} data-testid="done-keep-library"
                   >
                     保留到资料库
                   </button>
                   <button
-                    type="button" className="dpl-btn dpl-ib-outlinebtn" disabled={doneResult !== null}
+                    type="button" className="dpl-btn dpl-ib-outlinebtn" disabled={doneResult !== null && !doneFailed}
                     onClick={() => void archive('trash')} data-testid="done-to-trash"
                   >
                     移入回收站
                   </button>
+                  {doneFailed ? (
+                    <button
+                      type="button" className="dpl-btn dpl-ib-retrybtn" onClick={() => void archive(doneTarget ?? 'trash')}
+                      data-testid="done-retry"
+                    >
+                      <RefreshCw size={14} /> 重试
+                    </button>
+                  ) : null}
                 </div>
               </>
             ) : null}
-            {doneResult !== null && doneResult !== 'moving' ? (
-              <p className="dpl-ib-doneresult" data-testid="done-result">{doneResult}</p>
+            {doneMoving ? (
+              <p className="dpl-ib-donemoving" data-testid="done-moving">
+                <Loader2 size={12} className="dpl-spin" /> 处理中…
+              </p>
+            ) : null}
+            {doneResult !== null && !doneMoving ? (
+              <p className={'dpl-ib-doneresult' + (doneFailed ? ' dpl-error' : '')} data-testid="done-result">{doneResult}</p>
             ) : null}
           </div>
         </div>

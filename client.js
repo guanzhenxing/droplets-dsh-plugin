@@ -2586,7 +2586,10 @@ function purifyHtml(html3) {
   return purify.sanitize(html3, {
     ADD_ATTR: ["target", "loading", "referrerpolicy", "data-dpl-target"],
     ADD_TAGS: [],
-    ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|dpl-note):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i
+    // blob: serves EPUB resource rewrites (epub-view creates per-book object
+    // URLs, revoked on destroy); data: was already covered by the generic
+    // branch but stays explicit-free — see purify DATA_URI_TAGS for img/svg.
+    ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|dpl-note|blob):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i
   });
 }
 
@@ -3959,6 +3962,7 @@ function partitionFeedItems(items, readAtEntry) {
 
 // src/client/feed/SourcesPane.jsx
 var import_jsx_runtime3 = require("react/jsx-runtime");
+var EMPTY_SET = /* @__PURE__ */ new Set();
 function useRefreshProgress(api) {
   const [progress, setProgress] = (0, import_react6.useState)(null);
   (0, import_react6.useEffect)(() => {
@@ -3996,39 +4000,38 @@ function SourcesPane({
   onSelectGroup,
   collapsed,
   onExpand,
-  onCollapse
+  onCollapse,
+  sortMode = DEFAULT_FEED_SORT_MODE,
+  onSortModeChange,
+  collapsedGroups = EMPTY_SET,
+  onCollapsedGroupsChange
 }) {
   const progress = useRefreshProgress(api);
-  const [collapsedGroups, setCollapsedGroups] = (0, import_react6.useState)(() => /* @__PURE__ */ new Set());
-  const [sortMode, setSortMode] = (0, import_react6.useState)(DEFAULT_FEED_SORT_MODE);
+  const [filter, setFilter] = (0, import_react6.useState)("");
   const [sortMenuOpen, setSortMenuOpen] = (0, import_react6.useState)(false);
   const [autoReveal, setAutoReveal] = (0, import_react6.useState)(false);
   const host = (0, import_react6.useRef)(null);
   const toggleGroup = (group) => {
-    setCollapsedGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(group)) next.delete(group);
-      else next.add(group);
-      return next;
-    });
+    const next = new Set(collapsedGroups);
+    if (next.has(group)) next.delete(group);
+    else next.add(group);
+    onCollapsedGroupsChange?.(next);
   };
-  const groups = (0, import_react6.useMemo)(() => groupAndSortFeeds(feeds, sortMode), [feeds, sortMode]);
+  const filterQuery = filter.trim().toLowerCase();
+  const visibleFeeds = (0, import_react6.useMemo)(() => filterQuery ? feeds.filter((feed) => String(feed.title ?? "").toLowerCase().includes(filterQuery)) : feeds, [feeds, filterQuery]);
+  const groups = (0, import_react6.useMemo)(() => groupAndSortFeeds(visibleFeeds, sortMode), [visibleFeeds, sortMode]);
+  const isGroupHidden = (group) => filterQuery ? false : collapsedGroups.has(group);
   (0, import_react6.useEffect)(() => {
     if (!autoReveal || !sourceId) return;
     const group = feeds.find((f) => f.id === sourceId)?.groupName ?? "";
-    setCollapsedGroups((prev) => {
-      if (!prev.has(group)) return prev;
-      const next = new Set(prev);
-      next.delete(group);
-      return next;
-    });
+    if (collapsedGroups.has(group)) onCollapsedGroupsChange?.(new Set([...collapsedGroups].filter((name2) => name2 !== group)));
     const frame2 = requestAnimationFrame(() => {
       host.current?.querySelector('[data-feed-id="' + CSS.escape(sourceId) + '"]')?.scrollIntoView({ block: "nearest" });
     });
     return () => cancelAnimationFrame(frame2);
-  }, [autoReveal, sourceId, feeds, collapsedGroups]);
+  }, [autoReveal, sourceId, feeds]);
   const groupNames = groups.map(([name2]) => name2);
-  const anyGroupExpanded = groupNames.some((name2) => !collapsedGroups.has(name2));
+  const anyGroupExpanded = groupNames.some((name2) => !isGroupHidden(name2));
   const aggregated = feeds.filter((f) => f.enabled);
   const totalUnread = aggregated.reduce((sum, f) => sum + f.unreadCount, 0);
   const totalCount = aggregated.reduce((sum, f) => sum + f.itemCount, 0);
@@ -4051,32 +4054,38 @@ function SourcesPane({
         " \u7BA1\u7406"
       ] })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "dpl-sources-toolbar", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "dpl-toolbar-dots", "aria-hidden": "true", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", {}),
-        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", {}),
-        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", {})
-      ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "dpl-toolbar-actions", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "dpl-relative", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { type: "button", className: "dpl-icon-btn dpl-tb", "data-tip": "\u6392\u5E8F\uFF08\u4F1A\u8BDD\u5185\uFF1B\u300C\u672A\u5206\u7EC4\u300D\u6052\u6392\u6700\u540E\uFF09", onClick: () => setSortMenuOpen((v) => !v), children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(ArrowUpNarrowWide, { size: 14 }) }),
-          sortMenuOpen ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "dpl-menu", children: [
-            ["unread-desc", "\u672A\u8BFB \u591A\u2192\u5C11\uFF08\u9ED8\u8BA4\uFF09"],
-            ["default", "\u8BA2\u9605\u987A\u5E8F"],
-            ["name-asc", "\u540D\u79F0 A\u2192Z"],
-            ["name-desc", "\u540D\u79F0 Z\u2192A"]
-          ].map(([mode, label]) => /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("button", { type: "button", className: "dpl-menu-item", onClick: () => {
-            setSortMode(mode);
-            setSortMenuOpen(false);
-          }, children: [
-            sortMode === mode ? "\u2713 " : "",
-            label
-          ] }, mode)) }) : null
-        ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { type: "button", className: "dpl-icon-btn dpl-tb" + (autoReveal ? " is-toggled" : ""), "data-tip": "\u81EA\u52A8\u5B9A\u4F4D\uFF08\u9009\u4E2D\u6E90\u53D8\u5316\u65F6\u5C55\u5F00\u5176\u6240\u5728\u7EC4\u5E76\u6EDA\u52A8\u5230\u8BE5\u6E90\uFF09", onClick: () => setAutoReveal(!autoReveal), children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(ScanSearch, { size: 14 }) }),
-        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { type: "button", className: "dpl-icon-btn dpl-tb", title: anyGroupExpanded ? "\u5168\u90E8\u6298\u53E0" : "\u5168\u90E8\u5C55\u5F00", onClick: () => setCollapsedGroups(anyGroupExpanded ? new Set(groupNames) : /* @__PURE__ */ new Set()), children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(ChevronsDownUp, { size: 14 }) })
-      ] })
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "dpl-source-filter", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+        "input",
+        {
+          value: filter,
+          placeholder: "\u8FC7\u6EE4\u8BA2\u9605\u6E90\u2026",
+          "aria-label": "\u8FC7\u6EE4\u8BA2\u9605\u6E90",
+          spellCheck: false,
+          onChange: (event) => setFilter(event.target.value)
+        }
+      ),
+      filter ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { type: "button", className: "dpl-icon-btn dpl-tb", "data-tip": "\u6E05\u9664\u8FC7\u6EE4", "aria-label": "\u6E05\u9664\u8FC7\u6EE4", onClick: () => setFilter(""), children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(X, { size: 13 }) }) : null
     ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "dpl-sources-toolbar", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "dpl-toolbar-actions", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "dpl-relative", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { type: "button", className: "dpl-icon-btn dpl-tb", "data-tip": "\u6392\u5E8F\uFF08\u300C\u672A\u5206\u7EC4\u300D\u6052\u6392\u6700\u540E\uFF09", onClick: () => setSortMenuOpen((v) => !v), children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(ArrowUpNarrowWide, { size: 14 }) }),
+        sortMenuOpen ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "dpl-menu", children: [
+          ["unread-desc", "\u672A\u8BFB \u591A\u2192\u5C11\uFF08\u9ED8\u8BA4\uFF09"],
+          ["default", "\u8BA2\u9605\u987A\u5E8F"],
+          ["name-asc", "\u540D\u79F0 A\u2192Z"],
+          ["name-desc", "\u540D\u79F0 Z\u2192A"]
+        ].map(([mode, label]) => /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("button", { type: "button", className: "dpl-menu-item", onClick: () => {
+          onSortModeChange?.(mode);
+          setSortMenuOpen(false);
+        }, children: [
+          sortMode === mode ? "\u2713 " : "",
+          label
+        ] }, mode)) }) : null
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { type: "button", className: "dpl-icon-btn dpl-tb" + (autoReveal ? " is-toggled" : ""), "data-tip": "\u81EA\u52A8\u5B9A\u4F4D\uFF08\u9009\u4E2D\u6E90\u53D8\u5316\u65F6\u5C55\u5F00\u5176\u6240\u5728\u7EC4\u5E76\u6EDA\u52A8\u5230\u8BE5\u6E90\uFF09", onClick: () => setAutoReveal(!autoReveal), children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(ScanSearch, { size: 14 }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { type: "button", className: "dpl-icon-btn dpl-tb", title: anyGroupExpanded ? "\u5168\u90E8\u6298\u53E0" : "\u5168\u90E8\u5C55\u5F00", onClick: () => onCollapsedGroupsChange?.(anyGroupExpanded ? new Set(groupNames) : /* @__PURE__ */ new Set()), children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(ChevronsDownUp, { size: 14 }) })
+    ] }) }),
     progress && progress.total > 0 ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(RefreshProgressLine, { progress }) : null,
     /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "dpl-sources-list", ref: host, children: [
       /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
@@ -4092,7 +4101,7 @@ function SourcesPane({
         }
       ),
       groups.map(([group, groupFeeds]) => {
-        const isCollapsed = collapsedGroups.has(group);
+        const isCollapsed = isGroupHidden(group);
         const label = group === "" ? "\u672A\u5206\u7EC4" : group;
         const groupUnread = groupFeeds.reduce((s, f) => s + f.unreadCount, 0);
         const groupTotal = groupFeeds.reduce((s, f) => s + f.itemCount, 0);
@@ -4225,7 +4234,8 @@ function formatWhen(ts) {
   if (date.toDateString() === now2.toDateString()) {
     return date.toLocaleTimeString("zh-Hans-CN", { hour: "2-digit", minute: "2-digit" });
   }
-  return date.toLocaleDateString("zh-Hans-CN", { month: "numeric", day: "numeric" });
+  const sameYear = date.getFullYear() === now2.getFullYear();
+  return date.toLocaleDateString("zh-Hans-CN", sameYear ? { month: "numeric", day: "numeric" } : { year: "numeric", month: "numeric", day: "numeric" });
 }
 function formatWhenFull(ts) {
   if (!Number.isFinite(ts)) return "";
@@ -4233,7 +4243,8 @@ function formatWhenFull(ts) {
   const now2 = /* @__PURE__ */ new Date();
   const time = date.toLocaleTimeString("zh-Hans-CN", { hour: "2-digit", minute: "2-digit" });
   if (date.toDateString() === now2.toDateString()) return "\u4ECA\u5929 " + time;
-  return date.toLocaleDateString("zh-Hans-CN", { year: "numeric", month: "numeric", day: "numeric" }) + " " + time;
+  const sameYear = date.getFullYear() === now2.getFullYear();
+  return date.toLocaleDateString("zh-Hans-CN", sameYear ? { month: "numeric", day: "numeric" } : { year: "numeric", month: "numeric", day: "numeric" }) + " " + time;
 }
 
 // src/client/feed/ManageTable.jsx
@@ -4250,6 +4261,19 @@ function ManageTable({ api, feeds, onBack, onChanged }) {
   const [adding, setAdding] = (0, import_react7.useState)(false);
   const [busy, setBusy] = (0, import_react7.useState)(false);
   const [opmlBusy, setOpmlBusy] = (0, import_react7.useState)("");
+  const [batchNotice, setBatchNotice] = (0, import_react7.useState)("");
+  const noticeTimer = (0, import_react7.useRef)(null);
+  (0, import_react7.useEffect)(() => () => {
+    if (noticeTimer.current) clearTimeout(noticeTimer.current);
+  }, []);
+  const showBatchNotice = (text2) => {
+    setBatchNotice(text2);
+    if (noticeTimer.current) clearTimeout(noticeTimer.current);
+    noticeTimer.current = setTimeout(() => {
+      noticeTimer.current = null;
+      setBatchNotice("");
+    }, 6e3);
+  };
   const availableGroups = (0, import_react7.useMemo)(
     () => [...new Set(feeds.map((f) => f.groupName).filter((g) => g !== ""))].sort((a2, b) => a2.localeCompare(b, "zh-Hans-CN")),
     [feeds]
@@ -4265,9 +4289,19 @@ function ManageTable({ api, feeds, onBack, onChanged }) {
   const disabledCount = feeds.filter((f) => !f.enabled).length;
   async function patch(ids, changes) {
     setBusy(true);
+    const failures = [];
     try {
-      for (const id2 of ids) await api.setFeed({ id: id2, patch: changes });
+      for (const id2 of ids) {
+        try {
+          await api.setFeed({ id: id2, patch: changes });
+        } catch (cause) {
+          failures.push(String(cause?.message ?? cause));
+        }
+      }
       await onChanged();
+      if (failures.length > 0) {
+        showBatchNotice(`\u6210\u529F ${ids.length - failures.length} \u4E2A\uFF0C\u5931\u8D25 ${failures.length} \u4E2A\uFF1A${failures[0]}`);
+      }
     } finally {
       setBusy(false);
     }
@@ -4275,17 +4309,37 @@ function ManageTable({ api, feeds, onBack, onChanged }) {
   async function retry(ids) {
     setBusy(true);
     try {
-      await api.refresh();
+      await api.refresh(ids.length === 1 ? ids[0] : { channels: ids });
       await onChanged();
+    } catch (cause) {
+      showBatchNotice("\u91CD\u8BD5\u5931\u8D25\uFF1A" + String(cause?.message ?? cause));
     } finally {
       setBusy(false);
     }
   }
   async function removeBatch(ids) {
     setBusy(true);
+    const failures = [];
+    const failedIds = /* @__PURE__ */ new Set();
     try {
-      for (const id2 of ids) await api.removeSubscription(id2);
-      setChecked(/* @__PURE__ */ new Set());
+      for (const id2 of ids) {
+        try {
+          await api.removeSubscription(id2);
+        } catch (cause) {
+          failedIds.add(id2);
+          failures.push(String(cause?.message ?? cause));
+        }
+      }
+      if (failures.length === 0) {
+        setChecked(/* @__PURE__ */ new Set());
+      } else {
+        setChecked((prev) => {
+          const next = new Set(prev);
+          for (const id2 of ids) if (!failedIds.has(id2)) next.delete(id2);
+          return next;
+        });
+        showBatchNotice(`\u6210\u529F ${ids.length - failures.length} \u4E2A\uFF0C\u5931\u8D25 ${failures.length} \u4E2A\uFF1A${failures[0]}`);
+      }
       setConfirmBatchDelete(false);
       await onChanged();
     } finally {
@@ -4339,6 +4393,7 @@ function ManageTable({ api, feeds, onBack, onChanged }) {
       /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { children: importNotice }),
       /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { type: "button", className: "dpl-icon-btn", "aria-label": "\u5173\u95ED\u63D0\u793A", onClick: () => setImportNotice(""), children: "\u2715" })
     ] }) : null,
+    batchNotice ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "dpl-notice dpl-manage-batch-notice", role: "status", children: batchNotice }) : null,
     /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "dpl-manage-filters", children: [
       /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("input", { className: "dpl-manage-search", placeholder: "\u641C\u7D22\u540D\u79F0 / URL", value: query, onChange: (e) => setQuery(e.target.value) }),
       /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "dpl-seg", children: [
@@ -5068,6 +5123,7 @@ function FeedView({ api, onMaterial, onJumpSpace, onOpenVaultNote }) {
   const [selected, setSelected] = (0, import_react9.useState)(null);
   const [spinning, setSpinning] = (0, import_react9.useState)(false);
   const refreshTick = (0, import_react9.useRef)(0);
+  const [itemsVersion, setItemsVersion] = (0, import_react9.useState)(0);
   const bumpUnread = (0, import_react9.useCallback)((feedId, delta) => {
     if (typeof feedId !== "string" || !delta) return;
     setFeeds((current) => current.map((feed) => feed.id === feedId ? { ...feed, unreadCount: Math.max(0, (feed.unreadCount ?? 0) + delta) } : feed));
@@ -5104,6 +5160,33 @@ function FeedView({ api, onMaterial, onJumpSpace, onOpenVaultNote }) {
       alive = false;
     };
   }, [api]);
+  const [sourcesSortMode, setSourcesSortMode] = (0, import_react9.useState)(DEFAULT_FEED_SORT_MODE);
+  const [sourcesCollapsedGroups, setSourcesCollapsedGroups] = (0, import_react9.useState)(() => /* @__PURE__ */ new Set());
+  (0, import_react9.useEffect)(() => {
+    let alive = true;
+    void api.getSettings?.().then((result) => {
+      if (!alive) return;
+      const settings = result?.settings ?? {};
+      if (typeof settings.sourcesSortMode === "string") setSourcesSortMode(settings.sourcesSortMode);
+      if (Array.isArray(settings.sourcesCollapsedGroups)) {
+        setSourcesCollapsedGroups(new Set(settings.sourcesCollapsedGroups.filter((group) => typeof group === "string")));
+      }
+    }).catch(() => {
+    });
+    return () => {
+      alive = false;
+    };
+  }, [api]);
+  const changeSourcesSortMode = (0, import_react9.useCallback)((mode) => {
+    setSourcesSortMode(mode);
+    void api.saveSettings?.({ sourcesSortMode: mode }).catch(() => {
+    });
+  }, [api]);
+  const changeSourcesCollapsedGroups = (0, import_react9.useCallback)((groups) => {
+    setSourcesCollapsedGroups(groups);
+    void api.saveSettings?.({ sourcesCollapsedGroups: [...groups] }).catch(() => {
+    });
+  }, [api]);
   (0, import_react9.useEffect)(() => {
     void loadFeeds();
   }, [loadFeeds]);
@@ -5124,6 +5207,8 @@ function FeedView({ api, onMaterial, onJumpSpace, onOpenVaultNote }) {
       await api.refresh();
       if (tick !== refreshTick.current) return;
       await loadFeeds();
+      if (tick !== refreshTick.current) return;
+      setItemsVersion((value) => value + 1);
       setTimeout(() => {
         if (tick === refreshTick.current) void loadIcons();
       }, 12e3);
@@ -5153,6 +5238,10 @@ function FeedView({ api, onMaterial, onJumpSpace, onOpenVaultNote }) {
               onManage: () => setManaging(false),
               onSelectSource: selectSource,
               onSelectGroup: selectGroup,
+              sortMode: sourcesSortMode,
+              onSortModeChange: changeSourcesSortMode,
+              collapsedGroups: sourcesCollapsedGroups,
+              onCollapsedGroupsChange: changeSourcesCollapsedGroups,
               collapsed,
               onExpand: expand,
               onCollapse: collapse
@@ -5181,6 +5270,10 @@ function FeedView({ api, onMaterial, onJumpSpace, onOpenVaultNote }) {
             onManage: () => setManaging(true),
             onSelectSource: selectSource,
             onSelectGroup: selectGroup,
+            sortMode: sourcesSortMode,
+            onSortModeChange: changeSourcesSortMode,
+            collapsedGroups: sourcesCollapsedGroups,
+            onCollapsedGroupsChange: changeSourcesCollapsedGroups,
             collapsed,
             onExpand: expand,
             onCollapse: collapse
@@ -5194,6 +5287,7 @@ function FeedView({ api, onMaterial, onJumpSpace, onOpenVaultNote }) {
             icons,
             sourceId,
             selectedGroup,
+            itemsVersion,
             selected,
             onSelect: setSelected,
             onMaterial,
@@ -5213,12 +5307,13 @@ function FeedView({ api, onMaterial, onJumpSpace, onOpenVaultNote }) {
   );
 }
 function ItemList(props) {
-  const { api, feeds, icons, sourceId, selectedGroup, selected, onSelect, onMaterial, onUnreadChange, spinning, onRefresh, onFeedsChanged, onManage, collapsed, onExpand, onCollapse } = props;
+  const { api, feeds, icons, sourceId, selectedGroup, itemsVersion, selected, onSelect, onMaterial, onUnreadChange, spinning, onRefresh, onFeedsChanged, onManage, collapsed, onExpand, onCollapse } = props;
   const [items, setItems] = (0, import_react9.useState)([]);
   const [loading, setLoading] = (0, import_react9.useState)(true);
   const [viewFilter, setViewFilter] = (0, import_react9.useState)("all");
   const [confirmMarkAllRead, setConfirmMarkAllRead] = (0, import_react9.useState)(false);
   const [pill, setPill] = (0, import_react9.useState)(0);
+  const [notice, setNotice] = (0, import_react9.useState)("");
   const listScroll = (0, import_react9.useRef)(null);
   const hoverTimer = (0, import_react9.useRef)(null);
   const visibleItems = (0, import_react9.useRef)([]);
@@ -5247,7 +5342,7 @@ function ItemList(props) {
     return () => {
       cancelled = true;
     };
-  }, [api, sourceId, selectedGroup]);
+  }, [api, sourceId, selectedGroup, itemsVersion]);
   const partitioned = (0, import_react9.useMemo)(() => {
     if (!loading && readSnapshot.current.session !== sessionKey) {
       readSnapshot.current = { session: sessionKey, read: snapshotReadItems(items) };
@@ -5284,21 +5379,42 @@ function ItemList(props) {
     }
     return feeds.reduce((sum, feed) => sum + (feed.unreadCount ?? 0), 0);
   })();
+  const [rollback, setRollback] = (0, import_react9.useState)(null);
+  (0, import_react9.useEffect)(() => {
+    if (!rollback) return;
+    const { item, previous, state, cause } = rollback;
+    setRollback(null);
+    const row = items.find((entry) => entry.key === item.key && entry.sourceId === item.sourceId);
+    if (!row || row.state !== state) return;
+    setItems((current) => current.map((entry) => entry.key === item.key && entry.sourceId === item.sourceId ? { ...entry, state: previous } : entry));
+    if (previous === "unseen" && state !== "unseen") onUnreadChange?.(item.sourceId, 1);
+    else if (previous !== "unseen" && state === "unseen") onUnreadChange?.(item.sourceId, -1);
+    setNotice("\u6807\u8BB0\u5931\u8D25\uFF1A" + String(cause?.message ?? cause));
+  }, [rollback]);
+  const rollbackItemState = (item, previous, state, cause) => {
+    setRollback({ item, previous, state, cause });
+  };
   const markState = async (item, state) => {
+    const previous = item.state;
     setItems((current) => current.map((entry) => entry.key === item.key && entry.sourceId === item.sourceId ? { ...entry, state } : entry));
-    if (item.state === "unseen" && state !== "unseen") onUnreadChange?.(item.sourceId, -1);
-    else if (item.state !== "unseen" && state === "unseen") onUnreadChange?.(item.sourceId, 1);
-    await api.setItemState({ keys: [item.key], state }).catch(() => {
-    });
-    void onFeedsChanged();
+    if (previous === "unseen" && state !== "unseen") onUnreadChange?.(item.sourceId, -1);
+    else if (previous !== "unseen" && state === "unseen") onUnreadChange?.(item.sourceId, 1);
+    try {
+      await api.setItemState({ keys: [item.key], state });
+      void onFeedsChanged();
+    } catch (cause) {
+      rollbackItemState(item, previous, state, cause);
+    }
   };
   const openItem = (item) => {
     onSelect(item);
     onMaterial({ space: "feed", key: item.key, title: item.title, url: item.link, content: "" });
     if (item.state === "unseen") {
+      const previous = item.state;
       setItems((current) => current.map((entry) => entry.key === item.key && entry.sourceId === item.sourceId ? { ...entry, state: "seen" } : entry));
       onUnreadChange?.(item.sourceId, -1);
-      void api.setItemState({ keys: [item.key], state: "seen" }).then(() => onFeedsChanged()).catch(() => {
+      void api.setItemState({ keys: [item.key], state: "seen" }).then(() => onFeedsChanged()).catch((cause) => {
+        rollbackItemState(item, previous, "seen", cause);
       });
       onSelect({ ...item, state: "seen" });
     }
@@ -5310,6 +5426,59 @@ function ItemList(props) {
     }
   };
   (0, import_react9.useEffect)(() => clearHoverTimer, []);
+  const currentEntry = () => {
+    const list = visibleItems.current;
+    if (list.length === 0) return null;
+    if (selected !== null) {
+      const match = list.find((entry) => entry.key === selected.key && entry.sourceId === selected.sourceId);
+      if (match) return match;
+    }
+    return list[0];
+  };
+  const entryRow = (entry) => listScroll.current?.querySelector(
+    '[data-entry="' + String(entry.sourceId + ":" + entry.key).replace(/"/g, '\\"') + '"]'
+  );
+  const handleListKeyDown = (event) => {
+    if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+    const target = event.target;
+    if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+    const key = event.key;
+    if (key === "j" || key === "k") {
+      event.preventDefault();
+      const list = visibleItems.current;
+      if (list.length === 0) return;
+      const delta = key === "j" ? 1 : -1;
+      const currentIndex = selected !== null ? list.findIndex((entry) => entry.key === selected.key && entry.sourceId === selected.sourceId) : -1;
+      const nextIndex = currentIndex === -1 ? delta > 0 ? 0 : list.length - 1 : (currentIndex + delta + list.length) % list.length;
+      const next = list[nextIndex];
+      if (!next) return;
+      onSelect({ ...next });
+      entryRow(next)?.scrollIntoView({ block: "nearest" });
+      return;
+    }
+    if (key === "o" || key === " ") {
+      event.preventDefault();
+      const current = currentEntry();
+      if (current) openItem(current);
+      return;
+    }
+    if (key === "s") {
+      event.preventDefault();
+      const current = currentEntry();
+      if (current) void markState(current, "skipped");
+      return;
+    }
+    if (key === "m") {
+      event.preventDefault();
+      const current = currentEntry();
+      if (current) void markState(current, "unseen");
+      return;
+    }
+    if (key === "r") {
+      event.preventDefault();
+      onRefresh();
+    }
+  };
   const markAllRead = async () => {
     setConfirmMarkAllRead(false);
     await api.markAllRead({
@@ -5334,14 +5503,15 @@ function ItemList(props) {
         " \u6761"
       ] }) : null,
       /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("button", { type: "button", className: "dpl-icon-btn", "data-tip": "\u5237\u65B0\u5168\u90E8", "aria-label": "\u5237\u65B0\u5168\u90E8", disabled: spinning, onClick: onRefresh, children: spinning ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(LoaderCircle, { size: 15, className: "dpl-spin" }) : /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(RefreshCw, { size: 15 }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("button", { type: "button", className: "dpl-icon-btn" + (viewFilter === "unseen" ? " is-toggled" : ""), "data-tip": "\u53EA\u663E\u793A\u672A\u8BFB", "aria-label": "\u53EA\u663E\u793A\u672A\u8BFB", "aria-pressed": viewFilter === "unseen", onClick: () => setViewFilter(viewFilter === "unseen" ? "all" : "unseen"), children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Circle, { size: 14, className: viewFilter === "unseen" ? "dpl-fill" : void 0 }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("button", { type: "button", className: "dpl-icon-btn" + (viewFilter === "unseen" ? " is-toggled" : ""), "data-tip": "\u53EA\u663E\u793A\u672A\u8BFB", "aria-label": "\u53EA\u663E\u793A\u672A\u8BFB", "aria-pressed": viewFilter === "unseen", onClick: () => setViewFilter(viewFilter === "unseen" ? "all" : "unseen"), children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Circle, { size: 15, className: viewFilter === "unseen" ? "dpl-fill" : void 0 }) }),
       /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("button", { type: "button", className: "dpl-icon-btn" + (viewFilter === "seen" ? " is-toggled" : ""), "data-tip": "\u53EA\u663E\u793A\u5DF2\u8BFB", "aria-label": "\u53EA\u663E\u793A\u5DF2\u8BFB", "aria-pressed": viewFilter === "seen", onClick: () => setViewFilter(viewFilter === "seen" ? "all" : "seen"), children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(CircleCheck, { size: 15 }) }),
       /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("button", { type: "button", className: "dpl-icon-btn" + (viewFilter === "skipped" ? " is-toggled" : ""), "data-tip": "\u53EA\u663E\u793A\u7565\u8FC7", "aria-label": "\u53EA\u663E\u793A\u7565\u8FC7", "aria-pressed": viewFilter === "skipped", onClick: () => setViewFilter(viewFilter === "skipped" ? "all" : "skipped"), children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Archive, { size: 15 }) }),
       /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("button", { type: "button", className: "dpl-icon-btn", "data-tip": "\u6807\u8BB0\u5168\u90E8\u4E3A\u5DF2\u8BFB", "aria-label": "\u6807\u8BB0\u5168\u90E8\u4E3A\u5DF2\u8BFB", disabled: scopeUnseen === 0, onClick: () => setConfirmMarkAllRead(true), children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(CheckCheck, { size: 15 }) }),
       /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: "dpl-flex-fill" }),
       /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(PanelCollapseButton, { onClick: onCollapse })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "dpl-entry-scroll", ref: listScroll, children: [
+    notice ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "dpl-notice dpl-items-notice", role: "status", children: notice }) : null,
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "dpl-entry-scroll", ref: listScroll, tabIndex: 0, onKeyDown: handleListKeyDown, children: [
       loading ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "dpl-list-loading", children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(LoaderCircle, { size: 17, className: "dpl-spin" }) }) : null,
       !loading && partitioned.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "dpl-list-empty", children: [
         /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("p", { children: feeds.length === 0 ? "\u8FD8\u6CA1\u6709\u8BA2\u9605\u6E90\u3002" : "\u6682\u65E0\u6761\u76EE\u3002" }),
@@ -5352,6 +5522,7 @@ function ItemList(props) {
         return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
           "div",
           {
+            "data-entry": item.sourceId + ":" + item.key,
             className: "dpl-entry-row" + (selected?.key === item.key && selected?.sourceId === item.sourceId ? " is-active" : ""),
             onMouseEnter: () => {
               if (!hoverPreviewEnabled) return;
@@ -5369,6 +5540,7 @@ function ItemList(props) {
             onKeyDown: (event) => {
               if (event.key === "Enter" || event.key === " ") {
                 event.preventDefault();
+                event.stopPropagation();
                 clearHoverTimer();
                 openItem(item);
               }
@@ -106423,6 +106595,11 @@ async function openPdf(base64) {
       canvas.height = Math.floor(viewport.height);
       await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
     },
+    /** scale=1 时的页宽（pt/px），适宽缩放的基准（InboxView PdfPane 用）。 */
+    async pageWidth(pageNumber) {
+      const page = await pdf.getPage(pageNumber);
+      return page.getViewport({ scale: 1 }).width;
+    },
     async textOf(pageNumber) {
       const page = await pdf.getPage(pageNumber);
       const content2 = await page.getTextContent();
@@ -106914,6 +107091,16 @@ var EPUB_LIMITS = {
   maxTotalBytes: 256 * 1024 * 1024,
   maxFileCount: 2e3
 };
+var RESOURCE_EXT = /\.(png|jpe?g|gif|webp|svg|css)$/i;
+var RESOURCE_MIME = {
+  css: "text/css",
+  gif: "image/gif",
+  jpeg: "image/jpeg",
+  jpg: "image/jpeg",
+  png: "image/png",
+  svg: "image/svg+xml",
+  webp: "image/webp"
+};
 function openEpub(base64, limits = EPUB_LIMITS) {
   const bytes = Uint8Array.from(atob(base64), (ch2) => ch2.charCodeAt(0));
   let files;
@@ -106945,14 +107132,42 @@ function openEpub(base64, limits = EPUB_LIMITS) {
     if (id2 && href) manifest.set(id2, { href: decodeURIComponent(href), type });
   }
   const spine = [...opf.matchAll(/<itemref\b[^>]*idref="([^"]+)"[^>]*\/>/gi)].map((match) => manifest.get(match[1])).filter(Boolean).filter((item) => /x?html/.test(item.type) || /\.x?html?$/i.test(item.href));
+  const resources = /* @__PURE__ */ new Map();
+  for (const name2 of names) {
+    if (RESOURCE_EXT.test(name2)) resources.set(normalizePath(name2), files[name2]);
+  }
+  const canBlob = typeof URL !== "undefined" && typeof URL.createObjectURL === "function" && typeof Blob !== "undefined";
+  const blobUrls = [];
+  const blobUrlByKey = /* @__PURE__ */ new Map();
+  const resourceUrl = (key) => {
+    if (!canBlob || blobUrlByKey.has(key)) return blobUrlByKey.get(key);
+    const data2 = resources.get(key);
+    if (!data2) return void 0;
+    const url = URL.createObjectURL(new Blob([data2], { type: mimeFor(key) }));
+    blobUrlByKey.set(key, url);
+    blobUrls.push(url);
+    return url;
+  };
   const chapters = (spine.length > 0 ? spine : names.filter((name2) => /\.x?html?$/i.test(name2)).map((href) => ({ href, type: "text/html" }))).map((item, index2) => {
     const path = baseDir ? normalizePath(baseDir + item.href) : item.href;
     const raw = readFile(files, path) ?? "";
-    return { index: index2, title: "\u7B2C " + (index2 + 1) + " \u8282", html: purifyHtml(stripToBody(raw)) };
+    const m2 = /<h[1-6][^>]*>([^<]+)<\/h[1-6]>/i.exec(raw) ?? /<title[^>]*>([^<]+)<\/title>/i.exec(raw);
+    const html3 = rewriteResourceRefs(purifyHtml(stripToBody(raw)), path.replace(/[^/]*$/, ""), resourceUrl);
+    return { index: index2, title: m2?.[1]?.trim() || "\u7B2C " + (index2 + 1) + " \u8282", html: html3 };
   }).filter((chapter) => chapter.html !== "");
-  return { title: title ?? "EPUB", chapters, destroy() {
-    files = null;
-  } };
+  return {
+    title: title ?? "EPUB",
+    chapters,
+    destroy() {
+      files = null;
+      resources.clear();
+      blobUrlByKey.clear();
+      const urls = blobUrls.splice(0, blobUrls.length);
+      if (typeof URL !== "undefined" && typeof URL.revokeObjectURL === "function") {
+        for (const url of urls) URL.revokeObjectURL(url);
+      }
+    }
+  };
 }
 function readFile(files, name2) {
   const file = files[name2];
@@ -106971,6 +107186,42 @@ function normalizePath(path) {
 function stripToBody(xhtml) {
   const body = /<body[^>]*>([\s\S]*?)<\/body>/i.exec(xhtml);
   return body ? body[1] : xhtml;
+}
+function mimeFor(path) {
+  const ext = /\.([a-z0-9]+)$/i.exec(path)?.[1]?.toLowerCase() ?? "";
+  return RESOURCE_MIME[ext] ?? "application/octet-stream";
+}
+function rewriteResourceRefs(html3, dir, resolveUrl) {
+  return html3.replace(/(src|href)="([^"]+)"/g, (whole, attr, value) => {
+    const url = resourceUrlFor(value, dir, resolveUrl);
+    return url === void 0 ? whole : attr + '="' + url + '"';
+  });
+}
+function resourceUrlFor(value, dir, resolveUrl) {
+  let ref = String(value).trim();
+  for (const mark of ["#", "?"]) {
+    const at = ref.indexOf(mark);
+    if (at >= 0) ref = ref.slice(0, at);
+  }
+  if (ref === "" || ref.startsWith("//") || /^[a-z][a-z0-9+.\-]*:/i.test(ref)) return void 0;
+  const rootRelative = ref.startsWith("/");
+  if (rootRelative) ref = ref.slice(1);
+  const base2 = rootRelative ? "" : dir;
+  const decoded = decodePath(decodeEntities(ref));
+  return resolveUrl(normalizePath(base2 + decoded)) ?? resolveUrl(normalizePath(base2 + ref));
+}
+function decodeEntities(value) {
+  return value.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&#(\d+);/g, (whole, code2) => {
+    const point = Number(code2);
+    return point > 0 && point <= 1114111 ? String.fromCodePoint(point) : whole;
+  }).replace(/&amp;/g, "&");
+}
+function decodePath(value) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
 }
 
 // src/client/InboxView.jsx
@@ -107015,7 +107266,10 @@ function InboxView({ api, onMaterial, onOpenVaultNote }) {
   const [selectedId, setSelectedId] = (0, import_react10.useState)(null);
   const [data2, setData] = (0, import_react10.useState)({ items: [], counts: { byStatus: {}, byTag: {}, total: 0 }, pendingIds: [] });
   const [loading, setLoading] = (0, import_react10.useState)(true);
+  const [listError, setListError] = (0, import_react10.useState)(null);
   const [retryingAll, setRetryingAll] = (0, import_react10.useState)(false);
+  const [retryNotice, setRetryNotice] = (0, import_react10.useState)("");
+  const [detailRev, setDetailRev] = (0, import_react10.useState)(0);
   const everSelected = (0, import_react10.useRef)(false);
   const listScrollTop = (0, import_react10.useRef)(0);
   const load = (0, import_react10.useCallback)(async () => {
@@ -107024,8 +107278,13 @@ function InboxView({ api, onMaterial, onOpenVaultNote }) {
         status: filter.status,
         tag: filter.tag
       });
-      setData(result ?? { items: [], counts: { byStatus: {}, byTag: {}, total: 0 }, pendingIds: [] });
-    } catch {
+      const shaped = result ?? { items: [], counts: { byStatus: {}, byTag: {}, total: 0 }, pendingIds: [] };
+      setData(shaped);
+      setListError(null);
+      return shaped;
+    } catch (error) {
+      setListError(String(error?.message ?? error));
+      return null;
     } finally {
       setLoading(false);
     }
@@ -107033,14 +107292,22 @@ function InboxView({ api, onMaterial, onOpenVaultNote }) {
   (0, import_react10.useEffect)(() => {
     void load();
   }, [load]);
-  const pendingIds = data2.pendingIds ?? [];
+  const pending = (0, import_react10.useMemo)(() => new Set(data2.pendingIds ?? []), [data2.pendingIds]);
+  const pendingRef = (0, import_react10.useRef)(pending);
   (0, import_react10.useEffect)(() => {
-    if (pendingIds.length === 0) return void 0;
+    if (pending.size === 0) return void 0;
     const timer2 = setInterval(() => {
       void load();
     }, 1500);
     return () => clearInterval(timer2);
-  }, [pendingIds.length > 0, load]);
+  }, [pending.size > 0, load]);
+  (0, import_react10.useEffect)(() => {
+    const previous = pendingRef.current;
+    if (selectedId !== null && previous.has(selectedId) && !pending.has(selectedId)) {
+      setDetailRev((rev2) => rev2 + 1);
+    }
+    pendingRef.current = pending;
+  }, [pending, selectedId]);
   (0, import_react10.useEffect)(() => {
     const onFocus = () => {
       void load();
@@ -107060,8 +107327,10 @@ function InboxView({ api, onMaterial, onOpenVaultNote }) {
   };
   const retryAll = async () => {
     setRetryingAll(true);
+    setRetryNotice("");
     try {
-      await api.inboxRetryAllFailed();
+      const result = await api.inboxRetryAllFailed();
+      setRetryNotice(`\u5DF2\u91CD\u8BD5 ${result?.retried ?? 0} \u6761\uFF0C\u5931\u8D25 ${result?.failed ?? 0} \u6761`);
     } catch {
     } finally {
       setRetryingAll(false);
@@ -107094,8 +107363,16 @@ function InboxView({ api, onMaterial, onOpenVaultNote }) {
               filter,
               selectedId,
               onSelect: select,
+              pending,
+              listError,
+              onRetryLoad: () => {
+                setListError(null);
+                void load();
+              },
               retryingAll,
               onRetryAll: () => void retryAll(),
+              retryNotice,
+              onDismissRetryNotice: () => setRetryNotice(""),
               onChanged: load,
               scrollTopRef: listScrollTop,
               onCollapse: collapse
@@ -107113,6 +107390,9 @@ function InboxView({ api, onMaterial, onOpenVaultNote }) {
               api,
               selectedId,
               items: data2.items,
+              pending,
+              detailRev,
+              onSelect: select,
               onMaterial,
               onChanged: load,
               onOpenVaultNote
@@ -107292,7 +107572,7 @@ function TagEditor({ item, onClose, onCommit }) {
     ] })
   ] });
 }
-function ItemList2({ api, items, loading, selectedId, onSelect, retryingAll, onRetryAll, onChanged, scrollTopRef, onCollapse }) {
+function ItemList2({ api, items, loading, filter, selectedId, onSelect, pending, listError, onRetryLoad, retryingAll, onRetryAll, retryNotice, onDismissRetryNotice, onChanged, scrollTopRef, onCollapse }) {
   const listRef = (0, import_react10.useRef)(null);
   const [tagEditorFor, setTagEditorFor] = (0, import_react10.useState)(null);
   (0, import_react10.useEffect)(() => {
@@ -107301,6 +107581,8 @@ function ItemList2({ api, items, loading, selectedId, onSelect, retryingAll, onR
     el.scrollTop = scrollTopRef.current ?? 0;
   }, [loading, items, scrollTopRef]);
   const hasFailed = (items ?? []).some((item) => item.status === "fetch_failed");
+  const pendingSet = pending ?? /* @__PURE__ */ new Set();
+  const emptyText = filter.status === "fetch_failed" ? "\u5F53\u524D\u6CA1\u6709\u5931\u8D25\u6761\u76EE" : filter.tag !== void 0 ? `\u6807\u7B7E ${filter.tag} \u4E0B\u6682\u65E0\u6761\u76EE` : "\u6682\u65E0\u5185\u5BB9\u3002\u5DE6\u4E0A\u89D2\u300C\u6DFB\u52A0 URL\u300D\u6216\u300C\u5BFC\u5165\u300D\u5F00\u59CB\u6536\u96C6\u3002";
   const commitTags = async (id2, tags3) => {
     try {
       await api.inboxUpdate({ id: id2, patch: { tags: tags3 } });
@@ -107327,6 +107609,17 @@ function ItemList2({ api, items, loading, selectedId, onSelect, retryingAll, onR
       ) : null,
       /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(PanelCollapseButton, { onClick: onCollapse })
     ] }),
+    listError ? /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "dpl-error dpl-ib-listerror", role: "alert", "data-testid": "list-error", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("span", { children: [
+        "\u52A0\u8F7D\u5931\u8D25\uFF1A",
+        listError
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { type: "button", className: "dpl-inline-btn", onClick: onRetryLoad, "data-testid": "list-error-retry", children: "\u91CD\u8BD5" })
+    ] }) : null,
+    retryNotice ? /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "dpl-notice dpl-ib-listnotice", "data-testid": "retry-all-notice", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { children: retryNotice }),
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { type: "button", onClick: onDismissRetryNotice, "aria-label": "\u5173\u95ED\u91CD\u8BD5\u7ED3\u679C", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(X, { size: 12 }) })
+    ] }) : null,
     /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
       "div",
       {
@@ -107337,7 +107630,7 @@ function ItemList2({ api, items, loading, selectedId, onSelect, retryingAll, onR
         },
         "data-testid": "item-scroll",
         children: [
-          !loading && (items ?? []).length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "dpl-ib-listempty", children: "\u6682\u65E0\u5185\u5BB9\u3002\u5DE6\u4E0A\u89D2\u300C\u6DFB\u52A0 URL\u300D\u6216\u300C\u5BFC\u5165\u300D\u5F00\u59CB\u6536\u96C6\u3002" }) : null,
+          !loading && (items ?? []).length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "dpl-ib-listempty", "data-testid": "list-empty", children: emptyText }) : null,
           loading ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "dpl-ib-listempty", children: "\u52A0\u8F7D\u4E2D\u2026" }) : null,
           (items ?? []).map((item) => /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
             "div",
@@ -107347,15 +107640,18 @@ function ItemList2({ api, items, loading, selectedId, onSelect, retryingAll, onR
               "data-testid": `item-${item.id}`,
               children: [
                 /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "dpl-ib-rowmain", children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "dpl-dot " + (STATUS_DOT[item.status] ?? "is-gray") }),
+                  pendingSet.has(item.id) ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "dpl-ib-rowpend", "data-testid": `item-pending-${item.id}`, children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(LoaderCircle, { size: 12, className: "dpl-spin" }) }) : /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "dpl-dot " + (STATUS_DOT[item.status] ?? "is-gray") }),
                   /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "dpl-ib-rowbody", children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+                    /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
                       "div",
                       {
                         className: "dpl-ib-rowtitle" + (item.status === "finished" ? " is-done" : ""),
                         title: item.title,
                         "data-testid": `item-title-${item.id}`,
-                        children: item.title
+                        children: [
+                          item.title,
+                          pendingSet.has(item.id) ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("em", { className: "dpl-ib-pending", children: "\u6293\u53D6\u4E2D\u2026" }) : null
+                        ]
                       }
                     ),
                     /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "dpl-ib-rowmeta", children: [
@@ -107430,9 +107726,46 @@ function TagEditPopup({ item, onCommit, onClose }) {
     }
   ) });
 }
+var PDF_ZOOM_STEP = 1.25;
+var PDF_ZOOM_MIN = 0.3;
+var PDF_ZOOM_MAX = 4;
+var PDF_FIT_PADDING = 16;
 function PdfPane({ doc: doc2, setDoc }) {
   const canvasRef = (0, import_react10.useRef)(null);
+  const scrollRef = (0, import_react10.useRef)(null);
+  const [containerWidth, setContainerWidth] = (0, import_react10.useState)(0);
+  const [pageWidth, setPageWidth] = (0, import_react10.useState)(0);
   const [rendering, setRendering] = (0, import_react10.useState)(false);
+  const [pageError, setPageError] = (0, import_react10.useState)("");
+  const [renderRev, setRenderRev] = (0, import_react10.useState)(0);
+  const zoom = doc2.zoom ?? 1;
+  (0, import_react10.useEffect)(() => {
+    const el = scrollRef.current;
+    if (!el) return void 0;
+    setContainerWidth(el.clientWidth ?? 0);
+    if (typeof ResizeObserver === "undefined") return void 0;
+    const observer = new ResizeObserver((entries2) => {
+      const width = entries2[0]?.contentRect?.width ?? el.clientWidth;
+      setContainerWidth(Math.max(0, width));
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  (0, import_react10.useEffect)(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const width = await doc2.pdf.pageWidth(doc2.page);
+        if (!cancelled) setPageWidth(width);
+      } catch {
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [doc2.pdf, doc2.page]);
+  const fitScale = pageWidth > 0 && containerWidth > 0 ? Math.max(0.05, (containerWidth - PDF_FIT_PADDING) / pageWidth) : null;
+  const scale = fitScale !== null ? fitScale * zoom : 1.2 * zoom;
   (0, import_react10.useEffect)(() => {
     let cancelled = false;
     setRendering(true);
@@ -107440,9 +107773,10 @@ function PdfPane({ doc: doc2, setDoc }) {
       const canvas = canvasRef.current;
       if (!canvas) return;
       try {
-        await doc2.pdf.renderPage(doc2.page, canvas);
-      } catch {
-        if (!cancelled) setDoc({ ...doc2, error: "PDF \u6E32\u67D3\u5931\u8D25" });
+        await doc2.pdf.renderPage(doc2.page, canvas, scale);
+        if (!cancelled) setPageError("");
+      } catch (error) {
+        if (!cancelled) setPageError("PDF \u6E32\u67D3\u5931\u8D25\uFF1A" + String(error?.message ?? error));
       } finally {
         if (!cancelled) setRendering(false);
       }
@@ -107450,10 +107784,13 @@ function PdfPane({ doc: doc2, setDoc }) {
     return () => {
       cancelled = true;
     };
-  }, [doc2, setDoc]);
+  }, [doc2.pdf, doc2.page, scale, renderRev]);
   if (doc2.error) {
     return /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "dpl-ib-readercenter", children: doc2.error });
   }
+  const setZoom = (next) => {
+    setDoc({ ...doc2, zoom: Math.min(PDF_ZOOM_MAX, Math.max(PDF_ZOOM_MIN, next)) });
+  };
   return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "dpl-ib-docpane", "data-testid": "pdf-reader", children: [
     /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "dpl-ib-docnav", children: [
       /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("button", { type: "button", className: "dpl-btn dpl-ib-docnavbtn", disabled: doc2.page <= 1, onClick: () => setDoc({ ...doc2, page: doc2.page - 1 }), "data-testid": "pdf-prev", children: [
@@ -107469,9 +107806,23 @@ function PdfPane({ doc: doc2, setDoc }) {
         "\u4E0B\u4E00\u9875 ",
         /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(ChevronRight, { size: 14 })
       ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("span", { className: "dpl-ib-doczoom", "data-testid": "pdf-zoom-label", children: [
+        Math.round(zoom * 100),
+        "%"
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { type: "button", className: "dpl-btn dpl-ib-docnavbtn", "aria-label": "\u7F29\u5C0F", onClick: () => setZoom(zoom / PDF_ZOOM_STEP), "data-testid": "pdf-zoom-out", children: "\u2212" }),
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { type: "button", className: "dpl-btn dpl-ib-docnavbtn", "aria-label": "\u653E\u5927", onClick: () => setZoom(zoom * PDF_ZOOM_STEP), "data-testid": "pdf-zoom-in", children: "+" }),
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { type: "button", className: "dpl-btn dpl-ib-docnavbtn", onClick: () => setDoc({ ...doc2, zoom: 1 }), "data-testid": "pdf-zoom-fit", children: "\u9002\u5E94\u5BBD\u5EA6" }),
       rendering ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(LoaderCircle, { size: 12, className: "dpl-spin" }) : null
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "dpl-ib-docscroll", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("canvas", { ref: canvasRef, className: "dpl-ib-pdfcanvas", "data-testid": "pdf-canvas" }) })
+    pageError ? /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "dpl-error dpl-ib-listerror", role: "alert", "data-testid": "pdf-render-error", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { children: pageError }),
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { type: "button", className: "dpl-inline-btn", onClick: () => {
+        setPageError("");
+        setRenderRev((rev2) => rev2 + 1);
+      }, "data-testid": "pdf-render-retry", children: "\u91CD\u8BD5" })
+    ] }) : null,
+    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { ref: scrollRef, className: "dpl-ib-docscroll", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("canvas", { ref: canvasRef, className: "dpl-ib-pdfcanvas", "data-testid": "pdf-canvas" }) })
   ] });
 }
 function EpubPane({ doc: doc2, setDoc }) {
@@ -107502,19 +107853,26 @@ function EpubPane({ doc: doc2, setDoc }) {
     /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "dpl-ib-docscroll dpl-ib-epubscroll", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(SafeHtml, { className: "dpl-ib-epubbody", html: chapter?.html ?? "" }) })
   ] });
 }
-function Reader({ api, selectedId, onMaterial, onChanged, onOpenVaultNote }) {
+var EMPTY_SET2 = /* @__PURE__ */ new Set();
+function Reader({ api, selectedId, pending, detailRev, onSelect, onMaterial, onChanged, onOpenVaultNote }) {
   const [detail, setDetail] = (0, import_react10.useState)(null);
   const [detailLoading, setDetailLoading] = (0, import_react10.useState)(false);
   const [doc2, setDoc] = (0, import_react10.useState)(null);
   const [docError, setDocError] = (0, import_react10.useState)("");
   const [showDone, setShowDone] = (0, import_react10.useState)(false);
   const [doneResult, setDoneResult] = (0, import_react10.useState)(null);
+  const [doneTarget, setDoneTarget] = (0, import_react10.useState)(null);
   const [tagEdit, setTagEdit] = (0, import_react10.useState)(false);
   const [retrying, setRetrying] = (0, import_react10.useState)(false);
+  const [saveError, setSaveError] = (0, import_react10.useState)("");
+  const [saveOk, setSaveOk] = (0, import_react10.useState)(false);
+  const saveOkTimer = (0, import_react10.useRef)(0);
   const contentScrollRef = (0, import_react10.useRef)(null);
   const docRef = (0, import_react10.useRef)(null);
+  const loadedRevRef = (0, import_react10.useRef)(detailRev);
   const item = detail?.item ?? null;
   const content2 = detail?.content ?? "";
+  const pendingSet = pending ?? EMPTY_SET2;
   (0, import_react10.useEffect)(() => {
     contentScrollRef.current?.scrollTo?.({ top: 0 });
     docRef.current?.destroy?.();
@@ -107524,6 +107882,15 @@ function Reader({ api, selectedId, onMaterial, onChanged, onOpenVaultNote }) {
     setTagEdit(false);
     setShowDone(false);
     setDoneResult(null);
+    setDoneTarget(null);
+    setSaveError("");
+    setSaveOk(false);
+    if (saveOkTimer.current) {
+      clearTimeout(saveOkTimer.current);
+      saveOkTimer.current = 0;
+    }
+  }, [selectedId]);
+  (0, import_react10.useEffect)(() => {
     if (selectedId === null) {
       setDetail(null);
       setDetailLoading(false);
@@ -107539,16 +107906,29 @@ function Reader({ api, selectedId, onMaterial, onChanged, onOpenVaultNote }) {
       } catch (error) {
         if (!cancelled) setDetail({ item: null, content: "", error: String(error?.message ?? error) });
       } finally {
+        loadedRevRef.current = detailRev;
         if (!cancelled) setDetailLoading(false);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [api, selectedId]);
+  }, [api, selectedId, detailRev]);
   (0, import_react10.useEffect)(() => () => {
     docRef.current?.destroy?.();
+    if (saveOkTimer.current) clearTimeout(saveOkTimer.current);
   }, []);
+  (0, import_react10.useEffect)(() => {
+    if (!showDone) return void 0;
+    const onKey = (event) => {
+      if (event.key === "Escape") {
+        setShowDone(false);
+        setDoneResult(null);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showDone]);
   (0, import_react10.useEffect)(() => {
     if (!item || item.objectType !== "pdf" && item.objectType !== "epub") return void 0;
     let cancelled = false;
@@ -107559,7 +107939,7 @@ function Reader({ api, selectedId, onMaterial, onChanged, onOpenVaultNote }) {
         if (item.objectType === "pdf") {
           const pdf = await openPdf(original.base64);
           docRef.current = pdf;
-          setDoc({ kind: "pdf", pdf, page: 1 });
+          setDoc({ kind: "pdf", pdf, page: 1, zoom: 1 });
         } else {
           const epub = openEpub(original.base64);
           docRef.current = epub;
@@ -107575,17 +107955,23 @@ function Reader({ api, selectedId, onMaterial, onChanged, onOpenVaultNote }) {
   }, [api, item?.id, item?.objectType]);
   const headings = (0, import_react10.useMemo)(() => markdownHeadings(content2), [content2]);
   const isFailed = item?.status === "fetch_failed";
+  const detailStale = loadedRevRef.current !== detailRev;
+  const isPending = pendingSet.has(selectedId) || detailStale && !detailLoading;
   const fetchError = item?.source?.kind === "url" ? item.source.fetchError : void 0;
   const sourceUrl = sourceUrlOf(item);
   const enclosure = item?.source?.kind === "rss" ? item.source.enclosure : void 0;
   const plainChars = content2.replace(/\s+/g, "").length;
-  const shortKind = item && !isFailed ? classifyShortBody(item, plainChars) : null;
+  const shortKind = item && !isFailed && !isPending ? classifyShortBody(item, plainChars) : null;
   const isPdf = item?.objectType === "pdf";
   const isEpub = item?.objectType === "epub";
   const refreshDetail = async () => {
     if (!selectedId) return;
-    const result = await api.inboxGet(selectedId).catch(() => null);
-    setDetail(result?.item ? { item: result.item, content: result.content ?? "" } : null);
+    try {
+      const result = await api.inboxGet(selectedId);
+      setDetail(result?.item ? { item: result.item, content: result.content ?? "" } : null);
+    } catch (error) {
+      setDetail({ item: null, content: "", error: String(error?.message ?? error) });
+    }
   };
   const update = async (patch) => {
     try {
@@ -107606,6 +107992,7 @@ function Reader({ api, selectedId, onMaterial, onChanged, onOpenVaultNote }) {
   };
   const archive = async (target) => {
     if (!item) return;
+    setDoneTarget(target);
     setDoneResult("moving");
     try {
       if (target === "library") {
@@ -107615,10 +108002,15 @@ function Reader({ api, selectedId, onMaterial, onChanged, onOpenVaultNote }) {
         await api.inboxMoveToTrash(item.id);
         setDoneResult("\u5DF2\u79FB\u5165\u56DE\u6536\u7AD9");
       }
-      await onChanged();
     } catch (error) {
       setDoneResult(`\u64CD\u4F5C\u5931\u8D25\uFF1A${String(error?.message ?? error)}`);
+      return;
     }
+    await refreshDetail().catch(() => {
+    });
+    const fresh = await onChanged().catch(() => null);
+    const nextItem = (fresh?.items ?? []).find((entry) => entry.status === "unread");
+    onSelect(nextItem ? nextItem.id : null);
   };
   const askAi = () => {
     if (!item) return;
@@ -107634,10 +108026,15 @@ function Reader({ api, selectedId, onMaterial, onChanged, onOpenVaultNote }) {
   const saveAsNote = async () => {
     if (!item || savingNote) return;
     setSavingNote(true);
+    setSaveError("");
     try {
       const result = await api.saveAsNote({ source: "inbox", id: item.id, title: item.title });
+      setSaveOk(true);
+      if (saveOkTimer.current) clearTimeout(saveOkTimer.current);
+      saveOkTimer.current = setTimeout(() => setSaveOk(false), 3e3);
       onOpenVaultNote?.(result?.path);
-    } catch {
+    } catch (error) {
+      setSaveError(String(error?.message ?? error));
     } finally {
       setSavingNote(false);
     }
@@ -107647,6 +108044,14 @@ function Reader({ api, selectedId, onMaterial, onChanged, onOpenVaultNote }) {
     body = /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "dpl-ib-readercenter", "data-testid": "reader-empty", children: "\u5728\u4E2D\u95F4\u5217\u8868\u9009\u62E9\u4E00\u6761\u5185\u5BB9\u5F00\u59CB\u9605\u8BFB" });
   } else if (detailLoading) {
     body = /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "dpl-ib-readercenter", children: "\u8F7D\u5165\u4E2D\u2026" });
+  } else if (detail?.error) {
+    body = /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "dpl-ib-readercenter", "data-testid": "reader-error", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "dpl-error dpl-ib-readererror", role: "alert", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("p", { children: [
+        "\u8BFB\u53D6\u6761\u76EE\u5931\u8D25\uFF1A",
+        detail.error
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { type: "button", className: "dpl-btn dpl-ib-retrybtn", onClick: () => void refreshDetail(), "data-testid": "reader-error-retry", children: "\u91CD\u8BD5" })
+    ] }) });
   } else if (!item) {
     body = /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "dpl-ib-readercenter", "data-testid": "reader-archived", children: "\u8BE5\u6761\u76EE\u5DF2\u79BB\u5F00\u6536\u4EF6\u7BB1" });
   } else {
@@ -107725,7 +108130,18 @@ function Reader({ api, selectedId, onMaterial, onChanged, onOpenVaultNote }) {
           }
         ) : null
       ] }),
-      isFailed ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "dpl-ib-readerfill", "data-testid": "reader-failed", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "dpl-ib-failedcard", children: [
+      saveError ? /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "dpl-error dpl-ib-saveerror", role: "alert", "data-testid": "save-note-error", children: [
+        "\u5B58\u4E3A\u7B14\u8BB0\u5931\u8D25\uFF1A",
+        saveError
+      ] }) : null,
+      saveOk ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "dpl-notice dpl-ib-savenote", "data-testid": "save-note-ok", children: "\u5DF2\u5B58\u4E3A\u7B14\u8BB0" }) : null,
+      isPending ? (
+        // 抓取中占位（fix A）：替代「普通未读 + 空正文 + 0 字警告」的错误观感。
+        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "dpl-ib-readercenter", "data-testid": "reader-pending", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "dpl-ib-pendview", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(LoaderCircle, { size: 20, className: "dpl-spin" }),
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { children: "\u6B63\u5728\u6293\u53D6\u5185\u5BB9\u2026\uFF08\u9996\u5B57\u8282 20s \u8D85\u65F6\uFF09" })
+        ] }) })
+      ) : isFailed ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "dpl-ib-readerfill", "data-testid": "reader-failed", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "dpl-ib-failedcard", children: [
         /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(TriangleExclamationPoint, { size: 30, className: "dpl-ib-warnicon" }),
         /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("h3", { children: "\u6293\u53D6\u5931\u8D25" }),
         /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("p", { className: "dpl-ib-failedmsg", "data-testid": "fetch-error-message", children: fetchError?.message ?? "\u672A\u77E5\u539F\u56E0" }),
@@ -107771,56 +108187,88 @@ function Reader({ api, selectedId, onMaterial, onChanged, onOpenVaultNote }) {
       ] })
     ] });
   }
+  const doneFailed = typeof doneResult === "string" && doneResult.startsWith("\u64CD\u4F5C\u5931\u8D25");
+  const doneMoving = doneResult === "moving";
   return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "dpl-pane dpl-ib-reader", children: [
     /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "dpl-ib-readerbody", children: body }),
-    item !== null && !isFailed && !isPdf && !isEpub ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(AuxRail, { headings, containerRef: contentScrollRef, onAskAi: askAi }) : null,
-    showDone ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "dpl-ib-donescrim", "data-testid": "done-dialog", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "dpl-ib-donedialog", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "dpl-ib-donedialoghead", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("h3", { children: "\u5904\u7406\u5B8C\u6210" }),
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
-          "button",
-          {
-            type: "button",
-            className: "dpl-icon-btn",
-            "aria-label": "\u5173\u95ED\u5904\u7406\u5B8C\u6210\u5F39\u5C42",
-            onClick: () => {
-              setShowDone(false);
-              setDoneResult(null);
-            },
-            "data-testid": "done-cancel",
-            children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(X, { size: 15 })
+    item !== null && !isFailed && !isPending && !isPdf && !isEpub ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(AuxRail, { headings, containerRef: contentScrollRef, onAskAi: askAi }) : null,
+    showDone ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+      "div",
+      {
+        className: "dpl-ib-donescrim",
+        "data-testid": "done-dialog",
+        onMouseDown: (event) => {
+          if (event.target === event.currentTarget) {
+            setShowDone(false);
+            setDoneResult(null);
           }
-        )
-      ] }),
-      item ? /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(import_jsx_runtime7.Fragment, { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("p", { className: "dpl-ib-donesub", children: "\u8FD9\u6761\u5185\u5BB9\u63A5\u4E0B\u6765\u53BB\u54EA\u91CC\uFF1F" }),
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "dpl-ib-donebtns", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
-            "button",
-            {
-              type: "button",
-              className: "dpl-btn dpl-primary-solid",
-              disabled: doneResult !== null,
-              onClick: () => void archive("library"),
-              "data-testid": "done-keep-library",
-              children: "\u4FDD\u7559\u5230\u8D44\u6599\u5E93"
-            }
-          ),
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
-            "button",
-            {
-              type: "button",
-              className: "dpl-btn dpl-ib-outlinebtn",
-              disabled: doneResult !== null,
-              onClick: () => void archive("trash"),
-              "data-testid": "done-to-trash",
-              children: "\u79FB\u5165\u56DE\u6536\u7AD9"
-            }
-          )
+        },
+        children: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "dpl-ib-donedialog", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "dpl-ib-donedialoghead", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("h3", { children: "\u5904\u7406\u5B8C\u6210" }),
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+              "button",
+              {
+                type: "button",
+                className: "dpl-icon-btn",
+                "aria-label": "\u5173\u95ED\u5904\u7406\u5B8C\u6210\u5F39\u5C42",
+                onClick: () => {
+                  setShowDone(false);
+                  setDoneResult(null);
+                },
+                "data-testid": "done-cancel",
+                children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(X, { size: 15 })
+              }
+            )
+          ] }),
+          item ? /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(import_jsx_runtime7.Fragment, { children: [
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("p", { className: "dpl-ib-donesub", children: "\u8FD9\u6761\u5185\u5BB9\u63A5\u4E0B\u6765\u53BB\u54EA\u91CC\uFF1F" }),
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "dpl-ib-donebtns", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+                "button",
+                {
+                  type: "button",
+                  className: "dpl-btn dpl-primary-solid",
+                  disabled: doneResult !== null && !doneFailed,
+                  onClick: () => void archive("library"),
+                  "data-testid": "done-keep-library",
+                  children: "\u4FDD\u7559\u5230\u8D44\u6599\u5E93"
+                }
+              ),
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+                "button",
+                {
+                  type: "button",
+                  className: "dpl-btn dpl-ib-outlinebtn",
+                  disabled: doneResult !== null && !doneFailed,
+                  onClick: () => void archive("trash"),
+                  "data-testid": "done-to-trash",
+                  children: "\u79FB\u5165\u56DE\u6536\u7AD9"
+                }
+              ),
+              doneFailed ? /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
+                "button",
+                {
+                  type: "button",
+                  className: "dpl-btn dpl-ib-retrybtn",
+                  onClick: () => void archive(doneTarget ?? "trash"),
+                  "data-testid": "done-retry",
+                  children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(RefreshCw, { size: 14 }),
+                    " \u91CD\u8BD5"
+                  ]
+                }
+              ) : null
+            ] })
+          ] }) : null,
+          doneMoving ? /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("p", { className: "dpl-ib-donemoving", "data-testid": "done-moving", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(LoaderCircle, { size: 12, className: "dpl-spin" }),
+            " \u5904\u7406\u4E2D\u2026"
+          ] }) : null,
+          doneResult !== null && !doneMoving ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("p", { className: "dpl-ib-doneresult" + (doneFailed ? " dpl-error" : ""), "data-testid": "done-result", children: doneResult }) : null
         ] })
-      ] }) : null,
-      doneResult !== null && doneResult !== "moving" ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("p", { className: "dpl-ib-doneresult", "data-testid": "done-result", children: doneResult }) : null
-    ] }) }) : null
+      }
+    ) : null
   ] });
 }
 
@@ -137642,6 +138090,9 @@ function ancestorsOf(path) {
   }
   return dirs;
 }
+function dirOf(path) {
+  return String(path ?? "").split("/").slice(0, -1).join("/");
+}
 function filterFiles(files, query, limit = 40) {
   const needle = String(query ?? "").trim().toLowerCase();
   if (needle === "") return [];
@@ -137718,13 +138169,16 @@ function sliceGraph(graph, keep, limit) {
   return { nodes, edges };
 }
 function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }) {
-  const [tabs, setTabs] = (0, import_react11.useState)(() => loadJson(TABS_KEY, []));
+  const [tabs, setTabs] = (0, import_react11.useState)(() => loadJson(TABS_KEY, []).map((tab) => ({
+    ...tab,
+    dirty: tab.dirty === true || tab.dirty == null && tab.draft != null
+  })));
   const [activeTabId, setActiveTabId] = (0, import_react11.useState)(() => loadJson(TABS_KEY + ".active", null));
   const [expanded, setExpanded] = (0, import_react11.useState)(() => new Set(loadJson(EXPANDED_KEY, [])));
   const [leftMode, setLeftMode] = (0, import_react11.useState)("tree");
   const [backlinksOpen, setBacklinksOpen] = (0, import_react11.useState)(false);
   const [sideData, setSideData] = (0, import_react11.useState)({ backlinks: [], unlinked: [], tags: [] });
-  const [graphData, setGraphData] = (0, import_react11.useState)(null);
+  const [graphFull, setGraphFull] = (0, import_react11.useState)(null);
   const [filterOpen, setFilterOpen] = (0, import_react11.useState)(false);
   const [filter, setFilter] = (0, import_react11.useState)("");
   const [sortKey, setSortKey] = (0, import_react11.useState)("name-asc");
@@ -137744,6 +138198,7 @@ function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }) {
   const [renamePreview, setRenamePreview] = (0, import_react11.useState)(null);
   const [moveTarget, setMoveTarget] = (0, import_react11.useState)(null);
   const [notice, setNotice] = (0, import_react11.useState)("");
+  const [noticeIsError, setNoticeIsError] = (0, import_react11.useState)(false);
   const [error, setError] = (0, import_react11.useState)("");
   const [stats, setStats] = (0, import_react11.useState)({ files: 0 });
   const [fileIndex, setFileIndex] = (0, import_react11.useState)([]);
@@ -137753,6 +138208,7 @@ function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }) {
   const readerRef = (0, import_react11.useRef)(null);
   const notePaneRef = (0, import_react11.useRef)(null);
   const dirty = tabs.some((tab) => tab.dirty);
+  const dirtyCount = tabs.filter((tab) => tab.dirty).length;
   (0, import_react11.useEffect)(() => {
     saveJson(TABS_KEY, tabs);
   }, [tabs]);
@@ -137762,7 +138218,11 @@ function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }) {
   (0, import_react11.useEffect)(() => {
     saveJson(EXPANDED_KEY, [...expanded]);
   }, [expanded]);
-  const tabSignature = tabs.map((tab) => `${tab.id}:${tab.sha}:${tab.dirty != null ? "d" : "c"}`).join("|");
+  const tabsRef = (0, import_react11.useRef)(tabs);
+  (0, import_react11.useEffect)(() => {
+    tabsRef.current = tabs;
+  }, [tabs]);
+  const tabSignature = tabs.map((tab) => `${tab.id}:${tab.sha}:${tab.dirty ? "d" : "c"}`).join("|");
   (0, import_react11.useEffect)(() => {
     if (tabs.length === 0) return void 0;
     let stopped = false;
@@ -137774,7 +138234,7 @@ function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }) {
           if (stopped || !stat || stat.sha === tab.sha) continue;
           const note = await api.vaultRead(tab.path);
           if (stopped) return;
-          if (tab.dirty != null) {
+          if (tab.dirty) {
             setConflict((current) => current?.path === tab.path ? current : {
               path: tab.path,
               tabId: tab.id,
@@ -137782,7 +138242,7 @@ function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }) {
               currentExcerpt: String(note.content ?? "").slice(0, 300)
             });
           } else {
-            setTabs((current) => current.map((item) => item.id === tab.id ? { ...item, content: note.content, sha: note.sha, title: note.title, tags: note.tags ?? [], wordCount: note.wordCount ?? 0, savedAt: null } : item));
+            setTabs((current) => current.map((item) => item.id === tab.id ? { ...item, content: note.content, sha: note.sha, title: note.title, tags: note.tags ?? [], wordCount: note.wordCount ?? 0, savedAt: null, draft: null, dirty: false } : item));
           }
         } catch {
         }
@@ -137846,9 +138306,17 @@ function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }) {
   }, [activeTab?.path, leftMode]);
   const flashNotice = (0, import_react11.useCallback)((message) => {
     setNotice(message);
+    setNoticeIsError(false);
     setTimeout(() => {
       setNotice((current) => current === message ? "" : current);
     }, 3500);
+  }, []);
+  const flashError = (0, import_react11.useCallback)((message) => {
+    setNotice(message);
+    setNoticeIsError(true);
+    setTimeout(() => {
+      setNotice((current) => current === message ? "" : current);
+    }, 8e3);
   }, []);
   const openPath = (0, import_react11.useCallback)(async (path, { forceNew = false } = {}) => {
     const existing = tabs.find((tab) => tab.path === path);
@@ -137865,11 +138333,17 @@ function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }) {
         name: path.split("/").pop(),
         content: note.content,
         draft: null,
+        dirty: false,
         sha: note.sha,
         title: note.title,
         tags: note.tags ?? [],
         wordCount: note.wordCount ?? 0,
-        savedAt: null
+        savedAt: null,
+        // fix G: editor prefs live on the tab so switching back restores the
+        // same view/lineNumbers/wrap without remounting the note pane.
+        view: "read",
+        lineNumbers: true,
+        wrap: true
       };
       setTabs((current) => [...current.filter((item) => item.id !== tab.id), tab]);
       setActiveTabId(tab.id);
@@ -137886,6 +138360,61 @@ function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }) {
       setError(String(cause?.message ?? cause));
     }
   }, [api, tabs, onMaterial]);
+  const reloadTab = (0, import_react11.useCallback)(async (tabId) => {
+    const tab = tabsRef.current.find((item) => item.id === tabId || item.path === tabId);
+    if (!tab) return;
+    clearTimeout(saveTimer.current);
+    try {
+      const note = await api.vaultRead(tab.path);
+      setTabs((current) => current.map((item) => item.id === tab.id ? {
+        ...item,
+        content: note.content,
+        draft: null,
+        dirty: false,
+        sha: note.sha,
+        title: note.title,
+        tags: note.tags ?? [],
+        wordCount: note.wordCount ?? 0,
+        savedAt: null
+      } : item));
+      setConflict((current) => current && (current.tabId === tab.id || current.path === tab.path) ? null : current);
+    } catch (cause) {
+      setError(String(cause?.message ?? cause));
+    }
+  }, [api]);
+  const saveConflictCopy = (0, import_react11.useCallback)(async (conflictInfo) => {
+    const tab = tabsRef.current.find((item) => item.id === conflictInfo.tabId || item.path === conflictInfo.path);
+    if (!tab) return;
+    const draft = tab.draft ?? tab.content;
+    const dir = dirOf(tab.path);
+    const stem = tab.name.replace(/\.md$/i, "");
+    try {
+      let copyPath = null;
+      for (let attempt = 1; attempt <= 8; attempt += 1) {
+        const suffix = attempt === 1 ? " \u526F\u672C" : ` \u526F\u672C ${attempt}`;
+        const candidate = (dir === "" ? "" : dir + "/") + stem + suffix + ".md";
+        const result = await api.vaultWrite({ path: candidate, content: draft, expectedSha: null });
+        if (!result.conflict) {
+          copyPath = result.path ?? candidate;
+          break;
+        }
+      }
+      if (!copyPath) {
+        flashError("\u526F\u672C\u8DEF\u5F84\u90FD\u88AB\u5360\u7528\uFF0C\u8BF7\u624B\u52A8\u53E6\u5B58");
+        return;
+      }
+      setConflict(null);
+      await reloadTab(tab.id);
+      await openPath(copyPath);
+      flashNotice(`\u8349\u7A3F\u5DF2\u53E6\u5B58\uFF1A${copyPath}`);
+      void refreshIndex();
+    } catch (cause) {
+      flashError(String(cause?.message ?? cause));
+    }
+  }, [api, reloadTab, openPath, refreshIndex, flashError, flashNotice]);
+  const setTabPrefs = (0, import_react11.useCallback)((tabId, patch) => {
+    setTabs((current) => current.map((tab) => tab.id === tabId ? { ...tab, ...patch } : tab));
+  }, []);
   (0, import_react11.useEffect)(() => {
     if (!noteRequest?.path) return;
     void openPath(noteRequest.path).finally(() => {
@@ -137919,7 +138448,7 @@ function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }) {
     }
   }, [leftMode]);
   const setDraft = (0, import_react11.useCallback)((tabId, draft) => {
-    setTabs((current) => current.map((tab) => tab.id === tabId ? { ...tab, draft } : tab));
+    setTabs((current) => current.map((tab) => tab.id === tabId ? { ...tab, draft, dirty: draft != null } : tab));
   }, []);
   const closeTab = (0, import_react11.useCallback)(async (tabId) => {
     const tab = tabs.find((item) => item.id === tabId);
@@ -137932,18 +138461,19 @@ function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }) {
       return next;
     });
   }, [tabs, activeTabId]);
-  const tabsRef = (0, import_react11.useRef)(tabs);
-  (0, import_react11.useEffect)(() => {
-    tabsRef.current = tabs;
-  }, [tabs]);
   const saveTimer = (0, import_react11.useRef)(null);
+  const activeTabIdAtRender = (0, import_react11.useRef)(null);
+  activeTabIdAtRender.current = activeTab?.id ?? null;
   (0, import_react11.useEffect)(() => {
     if (!activeTab?.dirty) return void 0;
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
       void flushSave(activeTab.id);
     }, 800);
-    return () => clearTimeout(saveTimer.current);
+    return () => {
+      clearTimeout(saveTimer.current);
+      if (activeTab?.dirty && activeTabIdAtRender.current !== activeTab.id) void flushSave(activeTab.id);
+    };
   }, [activeTab?.draft, activeTab?.id]);
   const flushSave = (0, import_react11.useCallback)(async (tabId, { force = false } = {}) => {
     const tab = tabsRef.current.find((item) => item.id === tabId);
@@ -137951,7 +138481,8 @@ function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }) {
     try {
       const result = await api.vaultWrite({ path: tab.path, content: tab.draft ?? tab.content, expectedSha: force ? void 0 : tab.sha });
       if (result.conflict) {
-        setConflict({ path: tab.path, currentSha: result.currentSha, currentExcerpt: result.currentExcerpt });
+        if (!tabsRef.current.find((item) => item.id === tabId)?.dirty) return;
+        setConflict({ path: tab.path, tabId: tab.id, currentSha: result.currentSha, currentExcerpt: result.currentExcerpt });
         return;
       }
       setTabs((current) => current.map((item) => item.id === tabId ? {
@@ -137959,9 +138490,11 @@ function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }) {
         sha: result.sha,
         content: item.draft ?? item.content,
         draft: null,
+        dirty: false,
         savedAt: (/* @__PURE__ */ new Date()).toLocaleTimeString("zh-Hans-CN", { hour: "2-digit", minute: "2-digit" })
       } : item));
       setConflict(null);
+      setGraphFull(null);
     } catch (cause) {
       setError(String(cause?.message ?? cause));
     }
@@ -137979,15 +138512,26 @@ function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }) {
       setError(String(cause?.message ?? cause));
     }
   }, [api, searchQuery]);
+  const graphData = (0, import_react11.useMemo)(
+    () => graphFull ? activeTab?.path ? neighborhoodOf(graphFull, activeTab.path, 2, 300) : capByDegree(graphFull, 300) : null,
+    [graphFull, activeTab?.path]
+  );
+  const graphFetching = (0, import_react11.useRef)(false);
   const loadGraph = (0, import_react11.useCallback)(async () => {
-    if (graphData) return graphData;
-    const full = await api.vaultGraph();
-    const scoped = activeTab ? neighborhoodOf(full, activeTab.path, 2, 300) : capByDegree(full, 300);
-    setGraphData(scoped);
-    return scoped;
-  }, [api, graphData, activeTab?.path]);
+    if (graphFull || graphFetching.current) return;
+    graphFetching.current = true;
+    try {
+      setGraphFull(await api.vaultGraph());
+    } finally {
+      graphFetching.current = false;
+    }
+  }, [api, graphFull]);
+  (0, import_react11.useEffect)(() => {
+    if (leftMode === "graph" && !graphFull) void loadGraph();
+  }, [leftMode, graphFull, loadGraph]);
   const switchLeft = (0, import_react11.useCallback)(async (mode) => {
     setLeftMode((current) => current === mode ? "tree" : mode);
+    if (mode !== "tree") setFilterOpen(false);
     if (mode === "graph") {
       try {
         await loadGraph();
@@ -138006,11 +138550,12 @@ function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }) {
   const submitCreate = (0, import_react11.useCallback)(async () => {
     if (!creating) return;
     try {
+      const name2 = creating.name.trim() || "\u672A\u547D\u540D";
+      const dir = (creating.dir ?? "").trim();
       if (creating.kind === "dir") {
-        await api.vaultCreateDir({ dir: creating.path });
+        await api.vaultCreateDir({ dir: dir === "" ? name2 : `${dir}/${name2}` });
       } else {
-        const name2 = creating.name.trim() || "\u672A\u547D\u540D";
-        const path = (creating.dir === "" ? name2 : `${creating.dir}/${name2}`) + ".md";
+        const path = (dir === "" ? name2 : `${dir}/${name2}`) + ".md";
         const result = await api.vaultWrite({ path, content: `---
 id: ${crypto.randomUUID()}
 title: ${name2}
@@ -138021,7 +138566,7 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
 
 `, expectedSha: null, createOnly: true });
         if (result.conflict) {
-          setNotice(`\u5DF2\u5B58\u5728\uFF1A${path}`);
+          setCreating({ ...creating, error: `\u5DF2\u5B58\u5728\uFF1A${path}` });
           return;
         }
         void openPath(path);
@@ -138029,9 +138574,10 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
       setCreating(null);
       await refreshIndex();
     } catch (cause) {
-      setNotice(String(cause?.message ?? cause));
+      setCreating({ ...creating, error: String(cause?.message ?? cause) });
+      flashError(String(cause?.message ?? cause));
     }
-  }, [creating, api, refreshIndex, openPath]);
+  }, [creating, api, refreshIndex, openPath, flashError]);
   const startRename = (0, import_react11.useCallback)((path) => {
     setRenaming({ path, name: path.split("/").pop() });
     setRenamePreview(null);
@@ -138052,40 +138598,43 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
     if (!renaming) return;
     try {
       const result = await api.vaultRename({ from: renaming.path, to: nextPath, updateLinks: true });
-      setNotice(`\u5DF2\u91CD\u547D\u540D${result.updatedLinks > 0 ? `\uFF0C\u66F4\u65B0 ${result.updatedLinks} \u5904\u94FE\u63A5` : ""}`);
+      flashNotice(`\u5DF2\u91CD\u547D\u540D${result.updatedLinks > 0 ? `\uFF0C\u66F4\u65B0 ${result.updatedLinks} \u5904\u94FE\u63A5` : ""}`);
       setRenaming(null);
       setTabs((current) => current.map((tab) => tab.path === renaming.path ? { ...tab, path: result.path, name: result.path.split("/").pop(), id: result.path } : tab));
       if (activeTabId === renaming.path) setActiveTabId(result.path);
+      setGraphFull(null);
       await refreshIndex();
     } catch (cause) {
-      setNotice(String(cause?.message ?? cause));
+      flashError(String(cause?.message ?? cause));
     }
-  }, [renaming, api, refreshIndex, activeTabId]);
+  }, [renaming, api, refreshIndex, activeTabId, flashNotice, flashError]);
   const submitMove = (0, import_react11.useCallback)(async (dir) => {
     if (!moveTarget) return;
     const to = dir === "" ? moveTarget.name : `${dir}/${moveTarget.name}`;
     try {
       const result = await api.vaultRename({ from: moveTarget.path, to, updateLinks: moveTarget.path.toLowerCase().endsWith(".md") });
-      setNotice(`\u5DF2\u79FB\u52A8\u5230 ${dir || "\u6839\u76EE\u5F55"}${result.updatedLinks > 0 ? `\uFF0C\u66F4\u65B0 ${result.updatedLinks} \u5904\u94FE\u63A5` : ""}`);
+      flashNotice(`\u5DF2\u79FB\u52A8\u5230 ${dir || "\u6839\u76EE\u5F55"}${result.updatedLinks > 0 ? `\uFF0C\u66F4\u65B0 ${result.updatedLinks} \u5904\u94FE\u63A5` : ""}`);
       setMoveTarget(null);
       setTabs((current) => current.map((tab) => tab.path === moveTarget.path ? { ...tab, path: result.path, name: result.path.split("/").pop(), id: result.path } : tab));
       if (activeTabId === moveTarget.path) setActiveTabId(result.path);
+      setGraphFull(null);
       await refreshIndex();
     } catch (cause) {
-      setNotice(String(cause?.message ?? cause));
+      flashError(String(cause?.message ?? cause));
     }
-  }, [moveTarget, api, refreshIndex, activeTabId]);
+  }, [moveTarget, api, refreshIndex, activeTabId, flashNotice, flashError]);
   const trashPath = (0, import_react11.useCallback)(async (path, name2) => {
     if (!window.confirm(`\u628A\u300C${name2}\u300D\u79FB\u5165\u56DE\u6536\u7AD9\uFF1F\u53EF\u5728 Droplets \u56DE\u6536\u7AD9\u6062\u590D\u3002`)) return;
     try {
       await api.vaultDelete({ path });
       setTabs((current) => current.filter((tab) => tab.path !== path));
-      setNotice("\u5DF2\u79FB\u5165\u56DE\u6536\u7AD9");
+      flashNotice("\u5DF2\u79FB\u5165\u56DE\u6536\u7AD9");
+      setGraphFull(null);
       await refreshIndex();
     } catch (cause) {
-      setNotice(String(cause?.message ?? cause));
+      flashError(String(cause?.message ?? cause));
     }
-  }, [api, refreshIndex]);
+  }, [api, refreshIndex, flashNotice, flashError]);
   const duplicatePath = (0, import_react11.useCallback)(async (path) => {
     try {
       if (path.toLowerCase().endsWith(".md")) {
@@ -138095,12 +138644,13 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
         const dir = path.split("/").slice(0, -1).join("/");
         await api.vaultCopyDirTo({ from: path, toDir: dir });
       }
-      setNotice("\u5DF2\u521B\u5EFA\u526F\u672C");
+      flashNotice("\u5DF2\u521B\u5EFA\u526F\u672C");
+      setGraphFull(null);
       await refreshIndex();
     } catch (cause) {
-      setNotice(String(cause?.message ?? cause));
+      flashError(String(cause?.message ?? cause));
     }
-  }, [api, refreshIndex, openPath]);
+  }, [api, refreshIndex, openPath, flashNotice, flashError]);
   const pasteInto = (0, import_react11.useCallback)(async (dir) => {
     if (!clipboard) return;
     const name2 = clipboard.path.split("/").pop();
@@ -138110,20 +138660,21 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
         const result = await api.vaultRename({ from: clipboard.path, to, updateLinks: clipboard.path.toLowerCase().endsWith(".md") });
         setTabs((current) => current.map((tab) => tab.path === clipboard.path ? { ...tab, path: result.path, name: result.path.split("/").pop(), id: result.path } : tab));
         if (activeTabId === clipboard.path) setActiveTabId(result.path);
-        setNotice("\u5DF2\u7C98\u8D34\uFF08\u79FB\u52A8\uFF09");
+        flashNotice("\u5DF2\u7C98\u8D34\uFF08\u79FB\u52A8\uFF09");
+        setGraphFull(null);
       } else if (clipboard.path.toLowerCase().endsWith(".md")) {
         await api.vaultCopyTo({ from: clipboard.path, toDir: dir });
-        setNotice("\u5DF2\u7C98\u8D34\uFF08\u590D\u5236\uFF09");
+        flashNotice("\u5DF2\u7C98\u8D34\uFF08\u590D\u5236\uFF09");
       } else {
         await api.vaultCopyDirTo({ from: clipboard.path, toDir: dir });
-        setNotice("\u5DF2\u7C98\u8D34\uFF08\u590D\u5236\u6587\u4EF6\u5939\uFF09");
+        flashNotice("\u5DF2\u7C98\u8D34\uFF08\u590D\u5236\u6587\u4EF6\u5939\uFF09");
       }
       setClipboard(null);
       await refreshIndex();
     } catch (cause) {
-      setNotice(String(cause?.message ?? cause));
+      flashError(String(cause?.message ?? cause));
     }
-  }, [clipboard, api, refreshIndex, activeTabId]);
+  }, [clipboard, api, refreshIndex, activeTabId, flashNotice, flashError]);
   const linkMention = (0, import_react11.useCallback)(async (mention) => {
     if (!activeTab) return;
     try {
@@ -138133,37 +138684,37 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
       const pattern = new RegExp(`(^|[^\\[\\w])${stem.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}($|[^\\w])`);
       const match = pattern.exec(text2);
       if (!match) {
-        setNotice(`\u300C${mention.title}\u300D\u91CC\u6CA1\u627E\u5230\u300C${stem}\u300D\u539F\u6587`);
+        flashError(`\u300C${mention.title}\u300D\u91CC\u6CA1\u627E\u5230\u300C${stem}\u300D\u539F\u6587`);
         return;
       }
       const at = match.index + match[1].length;
       const next = text2.slice(0, at) + `[[${stem}]]` + text2.slice(at);
       const write = await api.vaultWrite({ path: mention.path, content: next, expectedSha: note.sha });
       if (write.conflict) {
-        setNotice(`\u300C${mention.title}\u300D\u6709\u51B2\u7A81\uFF0C\u672A\u6539\u5199`);
+        flashError(`\u300C${mention.title}\u300D\u6709\u51B2\u7A81\uFF0C\u672A\u6539\u5199`);
         return;
       }
-      setNotice(`\u5DF2\u5728\u300C${mention.title}\u300D\u5EFA\u7ACB\u94FE\u63A5`);
+      flashNotice(`\u5DF2\u5728\u300C${mention.title}\u300D\u5EFA\u7ACB\u94FE\u63A5`);
       await loadSideData(activeTab.path);
     } catch (cause) {
-      setNotice(String(cause?.message ?? cause));
+      flashError(String(cause?.message ?? cause));
     }
-  }, [activeTab, api, loadSideData]);
+  }, [activeTab, api, loadSideData, flashNotice, flashError]);
   const askAiNote = (0, import_react11.useCallback)(async (path) => {
     try {
       const note = await api.vaultRead(path);
       onMaterial({ space: "vault", path: note.path, title: note.title, content: note.content.slice(0, 6e4) }, { reveal: true });
     } catch (cause) {
-      setNotice(String(cause?.message ?? cause));
+      flashError(String(cause?.message ?? cause));
     }
-  }, [api, onMaterial]);
+  }, [api, onMaterial, flashError]);
   const askWholeLibrary = (0, import_react11.useCallback)(() => {
     const listing = (fileIndexCache ?? fileIndex).map((file, index2) => `${index2 + 1}. ${file.path}`).join("\n");
     onMaterial({ space: "vault", title: "\u77E5\u8BC6\u5E93\u6574\u5E93\u95EE\u7B54", content: listing.slice(0, 3e5) }, { reveal: true });
   }, [fileIndex, onMaterial]);
   const exportActive = (0, import_react11.useCallback)(async (format) => {
     if (!activeTab) {
-      setNotice("\u5148\u6253\u5F00\u4E00\u7BC7\u7B14\u8BB0");
+      flashError("\u5148\u6253\u5F00\u4E00\u7BC7\u7B14\u8BB0");
       return;
     }
     const text2 = activeTab.draft ?? activeTab.content;
@@ -138176,12 +138727,12 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
       anchor2.download = `${stem}.md`;
       anchor2.click();
       URL.revokeObjectURL(url2);
-      setNotice("\u5DF2\u5BFC\u51FA .md");
+      flashNotice("\u5DF2\u5BFC\u51FA .md");
       return;
     }
     const rendered = readerRef.current?.querySelector(".dpl-vault2-body");
     if (!rendered) {
-      setNotice("\u8BF7\u5207\u5230\u9605\u8BFB\u89C6\u56FE\u518D\u5BFC\u51FA");
+      flashError("\u8BF7\u5207\u5230\u9605\u8BFB\u89C6\u56FE\u518D\u5BFC\u51FA");
       return;
     }
     const html3 = `<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>${escapeHtml2(stem)}</title><style>body{max-width:720px;margin:40px auto;padding:0 24px;font:15px/1.75 -apple-system,'PingFang SC',sans-serif;color:#1a1a1a}h1,h2,h3{line-height:1.4}pre{background:#f5f5f5;padding:12px;border-radius:8px;overflow:auto}code{background:#f5f5f5;border-radius:4px;padding:1px 5px}img{max-width:100%}blockquote{border-left:3px solid #ddd;margin:0;padding:2px 14px;color:#555}table{border-collapse:collapse}th,td{border:1px solid #ddd;padding:5px 10px}@media print{body{margin:0}}</style></head><body>${rendered.innerHTML}</body></html>`;
@@ -138200,11 +138751,11 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
           frame2.contentWindow.focus();
           frame2.contentWindow.print();
         } catch {
-          setNotice("\u6253\u5370\u9762\u677F\u4E0D\u53EF\u7528\uFF0C\u8BF7\u7528\u5BFC\u51FA HTML");
+          flashError("\u6253\u5370\u9762\u677F\u4E0D\u53EF\u7528\uFF0C\u8BF7\u7528\u5BFC\u51FA HTML");
         }
         setTimeout(() => frame2.remove(), 6e4);
       };
-      setNotice("\u5DF2\u6253\u5F00\u6253\u5370\u9762\u677F\uFF08\u53EF\u9009\u300C\u5B58\u50A8\u4E3A PDF\u300D\uFF09");
+      flashNotice("\u5DF2\u6253\u5F00\u6253\u5370\u9762\u677F\uFF08\u53EF\u9009\u300C\u5B58\u50A8\u4E3A PDF\u300D\uFF09");
       return;
     }
     const blob = new Blob([html3], { type: "text/html;charset=utf-8" });
@@ -138214,11 +138765,13 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
     anchor.download = `${stem}.html`;
     anchor.click();
     URL.revokeObjectURL(url);
-    setNotice("\u5DF2\u5BFC\u51FA .html");
-  }, [activeTab]);
+    flashNotice("\u5DF2\u5BFC\u51FA .html");
+  }, [activeTab, flashNotice, flashError]);
   const paletteActions = (0, import_react11.useMemo)(() => [
-    { id: "new-note", label: "\u65B0\u5EFA\u7B14\u8BB0", run: () => setCreating({ kind: "note", name: "", dir: activeTab ? ancestorsOf(activeTab.path)[0] ?? "" : "" }) },
-    { id: "new-folder", label: "\u65B0\u5EFA\u6587\u4EF6\u5939", run: () => setCreating({ kind: "dir", name: "", dir: activeTab ? ancestorsOf(activeTab.path)[0] ?? "" : "" }) },
+    // fix J: default to the active note's own directory (was ancestorsOf()[0] —
+    // the top-level dir, one level too shallow).
+    { id: "new-note", label: "\u65B0\u5EFA\u7B14\u8BB0", run: () => setCreating({ kind: "note", name: "", dir: activeTab ? dirOf(activeTab.path) : "" }) },
+    { id: "new-folder", label: "\u65B0\u5EFA\u6587\u4EF6\u5939", run: () => setCreating({ kind: "dir", name: "", dir: activeTab ? dirOf(activeTab.path) : "" }) },
     { id: "search", label: "\u5168\u5E93\u641C\u7D22", run: () => setSearchOpen(true) },
     { id: "graph", label: "\u56FE\u8C31", run: () => void switchLeft("graph") },
     { id: "tags", label: "\u6807\u7B7E\u4E91", run: () => void switchLeft("tags") },
@@ -138239,13 +138792,13 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
       const key = event.key.toLowerCase();
       if (key === "p" && !event.shiftKey) {
         event.preventDefault();
-        setQuick({ query: "" });
+        setQuick({ query: "", active: 0 });
       } else if (key === "f" && event.shiftKey) {
         event.preventDefault();
         setSearchOpen(true);
       } else if (key === "p" && event.shiftKey) {
         event.preventDefault();
-        setPalette({ query: "" });
+        setPalette({ query: "", active: 0 });
       }
     };
     window.addEventListener("keydown", onKey);
@@ -138263,6 +138816,14 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
     () => filterOpen && filter.trim() !== "" ? filterFiles(fileIndex, filter, 30) : [],
     [filterOpen, filter, fileIndex]
   );
+  const vaultDirs = (0, import_react11.useMemo)(() => {
+    const dirs = /* @__PURE__ */ new Set();
+    for (const file of fileIndex) {
+      const dir = dirOf(file.path);
+      if (dir !== "") dirs.add(dir);
+    }
+    return [...dirs].sort((a2, b) => a2.localeCompare(b, "zh-Hans-CN"));
+  }, [fileIndex]);
   const graphLayout = (0, import_react11.useMemo)(
     () => leftMode === "graph" && graphData ? computeLayout(graphData, 640, 760) : null,
     [leftMode, graphData]
@@ -138309,30 +138870,31 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
       const result = await api.vaultWriteAttachment?.({ bytes: base64, name: name2 });
       return result?.path ?? null;
     } catch (cause) {
-      setNotice(String(cause?.message ?? cause));
+      flashError(String(cause?.message ?? cause));
       return null;
     }
-  }, [api]);
+  }, [api, flashError]);
   const openTrash = (0, import_react11.useCallback)(async () => {
     try {
       const outcome = await api.vaultTrashList();
       setTrash(outcome.entries ?? []);
     } catch (cause) {
-      setNotice(String(cause?.message ?? cause));
+      flashError(String(cause?.message ?? cause));
     }
-  }, [api]);
+  }, [api, flashError]);
   const restoreTrash = (0, import_react11.useCallback)(async (id2) => {
     try {
       const result = await api.vaultTrashRestore(id2);
-      setNotice(`\u5DF2\u6062\u590D\uFF1A${result.restored}`);
+      flashNotice(`\u5DF2\u6062\u590D\uFF1A${result.restored}`);
       setTrash((current) => (current ?? []).filter((entry) => entry.id !== id2));
       await refreshIndex();
     } catch (cause) {
-      setNotice(String(cause?.message ?? cause));
+      flashError(String(cause?.message ?? cause));
     }
-  }, [api, refreshIndex]);
+  }, [api, refreshIndex, flashNotice, flashError]);
   const captured = (0, import_react11.useRef)(false);
-  const captureSelection = () => {
+  const captureSelection = (event) => {
+    if (event?.target?.closest?.(".cm-editor")) return;
     if (captured.current) return;
     const selection = String(window.getSelection?.() ?? "").trim();
     captured.current = true;
@@ -138369,7 +138931,11 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
         TreeToolbar,
         {
           filterOpen,
-          onToggleFilter: () => setFilterOpen(!filterOpen),
+          onToggleFilter: () => {
+            const next = !filterOpen;
+            setFilterOpen(next);
+            if (next && leftMode !== "tree") setLeftMode("tree");
+          },
           sortKey,
           onSort: (key) => {
             setSortKey(key);
@@ -138387,8 +138953,8 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
             else flashNotice("\u5F53\u524D\u6CA1\u6709\u6253\u5F00\u7684\u7B14\u8BB0\u53EF\u5B9A\u4F4D");
           },
           onCollapseAll: () => setExpanded(/* @__PURE__ */ new Set()),
-          onNewNote: () => setCreating({ kind: "note", name: "", dir: activeTab ? ancestorsOf(activeTab.path)[0] ?? "" : "" }),
-          onNewFolder: () => setCreating({ kind: "dir", name: "", dir: activeTab ? ancestorsOf(activeTab.path)[0] ?? "" : "" })
+          onNewNote: () => setCreating({ kind: "note", name: "", dir: activeTab ? dirOf(activeTab.path) : "" }),
+          onNewFolder: () => setCreating({ kind: "dir", name: "", dir: activeTab ? dirOf(activeTab.path) : "" })
         }
       ),
       filterOpen ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-filter", children: [
@@ -138511,30 +139077,34 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
             hit.excerpt ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { dangerouslySetInnerHTML: { __html: highlightSnippet(hit.excerpt) } }) : null
           ] }, hit.path)),
           searchResults.results.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-empty", children: "\u65E0\u7ED3\u679C" }) : null
-        ] }) : activeTab ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
-          NoteReadPane,
-          {
-            ref: notePaneRef,
-            tab: activeTab,
-            onDraft: (draft) => setDraft(activeTab.id, draft),
-            onSave: () => void flushSave(activeTab.id),
-            onDiscard: () => setDraft(activeTab.id, null),
-            onWikilink: onVaultLink,
-            onMaterial,
-            onOutlineChange: setEditOutline,
-            onEditorScroll: (index2) => {
-              setEditorScrollTick((tick) => tick + 1);
-              setEditActive(typeof index2 === "number" ? index2 : -1);
-            },
-            resolveImage: resolveVaultImage,
-            pasteImage: pasteVaultImage,
-            noteFiles: fileIndex,
-            readerRef,
-            backlinksOpen,
-            onToggleBacklinks: () => setBacklinksOpen(!backlinksOpen),
-            onExport: (format) => void exportActive(format)
-          },
-          activeTab.id
+        ] }) : activeTab ? (
+          // Fix G: no per-tab key — the pane persists across tab switches so
+          // view/scroll survive; text loads through the setDoc effect below.
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+            NoteReadPane,
+            {
+              ref: notePaneRef,
+              tab: activeTab,
+              onPrefChange: (patch) => setTabPrefs(activeTab.id, patch),
+              onDraft: (draft) => setDraft(activeTab.id, draft),
+              onSave: () => void flushSave(activeTab.id),
+              onDiscard: () => setDraft(activeTab.id, null),
+              onWikilink: onVaultLink,
+              onMaterial,
+              onOutlineChange: setEditOutline,
+              onEditorScroll: (index2) => {
+                setEditorScrollTick((tick) => tick + 1);
+                setEditActive(typeof index2 === "number" ? index2 : -1);
+              },
+              resolveImage: resolveVaultImage,
+              pasteImage: pasteVaultImage,
+              noteFiles: fileIndex,
+              readerRef,
+              backlinksOpen,
+              onToggleBacklinks: () => setBacklinksOpen(!backlinksOpen),
+              onExport: (format) => void exportActive(format)
+            }
+          )
         ) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-empty dpl-vault2-readerempty", children: "\u5728\u5DE6\u4FA7\u9009\u62E9\u4E00\u7BC7\u7B14\u8BB0\u5F00\u59CB\u9605\u8BFB" }),
         backlinksOpen && activeTab && !searchResults ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-bldrawer", "data-testid": "backlinks-drawer", children: [
           /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-bldrawhead", children: [
@@ -138568,13 +139138,20 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
       /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-statusbar", children: [
         /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { children: activeTab ? `${activeTab.wordCount.toLocaleString()} \u5B57` : `${stats.files} \u7BC7\u7B14\u8BB0` }),
         /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { children: activeTab?.dirty ? "\u672A\u4FDD\u5B58" : activeTab?.savedAt ? `\u5DF2\u4FDD\u5B58 ${activeTab.savedAt}` : "" }),
+        dirtyCount > 1 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { className: "dpl-vault2-statusbadge", children: [
+          dirtyCount,
+          " \u4E2A\u672A\u4FDD\u5B58"
+        ] }) : null,
         /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("button", { type: "button", className: "dpl-vault2-statuslink", onClick: () => setBacklinksOpen(!backlinksOpen), children: [
           sideData.backlinks.length,
           " \u53CD\u94FE"
         ] }),
-        notice ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { className: "dpl-vault2-statusnotice", children: [
+        notice ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { className: "dpl-vault2-statusnotice" + (noticeIsError ? " is-error" : ""), children: [
           notice,
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", onClick: () => setNotice(""), children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(X, { size: 11 }) })
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", onClick: () => {
+            setNotice("");
+            setNoticeIsError(false);
+          }, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(X, { size: 11 }) })
         ] }) : null,
         error ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { className: "dpl-vault2-statuserror", children: [
           error,
@@ -138604,24 +139181,49 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
           autoFocus: true,
           placeholder: "\u5FEB\u901F\u5207\u6362\uFF1A\u8F93\u5165\u6587\u4EF6\u540D\u2026",
           value: quick.query,
-          onChange: (event) => setQuick({ query: event.target.value }),
+          onChange: (event) => setQuick({ query: event.target.value, active: 0 }),
           onKeyDown: (event) => {
-            if (event.key === "Escape") setQuick(null);
-            if (event.key === "Enter" && quickResults[0]) {
+            if (event.key === "Escape") {
               setQuick(null);
-              void openPath(quickResults[0].path);
+              return;
+            }
+            if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+              if (quickResults.length === 0) return;
+              event.preventDefault();
+              const delta = event.key === "ArrowDown" ? 1 : -1;
+              const count2 = quickResults.length;
+              const next = (((quick.active ?? 0) + delta) % count2 + count2) % count2;
+              setQuick({ ...quick, active: next });
+              window.requestAnimationFrame?.(() => {
+                document.querySelector('[data-testid="vault-quicklist"] button.is-active')?.scrollIntoView?.({ block: "nearest" });
+              });
+              return;
+            }
+            if (event.key === "Enter" && quickResults[quick.active ?? 0]) {
+              const file = quickResults[quick.active ?? 0];
+              setQuick(null);
+              void openPath(file.path);
             }
           }
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-quicklist", children: [
-        quickResults.map((file, index2) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("button", { type: "button", className: index2 === 0 ? "is-first" : "", onClick: () => {
-          setQuick(null);
-          void openPath(file.path);
-        }, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-truncate", children: file.name.replace(/\.md$/i, "") }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-vault2-filedir", children: file.path })
-        ] }, file.path)),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-quicklist", "data-testid": "vault-quicklist", children: [
+        quickResults.map((file, index2) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
+          "button",
+          {
+            type: "button",
+            className: index2 === (quick.active ?? 0) ? "is-active" : "",
+            onClick: () => {
+              setQuick(null);
+              void openPath(file.path);
+            },
+            children: [
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-truncate", children: file.name.replace(/\.md$/i, "") }),
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-vault2-filedir", children: file.path })
+            ]
+          },
+          file.path
+        )),
         quick && quick.query.trim() !== "" && quickResults.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-empty", children: "\u65E0\u5339\u914D" }) : null
       ] })
     ] }) }) : null,
@@ -138632,22 +139234,46 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
           autoFocus: true,
           placeholder: "\u547D\u4EE4\uFF1A\u8F93\u5165\u540D\u79F0\u2026",
           value: palette.query,
-          onChange: (event) => setPalette({ query: event.target.value }),
+          onChange: (event) => setPalette({ query: event.target.value, active: 0 }),
           onKeyDown: (event) => {
-            if (event.key === "Escape") setPalette(null);
-            if (event.key === "Enter" && paletteResults[0]) {
-              const action = paletteResults[0];
+            if (event.key === "Escape") {
+              setPalette(null);
+              return;
+            }
+            if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+              if (paletteResults.length === 0) return;
+              event.preventDefault();
+              const delta = event.key === "ArrowDown" ? 1 : -1;
+              const count2 = paletteResults.length;
+              const next = (((palette.active ?? 0) + delta) % count2 + count2) % count2;
+              setPalette({ ...palette, active: next });
+              window.requestAnimationFrame?.(() => {
+                document.querySelector('[data-testid="vault-palettelist"] button.is-active')?.scrollIntoView?.({ block: "nearest" });
+              });
+              return;
+            }
+            if (event.key === "Enter" && paletteResults[palette.active ?? 0]) {
+              const action = paletteResults[palette.active ?? 0];
               setPalette(null);
               action.run();
             }
           }
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-quicklist", children: [
-        paletteResults.map((action, index2) => /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: index2 === 0 ? "is-first" : "", onClick: () => {
-          setPalette(null);
-          action.run();
-        }, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-truncate", children: action.label }) }, action.id)),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-vault2-quicklist", "data-testid": "vault-palettelist", children: [
+        paletteResults.map((action, index2) => /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+          "button",
+          {
+            type: "button",
+            className: index2 === (palette.active ?? 0) ? "is-active" : "",
+            onClick: () => {
+              setPalette(null);
+              action.run();
+            },
+            children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "dpl-truncate", children: action.label })
+          },
+          action.id
+        )),
         palette && palette.query.trim() !== "" && paletteResults.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-empty", children: "\u65E0\u5339\u914D\u547D\u4EE4" }) : null
       ] })
     ] }) }) : null,
@@ -138680,10 +139306,13 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
       conflict.currentExcerpt ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("blockquote", { className: "dpl-conflict-excerpt", children: conflict.currentExcerpt }) : null,
       /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-form-row", children: [
         /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "dpl-btn", onClick: () => {
-          const path = conflict.path;
+          const target = conflict.tabId ?? conflict.path;
           setConflict(null);
-          void openPath(path);
+          void reloadTab(target);
         }, children: "\u91CD\u8F7D" }),
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "dpl-btn", onClick: () => {
+          void saveConflictCopy(conflict);
+        }, children: "\u53E6\u5B58\u526F\u672C" }),
         /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "dpl-btn is-danger", onClick: () => {
           const tabId = conflict.tabId ?? activeTabId;
           setConflict(null);
@@ -138695,7 +139324,17 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
       /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-form-col", children: [
         /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-field", children: [
           /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { children: "\u4F4D\u7F6E" }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("input", { value: creating.dir === "" ? "(vault \u6839)" : creating.dir, readOnly: true })
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+            "input",
+            {
+              value: creating.dir ?? "",
+              placeholder: "(vault \u6839)",
+              list: "vault-dirs",
+              spellCheck: false,
+              onChange: (event) => setCreating({ ...creating, dir: event.target.value, error: null })
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("datalist", { id: "vault-dirs", children: vaultDirs.map((dir) => /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("option", { value: dir }, dir)) })
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-field", children: [
           /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { children: "\u540D\u79F0" }),
@@ -138704,13 +139343,14 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
             {
               autoFocus: true,
               value: creating.name,
-              onChange: (event) => setCreating({ ...creating, name: event.target.value }),
+              onChange: (event) => setCreating({ ...creating, name: event.target.value, error: null }),
               onKeyDown: (event) => {
                 if (event.key === "Enter") void submitCreate();
               }
             }
           )
-        ] })
+        ] }),
+        creating.error ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { className: "dpl-dialog-error", children: creating.error }) : null
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dpl-form-row dpl-end", children: [
         /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "dpl-btn", onClick: () => setCreating(null), children: "\u53D6\u6D88" }),
@@ -138798,14 +139438,15 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
           cut: (path) => setClipboard({ mode: "cut", path, name: path.split("/").pop() }),
           duplicate: (path) => void duplicatePath(path),
           copyAbs: (path) => {
-            void api.vaultCopyPath({ path, relative: false }).then(() => setNotice("\u5DF2\u590D\u5236\u8DEF\u5F84")).catch((cause) => setNotice(String(cause?.message ?? cause)));
+            void api.vaultCopyPath({ path, relative: false }).then(() => flashNotice("\u5DF2\u590D\u5236\u8DEF\u5F84")).catch((cause) => flashError(String(cause?.message ?? cause)));
           },
           copyRel: (path) => {
-            void api.vaultCopyPath({ path, relative: true }).then(() => setNotice("\u5DF2\u590D\u5236\u76F8\u5BF9\u8DEF\u5F84")).catch((cause) => setNotice(String(cause?.message ?? cause)));
+            void api.vaultCopyPath({ path, relative: true }).then(() => flashNotice("\u5DF2\u590D\u5236\u76F8\u5BF9\u8DEF\u5F84")).catch((cause) => flashError(String(cause?.message ?? cause)));
           },
+          copy: (path) => setClipboard({ mode: "copy", path, name: path.split("/").pop() }),
           paste: (dir) => void pasteInto(dir),
           reveal: (path) => {
-            void api.vaultReveal({ path }).catch((cause) => setNotice(String(cause?.message ?? cause)));
+            void api.vaultReveal({ path }).catch((cause) => flashError(String(cause?.message ?? cause)));
           },
           askAi: (path) => void askAiNote(path),
           delete: trashPath,
@@ -138845,7 +139486,11 @@ function VaultContextMenu({ menu, clipboard, onClose, actions }) {
       { label: "\u79FB\u52A8\u5230\u2026", run: () => actions.move(t3.path) },
       { divider: true },
       { label: "\u526A\u5207", run: () => actions.cut(t3.path) },
-      { label: "\u590D\u5236", run: () => actions.duplicate(t3.path) },
+      // Fix K: 复制 now means clipboard-copy (paste with the copy branch);
+      // the old behavior — materialize a duplicate right here — moved to its
+      // own 创建副本 item.
+      { label: "\u590D\u5236", run: () => actions.copy(t3.path) },
+      { label: "\u521B\u5EFA\u526F\u672C", run: () => actions.duplicate(t3.path) },
       { label: "\u590D\u5236\u8DEF\u5F84", run: () => actions.copyAbs(t3.path) },
       { label: "\u590D\u5236\u76F8\u5BF9\u8DEF\u5F84", run: () => actions.copyRel(t3.path) },
       { divider: true },
@@ -138863,10 +139508,11 @@ function VaultContextMenu({ menu, clipboard, onClose, actions }) {
     if (!isRoot) items.push({ label: "\u91CD\u547D\u540D", run: () => actions.rename(t3.path) });
     items.push({ divider: true });
     if (!isRoot) items.push({ label: "\u526A\u5207", run: () => actions.cut(t3.path) });
-    if (!isRoot) items.push({ label: "\u590D\u5236", run: () => actions.duplicate(t3.path) });
+    if (!isRoot) items.push({ label: "\u590D\u5236", run: () => actions.copy(t3.path) });
+    if (!isRoot) items.push({ label: "\u521B\u5EFA\u526F\u672C", run: () => actions.duplicate(t3.path) });
     items.push({ label: "\u590D\u5236\u8DEF\u5F84", run: () => actions.copyAbs(t3.path) });
     if (!isRoot) items.push({ label: "\u590D\u5236\u76F8\u5BF9\u8DEF\u5F84", run: () => actions.copyRel(t3.path) });
-    if (clipboard?.mode === "cut") items.push({ label: "\u7C98\u8D34", run: () => actions.paste(t3.path) });
+    if (clipboard) items.push({ label: "\u7C98\u8D34", run: () => actions.paste(t3.path) });
     items.push({ divider: true });
     items.push({ label: "\u5728 Finder \u4E2D\u663E\u793A", run: () => actions.reveal(t3.path) });
   }
@@ -139060,21 +139706,28 @@ var NoteReadPane = (0, import_react11.forwardRef)(function NoteReadPane2({
   readerRef,
   backlinksOpen,
   onToggleBacklinks,
-  onExport
+  onExport,
+  onPrefChange
 }, forwardedRef) {
-  const [view, setView] = (0, import_react11.useState)("read");
-  const [lineNumbers2, setLineNumbers] = (0, import_react11.useState)(true);
-  const [wrap, setWrap] = (0, import_react11.useState)(true);
+  const view = tab.view ?? "read";
+  const lineNumbers2 = tab.lineNumbers ?? true;
+  const wrap = tab.wrap ?? true;
   const [toolbarVisible, setToolbarVisible] = (0, import_react11.useState)(true);
   const [modeMenu, setModeMenu] = (0, import_react11.useState)(false);
   const [moreMenu, setMoreMenu] = (0, import_react11.useState)(false);
   const hostRef = (0, import_react11.useRef)(null);
   const editorRef = (0, import_react11.useRef)(null);
   const outlineRef = (0, import_react11.useRef)([]);
-  const dirty = tab.dirty !== null && tab.dirty !== void 0;
+  const latestProps = (0, import_react11.useRef)({});
+  latestProps.current = { onDraft, onOutlineChange, onEditorScroll, resolveImage, pasteImage, onWikilink, noteFiles };
+  const scrollMemory = (0, import_react11.useRef)(/* @__PURE__ */ new Map());
+  const tabIdRef = (0, import_react11.useRef)(tab.id);
+  const suppressDocFeedback = (0, import_react11.useRef)(false);
+  const dirty = tab.dirty === true;
   const text2 = dirty ? tab.draft : tab.content;
   const segments = tab.path.split("/");
   const ModeIcon = view === "source" ? SquareCode : view === "live" ? Eye : BookOpen;
+  const viewLabel = MODE_ITEMS.find((item) => item.id === view)?.label ?? view;
   (0, import_react11.useEffect)(() => {
     if (view === "read" || !hostRef.current) {
       if (editorRef.current) {
@@ -139089,28 +139742,39 @@ var NoteReadPane = (0, import_react11.forwardRef)(function NoteReadPane2({
       mode: view,
       lineNumbers: lineNumbers2,
       wrap,
-      resolveImage,
-      pasteImage,
-      noteFiles,
-      onWikilink,
+      resolveImage: (src) => latestProps.current.resolveImage?.(src),
+      pasteImage: (base64, name2) => latestProps.current.pasteImage?.(base64, name2),
+      // Proxy: the completion source reads the note list only when the
+      // autocomplete runs, so forward property access to the latest array
+      // without recreating the editor on every index refresh.
+      noteFiles: new Proxy([], {
+        get(target, prop, receiver) {
+          const files = latestProps.current.noteFiles ?? [];
+          const value = Reflect.get(files, prop, files);
+          return typeof value === "function" ? value.bind(files) : value;
+        }
+      }),
+      onWikilink: (target) => latestProps.current.onWikilink?.(target),
       onChange: (next) => {
+        if (suppressDocFeedback.current) return;
         outlineRef.current = outlineOf(editorRef.current?.view.state ?? editor.view.state);
-        onOutlineChange(outlineRef.current);
+        latestProps.current.onOutlineChange?.(outlineRef.current);
         reportActive();
-        onDraft(next);
+        latestProps.current.onDraft?.(next);
       }
     });
     editorRef.current = editor;
     outlineRef.current = outlineOf(editor.view.state);
     onOutlineChange(outlineRef.current);
     const reportActive = () => {
-      onEditorScroll(activeOutlineIndex(editor.view, outlineRef.current ?? []));
+      latestProps.current.onEditorScroll?.(activeOutlineIndex(editor.view, outlineRef.current ?? []));
     };
     let scrollTimer = null;
     const onEditorScrollDom = () => {
       if (scrollTimer !== null) return;
       scrollTimer = setTimeout(() => {
         scrollTimer = null;
+        scrollMemory.current.set(tabIdRef.current, editor.view.scrollDOM.scrollTop);
         reportActive();
       }, 120);
     };
@@ -139124,15 +139788,41 @@ var NoteReadPane = (0, import_react11.forwardRef)(function NoteReadPane2({
       onOutlineChange(null);
     };
   }, [view]);
+  const loadedTabIdRef = (0, import_react11.useRef)(tab.id);
   (0, import_react11.useEffect)(() => {
-    if (editorRef.current && !dirty && editorRef.current.view.state.doc.toString() !== text2) {
-      editorRef.current.setDoc(text2);
+    const editor = editorRef.current;
+    const docChanged = editor && editor.view.state.doc.toString() !== text2;
+    const tabChanged = loadedTabIdRef.current !== tab.id;
+    if (docChanged && (!dirty || tabChanged)) {
+      suppressDocFeedback.current = true;
+      try {
+        editor.setDoc(text2);
+      } finally {
+        suppressDocFeedback.current = false;
+      }
+      outlineRef.current = outlineOf(editor.view.state);
+      onOutlineChange(outlineRef.current);
+      onEditorScroll(activeOutlineIndex(editor.view, outlineRef.current ?? []));
     }
-  }, [text2, dirty]);
+    loadedTabIdRef.current = tab.id;
+    tabIdRef.current = tab.id;
+  }, [text2, dirty, tab.id]);
+  (0, import_react11.useEffect)(() => {
+    const apply4 = () => {
+      const el = view === "read" ? readerRef?.current : editorRef.current?.view.scrollDOM;
+      const top2 = scrollMemory.current.get(tab.id);
+      if (el && typeof top2 === "number") el.scrollTop = top2;
+    };
+    apply4();
+    const raf = window.requestAnimationFrame?.(apply4);
+    return () => {
+      if (raf) window.cancelAnimationFrame?.(raf);
+    };
+  }, [tab.id, view]);
   const setMode = (next) => {
     if (next === view) return;
     setModeMenu(false);
-    setView(next);
+    onPrefChange?.({ view: next });
   };
   (0, import_react11.useEffect)(() => {
     const onKey = (event) => {
@@ -139147,7 +139837,7 @@ var NoteReadPane = (0, import_react11.forwardRef)(function NoteReadPane2({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [view, onSave]);
+  }, [view, onSave, tab.id]);
   const jumpTo = (index2) => {
     if (view === "read") {
       const heading2 = markdownHeadings2(text2)[index2];
@@ -139195,7 +139885,7 @@ var NoteReadPane = (0, import_react11.forwardRef)(function NoteReadPane2({
             {
               type: "button",
               className: "dpl-vault2-crumbbtn",
-              title: "\u5207\u6362\u89C6\u56FE (\u2318E)",
+              title: `\u5207\u6362\u89C6\u56FE (\u2318E) \xB7 \u5F53\u524D\uFF1A${viewLabel}`,
               onClick: () => {
                 setModeMenu(!modeMenu);
                 setMoreMenu(false);
@@ -139259,14 +139949,14 @@ var NoteReadPane = (0, import_react11.forwardRef)(function NoteReadPane2({
             ] }),
             view !== "read" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
               /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("button", { type: "button", className: "dpl-vault2-ctxitem", onClick: () => {
-                setLineNumbers(!lineNumbers2);
+                onPrefChange?.({ lineNumbers: !lineNumbers2 });
                 editorRef.current?.setLineNumbers(!lineNumbers2);
               }, "data-testid": "vault-more-line-numbers", children: [
                 "\u884C\u53F7 ",
                 lineNumbers2 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Check, { size: 12 }) : null
               ] }),
               /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("button", { type: "button", className: "dpl-vault2-ctxitem", onClick: () => {
-                setWrap(!wrap);
+                onPrefChange?.({ wrap: !wrap });
                 editorRef.current?.setWrap(!wrap);
               }, "data-testid": "vault-more-wrap", children: [
                 "\u81EA\u52A8\u6362\u884C ",
@@ -139321,10 +140011,18 @@ var NoteReadPane = (0, import_react11.forwardRef)(function NoteReadPane2({
         )) })
       ] })
     ] }) : null,
-    view === "read" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { ref: readerRef, className: "dpl-vault2-readerscroll", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(MarkdownView, { className: "dpl-note-body dpl-vault2-body", markdown: text2, onWikilink, resolveImage }),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-bodyend" })
-    ] }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-editwrap", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { ref: hostRef, className: "dpl-vault2-cmhost", "data-testid": "vault-editor" }) })
+    view === "read" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
+      "div",
+      {
+        ref: readerRef,
+        className: "dpl-vault2-readerscroll",
+        onScroll: (event) => scrollMemory.current.set(tab.id, event.currentTarget.scrollTop),
+        children: [
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(MarkdownView, { className: "dpl-note-body dpl-vault2-body", markdown: text2, onWikilink, resolveImage }),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-bodyend" })
+        ]
+      }
+    ) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-editwrap", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { ref: hostRef, className: "dpl-vault2-cmhost", "data-testid": "vault-editor" }) })
   ] });
 });
 function MoreIcon() {
@@ -139719,10 +140417,7 @@ function SettingsView({ api, onClose }) {
               }
             )
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "dpl-settings-presets", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { type: "button", className: "dpl-btn dpl-sm", onClick: () => setPickerPath("/Users/jesen/WorkSpace/DropletsSpace"), children: "\u586B\u5165 DropletsSpace" }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { type: "button", className: "dpl-btn dpl-sm", onClick: () => setPickerPath(""), children: "\u6539\u56DE\u63D2\u4EF6\u72EC\u7ACB\u5B58\u50A8" })
-          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "dpl-settings-presets", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { type: "button", className: "dpl-btn dpl-sm", onClick: () => setPickerPath(""), children: "\u6539\u56DE\u63D2\u4EF6\u72EC\u7ACB\u5B58\u50A8" }) }),
           pickerError ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "dpl-dialog-error", children: pickerError }) : null
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "dpl-dialog-footer", children: [
@@ -139931,7 +140626,11 @@ function Companion({ api, material, form = "docked", onFormChange, onClose, Sess
       ...form === "floating" ? {
         style: { top: "calc(3.5rem + " + clamped.y + "px)", right: "calc(1rem - " + clamped.x + "px)" }
       } : {
-        style: { width: dockedWidth + "px" }
+        // Fix M: width rides a CSS variable instead of an inline width —
+        // inline styles beat the @container (max-width: 860px) stacking rule,
+        // so a narrow window kept the docked pane at full dockedWidth and
+        // squeezed the vault. styles.css consumes --dpl-ai-w on .is-docked.
+        style: { "--dpl-ai-w": dockedWidth + "px" }
       },
       children: [
         form === "docked" ? /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
@@ -140295,7 +140994,7 @@ function nativeChatBridge(ctx) {
 }
 
 // src/client/styles.css
-var styles_default = "/* droplets \xB7 panel styles.\n * Skin: DSH design tokens (--dsw-alias-*) so the panel follows the host\n * theme (light/dark) automatically. Layout & interaction: droplets'\n * three-pane shapes (sources 240 / entries 320 / reader, docked companion).\n * Details (measure, ghost buttons, list rhythm): qiaomu-rss refinements. */\n.dpl-root {\n  --dpl-bg: var(--dsw-alias-bg-base, #fff);\n  --dpl-bg-2: var(--dsw-alias-bg-layer-1, rgba(15, 23, 42, 0.03));\n  --dpl-bg-active: var(--dsw-alias-interactive-bg-active, rgba(15, 23, 42, 0.08));\n  --dpl-bg-hover: var(--dsw-alias-interactive-bg-hover, rgba(15, 23, 42, 0.05));\n  --dpl-border: var(--dsw-alias-border-l1, rgba(15, 23, 42, 0.08));\n  --dpl-fg: var(--dsw-alias-label-primary, #0f1115);\n  --dpl-muted: var(--dsw-alias-label-secondary, rgba(15, 23, 42, 0.6));\n  --dpl-faint: var(--dsw-alias-label-tertiary, rgba(15, 23, 42, 0.4));\n  /* Accent follows the DSH system exactly: interactive/link blue for\n     selection & unread, the host's black primary fill for solid actions. */\n  --dpl-accent: var(--dsw-alias-link, #4176e6);\n  --dpl-accent-solid: var(--dsw-alias-button-primary-fill, #0f1115);\n  --dpl-accent-solid-hover: var(--dsw-alias-button-primary-hover, #43454a);\n  --dpl-accent-soft: var(--dsw-alias-interactive-bg-hover-accent, rgba(38, 49, 72, 0.14));\n  --dpl-link: var(--dsw-alias-link, #4176e6);\n  --dpl-danger: var(--dsw-alias-state-error-primary, #d5484f);\n  --dpl-radius: 10px;\n  --dpl-radius-sm: 8px;\n  --dpl-sources-width: 240px;\n  --dpl-list-width: 320px;\n  --dpl-measure: 720px;\n  display: flex;\n  flex-direction: column;\n  height: 100%;\n  min-height: 0;\n  background: var(--dpl-bg);\n  color: var(--dpl-fg);\n  font-size: 14px;\n  container-type: inline-size;\n}\n.dpl-root *, .dpl-root *::before, .dpl-root *::after { box-sizing: border-box; }\n.dpl-root button { font: inherit; color: inherit; }\n\n/* ---- header (droplets Topbar shape) ---- */\n.dpl-header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  height: 44px;\n  /* Follow the host frame's leading clearance: when the DSH sidebar is\n     collapsed the macOS traffic lights sit over this header, and the frame\n     publishes the required inset as --dsh-frame-leading-clearance (same\n     formula the host's own title cluster uses). */\n  padding-inline-start: max(0px, var(--dsh-frame-leading-clearance, 0px));\n  padding-inline-end: 12px;\n  border-bottom: 1px solid var(--dpl-border);\n  flex: none;\n}\n.dpl-brand { display: flex; align-items: center; gap: 8px; min-width: 0; }\n.dpl-brand strong { font-size: 14px; font-weight: 600; }\n.dpl-spaces { display: flex; gap: 2px; margin-left: 10px; background: var(--dpl-bg-2); border-radius: var(--dpl-radius); padding: 2px; }\n.dpl-space-tab {\n  border: none;\n  background: transparent;\n  padding: 4px 12px;\n  border-radius: calc(var(--dpl-radius) - 2px);\n  cursor: pointer;\n  color: var(--dpl-muted);\n  font-size: 13px;\n}\n.dpl-space-tab:hover { color: var(--dpl-fg); background: var(--dpl-bg-hover); }\n.dpl-space-tab.is-active { background: var(--dpl-bg); color: var(--dpl-fg); font-weight: 600; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.1); }\n.dpl-header-actions { display: flex; gap: 6px; align-items: center; }\n\n.dpl-body { display: flex; flex: 1; min-height: 0; }\n.dpl-space { flex: 1; min-width: 0; display: flex; }\n.dpl-space > * { flex: 1; min-width: 0; }\n\n/* ---- shared controls (DSH ghost-button feel) ---- */\n.dpl-btn {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  border: none;\n  background: transparent;\n  border-radius: var(--dpl-radius-sm);\n  padding: 5px 10px;\n  min-height: 28px;\n  cursor: pointer;\n  font-size: 13px;\n  color: var(--dpl-fg);\n  white-space: nowrap;\n}\n.dpl-btn:hover { background: var(--dpl-bg-hover); }\n.dpl-btn.is-danger { color: var(--dpl-danger); }\n.dpl-btn.is-danger:hover { background: color-mix(in srgb, var(--dpl-danger) 12%, transparent); }\n.dpl-btn.is-on { background: var(--dpl-bg-active); }\n.dpl-root .dpl-btn.is-primary { background: var(--dpl-accent-solid); color: #fff; }\n.dpl-root .dpl-btn.is-primary:hover { background: var(--dpl-accent-solid-hover); }\n.dpl-btn:disabled { opacity: 0.45; cursor: default; background: transparent; }\n\n/* \u7EDF\u4E00\u9762\u677F\u63A7\u5236\u6309\u94AE\uFF1A\u4FE1\u606F\u6D41 \u5237\u65B0/\u7BA1\u7406 \xB7 \u6536\u4EF6\u7BB1 \u6DFB\u52A0URL/\u5BFC\u5165 \xB7 \u77E5\u8BC6\u5E93\n   \u56FE\u8C31/\u6807\u7B7E\u4E91\u2014\u2014\u540C\u4E00\u7A7A\u95F4\u4F4D\u7F6E\uFF08\u5DE6\u680F\u7B2C\u4E8C\u884C\uFF09\u7684\u4E09\u7EC4\u63A7\u4EF6\uFF0C\u540C\u4E00\u51E0\u4F55\n   (28px \u9AD8 / 12.5px \u5B57 / 8px \u5706\u89D2 / 14px \u56FE\u6807) \u4E0E\u540C\u4E00\u8282\u594F\uFF08\u7B49\u5BBD\u534A\u5206\u3001\n   gap 6\u3001\u884C\u4E0B\u8DDD 8\uFF09\u3002\u7070\u5E95\u8272\u5757\u662F\u300C\u9762\u677F\u63A7\u4EF6\u300D\u5BB6\u65CF\u8BED\u8A00\uFF1Bis-active \u9009\u4E2D\u6001\n   \u53EA\u7528\u4E8E\u5206\u6BB5\u9009\u62E9\uFF08\u56FE\u8C31/\u6807\u7B7E\u4E91\uFF09\uFF0C\u52A8\u4F5C\u6309\u94AE\u4E0D\u5E38\u9A7B\u9AD8\u4EAE\u3002\n   .dpl-root \u524D\u7F00\u4E0D\u662F\u88C5\u9970\uFF1A\u9876\u90E8\u7684 .dpl-root button { font: inherit } \u91CD\u7F6E\n   \uFF08\u7279\u5F02\u5EA6 0,1,1\uFF09\u4F1A\u538B\u8FC7\u4EFB\u4F55\u5355\u7C7B\u6309\u94AE\u89C4\u5219\u7684\u5B57\u53F7/\u989C\u8272\u2014\u2014\u8001\u7248\u4E09\u7EC4\u6309\u94AE\n   \u5404\u81EA\u6F02\u79FB\u6B63\u662F\u56E0\u4E3A\u8FD9\u4E2A\u3002 */\n.dpl-root .dpl-pane-btn {\n  flex: 1;\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  gap: 6px;\n  min-height: 28px;\n  padding: 5px 10px;\n  border: none;\n  background: var(--dpl-bg-2);\n  border-radius: var(--dpl-radius-sm);\n  font-size: 12.5px;\n  color: var(--dpl-muted);\n  cursor: pointer;\n  white-space: nowrap;\n}\n.dpl-root .dpl-pane-btn:hover:not(:disabled) { background: var(--dpl-bg-active); color: var(--dpl-fg); }\n.dpl-root .dpl-pane-btn:disabled { opacity: 0.45; cursor: default; }\n.dpl-root .dpl-pane-btn.is-active { background: var(--dpl-accent-soft); color: var(--dpl-accent); font-weight: 600; }\n.dpl-root .dpl-pane-btn.is-active:hover:not(:disabled) { background: var(--dpl-accent-soft); color: var(--dpl-accent); }\n.dpl-icon-btn {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 28px;\n  height: 28px;\n  border: none;\n  background: transparent;\n  border-radius: var(--dpl-radius-sm);\n  cursor: pointer;\n  color: var(--dpl-muted);\n  font-size: 14px;\n  line-height: 1;\n}\n.dpl-icon-btn:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-chip {\n  border: none;\n  background: transparent;\n  border-radius: 999px;\n  padding: 3px 10px;\n  min-height: 24px;\n  cursor: pointer;\n  color: var(--dpl-muted);\n  font-size: 12px;\n}\n.dpl-chip:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-chip.is-active { background: var(--dpl-bg-active); color: var(--dpl-fg); font-weight: 600; }\n.dpl-root input, .dpl-root textarea {\n  font: inherit;\n  color: var(--dpl-fg);\n  background: var(--dpl-bg-2);\n  border: 1px solid transparent;\n  border-radius: var(--dpl-radius-sm);\n  padding: 5px 10px;\n  min-height: 30px;\n  outline: none;\n}\n.dpl-root input:focus, .dpl-root textarea:focus { border-color: var(--dpl-accent); background: var(--dpl-bg); }\n.dpl-root input::placeholder, .dpl-root textarea::placeholder { color: var(--dpl-faint); }\n\n/* ---- panes ---- */\n.dpl-feed, .dpl-inbox, .dpl-vault { display: flex; flex: 1; min-width: 0; }\n.dpl-col { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--dpl-border); background: var(--dpl-bg); }\n.dpl-vault-tree { width: var(--dpl-sources-width); flex: none; }\n.dpl-inbox-list { width: var(--dpl-list-width); flex: none; }\n.dpl-reader { flex: 1; min-width: 0; overflow: auto; padding: 20px clamp(16px, 3%, 36px); }\n.dpl-col-head {\n  display: flex;\n  align-items: center;\n  gap: 4px;\n  height: 40px;\n  padding: 0 8px;\n  border-bottom: 1px solid var(--dpl-border);\n  flex: none;\n}\n.dpl-pane-title { font-size: 12px; font-weight: 600; color: var(--dpl-muted); padding: 0 4px; }\n.dpl-search { padding: 8px; flex: none; }\n.dpl-search input { width: 100%; }\n\n/* ---- sources pane (droplets: title row, search+refresh row, collapsible groups) ---- */\n.dpl-source-tools { display: flex; gap: 6px; padding: 0 8px 8px; }\n.dpl-source-tools .dpl-search { flex: 1; padding: 0; }\n.dpl-source {\n  display: flex;\n  width: 100%;\n  align-items: center;\n  justify-content: space-between;\n  gap: 6px;\n  border: none;\n  background: transparent;\n  padding: 6px 10px;\n  cursor: pointer;\n  color: var(--dpl-fg);\n  text-align: left;\n  border-radius: var(--dpl-radius-sm);\n  margin: 0 4px;\n  width: calc(100% - 8px);\n}\n.dpl-source span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }\n.dpl-source em { font-style: normal; font-size: 12px; font-weight: 600; color: var(--dpl-accent); flex: none; }\n.dpl-source:hover { background: var(--dpl-bg-hover); }\n.dpl-source.is-active { background: var(--dpl-bg-active); font-weight: 600; }\n.dpl-source.has-error span { color: var(--dpl-danger); }\n.dpl-source-group-name {\n  padding: 10px 12px 2px;\n  font-size: 11px;\n  font-weight: 600;\n  letter-spacing: 0.02em;\n  text-transform: uppercase;\n  color: var(--dpl-faint);\n}\n.dpl-sources-list { overflow: auto; flex: 1; padding-bottom: 8px; }\n\n/* ---- entry list ---- */\n.dpl-entry-list { list-style: none; margin: 0; padding: 0; overflow: auto; flex: 1; }\n.dpl-entry-list li { display: flex; align-items: stretch; }\n.dpl-entry {\n  flex: 1;\n  min-width: 0;\n  border: none;\n  background: transparent;\n  text-align: left;\n  padding: 9px 10px 9px 14px;\n  cursor: pointer;\n  color: var(--dpl-fg);\n  display: flex;\n  flex-direction: column;\n  gap: 3px;\n}\n.dpl-entry:hover { background: var(--dpl-bg-hover); }\n.dpl-entry.is-active { background: var(--dpl-bg-active); }\n.dpl-entry-title { font-weight: 550; font-size: 13px; line-height: 1.45; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }\n.dpl-entry.is-unread .dpl-entry-title::before {\n  content: '';\n  display: inline-block;\n  width: 6px;\n  height: 6px;\n  border-radius: 50%;\n  background: var(--dpl-accent);\n  margin-right: 7px;\n  vertical-align: 2px;\n}\n.dpl-entry-meta { font-size: 12px; color: var(--dpl-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.dpl-warn { color: var(--dpl-danger); }\n.dpl-star {\n  border: none;\n  background: transparent;\n  cursor: pointer;\n  color: var(--dpl-faint);\n  padding: 0 8px 0 2px;\n  flex: none;\n  font-size: 14px;\n}\n.dpl-star:hover { color: var(--dpl-muted); }\n.dpl-star.is-on { color: #e6a700; }\n\n.dpl-empty { padding: 32px 20px; text-align: center; color: var(--dpl-faint); font-size: 13px; }\n.dpl-reader-empty { display: flex; align-items: center; justify-content: center; height: 100%; }\n.dpl-hint { font-size: 12px; color: var(--dpl-faint); }\n.dpl-error {\n  margin: 8px;\n  padding: 8px 10px;\n  border-radius: var(--dpl-radius-sm);\n  background: color-mix(in srgb, var(--dpl-danger) 10%, transparent);\n  color: var(--dpl-danger);\n  font-size: 12px;\n  word-break: break-all;\n}\n\n/* ---- reader ---- */\n.dpl-article, .dpl-note { max-width: var(--dpl-measure); margin: 0 auto; }\n.dpl-article h1, .dpl-note h1 { font-size: 22px; line-height: 1.35; margin: 0 0 8px; font-weight: 650; }\n.dpl-article-meta { display: flex; gap: 10px; font-size: 13px; color: var(--dpl-muted); margin-bottom: 18px; flex-wrap: wrap; }\n.dpl-article-meta a { color: var(--dpl-link); text-decoration: none; }\n.dpl-article-meta a:hover { text-decoration: underline; }\n.dpl-article-body { line-height: 1.75; font-size: 14.5px; }\n.dpl-article-body img { max-width: 100%; height: auto; border-radius: var(--dpl-radius-sm); }\n.dpl-article-body pre { overflow: auto; padding: 12px; border-radius: var(--dpl-radius-sm); background: var(--dpl-bg-2); font-size: 13px; }\n.dpl-article-body code { font-size: 0.92em; background: var(--dpl-bg-2); border-radius: 4px; padding: 1px 5px; }\n.dpl-article-body pre code { background: transparent; padding: 0; }\n.dpl-article-body blockquote { border-left: 3px solid var(--dpl-border); margin: 8px 0; padding: 2px 14px; color: var(--dpl-muted); }\n.dpl-reader-toolbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }\n.dpl-reader-toolbar h1 { font-size: 20px; margin: 0 0 4px; }\n.dpl-reader-actions { display: flex; gap: 4px; flex: none; }\n\n/* ---- pdf / epub ---- */\n.dpl-pdf { display: flex; flex-direction: column; align-items: center; gap: 12px; }\n.dpl-pdf-canvas { max-width: 100%; box-shadow: 0 2px 14px rgba(15, 23, 42, 0.18); border-radius: 6px; background: #fff; }\n.dpl-pager { display: flex; align-items: center; gap: 10px; color: var(--dpl-muted); font-size: 13px; }\n\n/* ---- vault ---- */\n.dpl-vault-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--dpl-muted); }\n.dpl-tree-stats { font-size: 12px; color: var(--dpl-faint); flex: 1; padding-left: 4px; }\n.dpl-tree details { margin-left: 4px; }\n.dpl-tree summary {\n  cursor: pointer;\n  padding: 4px 8px;\n  font-size: 12px;\n  font-weight: 600;\n  color: var(--dpl-muted);\n  border-radius: 6px;\n  list-style: none;\n  display: flex;\n  align-items: center;\n  gap: 4px;\n}\n.dpl-tree summary::before { content: '\u25B8'; font-size: 10px; transition: transform 0.12s; color: var(--dpl-faint); }\n.dpl-tree details[open] > summary::before { transform: rotate(90deg); }\n.dpl-tree summary:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-tree-file {\n  display: flex;\n  width: calc(100% - 8px);\n  margin: 0 4px;\n  border: none;\n  background: transparent;\n  text-align: left;\n  padding: 4px 10px;\n  cursor: pointer;\n  color: var(--dpl-fg);\n  border-radius: 6px;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  font-size: 13px;\n}\n.dpl-tree-file:hover { background: var(--dpl-bg-hover); }\n.dpl-tree-file.is-active { background: var(--dpl-bg-active); font-weight: 600; }\n.dpl-note-body { line-height: 1.75; font-size: 14.5px; }\n.dpl-note-body h1, .dpl-note-body h2 { border-bottom: 1px solid var(--dpl-border); padding-bottom: 6px; margin: 1.2em 0 0.6em; }\n.dpl-note-body pre { overflow: auto; padding: 12px; border-radius: var(--dpl-radius-sm); background: var(--dpl-bg-2); font-size: 13px; }\n.dpl-note-body code { background: var(--dpl-bg-2); border-radius: 4px; padding: 1px 5px; font-size: 0.92em; }\n.dpl-note-editor {\n  width: 100%;\n  min-height: 62vh;\n  font-family: var(--dsw-alias-font-mono, ui-monospace, 'SF Mono', monospace);\n  font-size: 13px;\n  line-height: 1.7;\n  border-radius: var(--dpl-radius);\n  border: 1px solid var(--dpl-border);\n  padding: 14px;\n  resize: vertical;\n  background: var(--dpl-bg);\n  color: var(--dpl-fg);\n}\n.dpl-note-editor:focus { border-color: var(--dpl-accent); }\n.dpl-wikilink { color: var(--dpl-link); text-decoration: none; border-bottom: 1px dashed currentColor; }\n.dpl-tag { color: var(--dpl-muted); background: var(--dpl-bg-2); border-radius: 4px; padding: 0 4px; font-size: 0.9em; }\n.dpl-backlinks h2, .dpl-search-results h2 { font-size: 14px; margin: 20px 0 8px; font-weight: 600; }\n.dpl-backlinks ul, .dpl-search-results ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }\n.dpl-backlinks button, .dpl-search-results button {\n  border: none;\n  background: transparent;\n  text-align: left;\n  cursor: pointer;\n  padding: 7px 9px;\n  border-radius: var(--dpl-radius-sm);\n  color: var(--dpl-fg);\n  display: block;\n  width: 100%;\n}\n.dpl-backlinks button:hover, .dpl-search-results button:hover { background: var(--dpl-bg-hover); }\n.dpl-search-results p { margin: 2px 0 0; font-size: 12px; color: var(--dpl-faint); }\n\n.dpl-graph { position: relative; height: 100%; }\n.dpl-graph svg { width: 100%; height: 100%; }\n.dpl-graph-edge { stroke: color-mix(in srgb, var(--dpl-fg) 20%, transparent); stroke-width: 1; }\n.dpl-graph-node { fill: var(--dpl-accent); cursor: pointer; }\n.dpl-graph-node.is-dangling { fill: color-mix(in srgb, var(--dpl-fg) 25%, transparent); }\n.dpl-graph-node.is-hover { stroke: var(--dpl-fg); stroke-width: 2; }\n.dpl-graph-label { position: absolute; top: 8px; left: 12px; font-size: 12px; color: var(--dpl-muted); }\n\n/* ---- companion (droplets: docked right panel) ---- */\n.dpl-companion {\n  width: 40%;\n  min-width: 360px;\n  flex: none;\n  display: flex;\n  flex-direction: column;\n  border-left: 1px solid var(--dpl-border);\n  min-height: 0;\n  background: var(--dpl-bg);\n}\n.dpl-companion-header { display: flex; align-items: center; gap: 4px; height: 40px; padding: 0 8px 0 12px; border-bottom: 1px solid var(--dpl-border); }\n.dpl-companion-header strong { flex: 1; font-size: 13px; font-weight: 600; }\n.dpl-companion-context { padding: 8px 12px; border-bottom: 1px solid var(--dpl-border); display: flex; flex-direction: column; gap: 2px; overflow: hidden; }\n.dpl-companion-context strong { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.dpl-companion-context small { font-size: 12px; color: var(--dpl-muted); }\n.dpl-native-chat { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }\n.dpl-companion-loading { padding: 24px; text-align: center; color: var(--dpl-faint); flex: 1; font-size: 13px; }\n.dpl-companion-error { margin: 10px; padding: 10px; border-radius: var(--dpl-radius-sm); background: color-mix(in srgb, var(--dpl-danger) 10%, transparent); color: var(--dpl-danger); font-size: 13px; }\n.dpl-companion-error p { margin: 6px 0 10px; font-size: 12px; word-break: break-all; }\n.dpl-companion-error button { margin-top: 2px; }\n.dpl-companion-notice { display: flex; align-items: center; gap: 6px; margin: 6px 10px; padding: 6px 10px; border-radius: var(--dpl-radius-sm); background: var(--dpl-bg-2); color: var(--dpl-muted); font-size: 12px; }\n.dpl-companion-notice span { flex: 1; }\n.dpl-companion-quote { margin: 8px 10px; border-left: 3px solid var(--dpl-accent); padding: 6px 10px; background: var(--dpl-bg-2); border-radius: 0 var(--dpl-radius-sm) var(--dpl-radius-sm) 0; }\n.dpl-companion-quote strong { font-size: 11px; color: var(--dpl-muted); display: block; margin-bottom: 4px; }\n.dpl-companion-quote blockquote { margin: 0; font-size: 12px; max-height: 90px; overflow: auto; white-space: pre-wrap; }\n.dpl-companion-prompt-strip { display: flex; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--dpl-border); flex: none; overflow-x: auto; }\n.dpl-prompt-ghost { border: 1px solid var(--dpl-border); background: transparent; border-radius: 999px; padding: 4px 12px; font-size: 12px; cursor: pointer; color: var(--dpl-fg); white-space: nowrap; }\n.dpl-prompt-ghost:hover { background: var(--dpl-bg-hover); }\n.dpl-prompt-ghost:disabled { opacity: 0.45; cursor: default; }\n\n/* ---- modal (DSH dialog feel) ---- */\n.dpl-form-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }\n.dpl-form-row input { flex: 1; min-width: 120px; }\n.dpl-sub-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }\n.dpl-sub-list li { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: var(--dpl-radius-sm); }\n.dpl-sub-list li:hover { background: var(--dpl-bg-hover); }\n.dpl-sub-list label { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }\n.dpl-sub-list label.is-dim { opacity: 0.5; }\n.dpl-sub-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }\n.dpl-sub-meta { font-size: 12px; color: var(--dpl-faint); }\n.dpl-opml-input { width: 100%; }\n.dpl-settings-block h3 { font-size: 13px; margin: 14px 0 6px; font-weight: 600; }\n.dpl-settings-block h3:first-child { margin-top: 0; }\n.dpl-path { display: block; padding: 6px 9px; border-radius: 6px; background: var(--dpl-bg-2); font-size: 12px; font-family: var(--dsw-alias-font-mono, ui-monospace, monospace); word-break: break-all; margin: 6px 0; }\n.dpl-toggle { display: flex; align-items: center; gap: 8px; }\n.dpl-conflict-excerpt { margin: 8px 0; padding: 8px 10px; border-left: 3px solid var(--dpl-danger); font-size: 12px; color: var(--dpl-muted); max-height: 120px; overflow: auto; }\n\n/* ---- responsive: narrow windows stack companion below (qiaomu pattern) ---- */\n@container (max-width: 860px) {\n  .dpl-body { flex-direction: column; }\n  .dpl-companion { width: 100%; min-width: 0; min-height: 240px; border-left: none; border-top: 1px solid var(--dpl-border); }\n}\n\n/* ---- feed page (droplets 1:1 port) ---- */\n.dpl-flex-fill { flex: 1; min-width: 0; }\n.dpl-grow { flex: 1 1 auto; min-width: 0; }\n.dpl-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.dpl-spin { animation: dpl-spin 0.9s linear infinite; }\n@keyframes dpl-spin { to { transform: rotate(360deg); } }\n.dpl-relative { position: relative; }\n.dpl-center { display: flex; align-items: center; justify-content: center; }\n.dpl-min0 { min-width: 0; }\n\n/* panel group: columns + separators + rails */\n.dpl-panel-group { display: flex; flex: 1; min-width: 0; min-height: 0; }\n.dpl-panel { display: flex; min-width: 0; min-height: 0; }\n.dpl-panel-separator { flex: 0 0 1px; background: var(--dpl-border); cursor: col-resize; position: relative; }\n.dpl-panel-separator::before { content: ''; position: absolute; inset: 0 -3px; }\n.dpl-panel-separator:hover, .dpl-panel-separator.is-adjacent-collapsed { background: var(--dpl-accent); }\n.dpl-panel-rail {\n  flex: 1;\n  display: flex;\n  align-items: flex-start;\n  justify-content: center;\n  padding-top: 12px;\n  border: none;\n  background: transparent;\n  color: var(--dpl-faint);\n  cursor: pointer;\n}\n.dpl-panel-rail:hover { color: var(--dpl-fg); background: var(--dpl-bg-hover); }\n.dpl-panel-collapse { flex: none; }\n\n/* pane frame (droplets panel chrome: head 44px, no side borders between) */\n.dpl-pane { display: flex; flex-direction: column; height: 100%; min-width: 0; min-height: 0; width: 100%; background: var(--dpl-bg); }\n.dpl-pane-head {\n  display: flex;\n  align-items: center;\n  gap: 2px;\n  height: 44px;\n  padding: 0 10px;\n  flex: none;\n}\n.dpl-pane-title { font-size: 12px; font-weight: 500; color: var(--dpl-muted); }\n\n/* sources pane */\n.dpl-sources { border-right: 1px solid var(--dpl-border); }\n.dpl-sources-actions { display: flex; gap: 6px; padding: 0 10px 8px; flex: none; }\n.dpl-sources-toolbar {\n  position: relative;\n  display: flex;\n  align-items: center;\n  height: 28px;\n  padding: 0 10px;\n  flex: none;\n}\n/* pointer-events:none is load-bearing: the dots are a full-row overlay\n   (inset:0) that stays in the hit-test tree even at opacity:0 \u2014 without\n   this, the two non-positioned toolbar buttons under it (\u81EA\u52A8\u5B9A\u4F4D/\u5168\u90E8\u6298\u53E0)\n   can never receive a click. Only the sort button survived, because its\n   .dpl-relative wrapper happens to paint above this overlay. */\n.dpl-toolbar-dots { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 16px; transition: opacity 0.12s; pointer-events: none; }\n.dpl-toolbar-dots span { width: 4px; height: 4px; border-radius: 50%; background: var(--dpl-faint); }\n.dpl-sources-toolbar:hover .dpl-toolbar-dots { opacity: 0; }\n.dpl-toolbar-actions {\n  display: flex;\n  width: 100%;\n  align-items: center;\n  justify-content: center;\n  gap: 2px;\n  opacity: 0;\n  pointer-events: none;\n  transition: opacity 0.12s;\n}\n.dpl-sources-toolbar:hover .dpl-toolbar-actions { opacity: 1; pointer-events: auto; }\n.dpl-icon-btn.dpl-tb { width: 24px; height: 24px; }\n.dpl-icon-btn.is-toggled { color: var(--dpl-accent); background: color-mix(in srgb, var(--dpl-accent) 12%, transparent); }\n.dpl-menu {\n  position: absolute;\n  top: 100%;\n  left: 0;\n  z-index: 40;\n  margin-top: 4px;\n  min-width: 148px;\n  background: var(--dpl-bg);\n  border: 1px solid var(--dpl-border);\n  border-radius: 8px;\n  padding: 4px;\n  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16);\n}\n.dpl-menu-item { display: block; width: 100%; text-align: left; border: none; background: transparent; padding: 5px 8px; border-radius: 6px; font-size: 12.5px; cursor: pointer; color: var(--dpl-fg); }\n.dpl-menu-item:hover { background: var(--dpl-bg-hover); }\n\n.dpl-sources-list { min-height: 0; flex: 1; overflow: auto; padding: 8px; }\n.dpl-source {\n  display: flex;\n  width: 100%;\n  align-items: center;\n  gap: 6px;\n  border: none;\n  background: transparent;\n  padding: 6px 10px;\n  border-radius: 7px;\n  cursor: pointer;\n  color: var(--dpl-fg);\n  text-align: left;\n  font-size: 13.5px;\n}\n.dpl-source em { font-style: normal; font-size: 12px; font-weight: 500; color: var(--dpl-accent); flex: none; }\n.dpl-source em:empty { display: none; }\n.dpl-source:hover { background: var(--dpl-bg-hover); }\n.dpl-source.is-selected { background: color-mix(in srgb, var(--dpl-accent) 12%, transparent); font-weight: 500; color: var(--dpl-accent); }\n.dpl-source.is-disabled { opacity: 0.5; }\n.dpl-source.dpl-in-group { padding-left: 22px; }\n.dpl-source-error { color: var(--dpl-danger); flex: none; }\n.dpl-source-group { }\n.dpl-group-row { margin-top: 6px; }\n.dpl-group-head {\n  display: flex;\n  width: 100%;\n  align-items: center;\n  gap: 4px;\n  border: none;\n  background: transparent;\n  padding: 4px 10px 4px 26px;\n  border-radius: 7px;\n  cursor: pointer;\n  color: var(--dpl-muted);\n  text-align: left;\n  font-size: 12px;\n  font-weight: 500;\n}\n.dpl-group-head em { font-style: normal; font-size: 12px; font-weight: 500; color: var(--dpl-accent); flex: none; }\n.dpl-group-head:hover { background: var(--dpl-bg-hover); }\n.dpl-group-head.is-selected { background: color-mix(in srgb, var(--dpl-accent) 12%, transparent); color: var(--dpl-accent); font-weight: 500; }\n.dpl-group-chevron {\n  position: absolute;\n  top: 50%;\n  left: 4px;\n  transform: translateY(-50%);\n  display: grid;\n  place-items: center;\n  width: 20px;\n  height: 20px;\n  border: none;\n  border-radius: 6px;\n  background: transparent;\n  color: var(--dpl-faint);\n  cursor: pointer;\n}\n.dpl-group-chevron:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-group-chevron .is-rotated { transform: rotate(-90deg); }\n\n.dpl-badge {\n  display: inline-grid;\n  place-items: center;\n  width: 16px;\n  height: 16px;\n  border-radius: 5px;\n  font-size: 10px;\n  font-weight: 600;\n  line-height: 1;\n  flex: none;\n}\n\n/* items pane */\n.dpl-items { border-right: 1px solid var(--dpl-border); }\n.dpl-entry-scroll { min-height: 0; flex: 1; overflow: auto; }\n.dpl-list-loading { display: grid; place-items: center; height: 64px; color: var(--dpl-faint); }\n.dpl-list-empty { display: grid; place-items: center; height: 128px; padding: 0 16px; text-align: center; font-size: 12px; color: var(--dpl-faint); }\n.dpl-entry-row {\n  cursor: pointer;\n  border-bottom: 1px solid var(--dpl-border);\n  padding: 10px 12px;\n  transition: background-color 0.1s;\n  content-visibility: auto;\n  contain-intrinsic-size: auto 76px;\n}\n.dpl-entry-row:hover { background: var(--dpl-bg-hover); }\n.dpl-entry-row.is-active { background: color-mix(in srgb, var(--dpl-accent) 9%, transparent); }\n.dpl-entry-src { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--dpl-faint); }\n.dpl-entry-main { display: flex; align-items: center; gap: 8px; margin-top: 4px; }\n.dpl-entry-main .dpl-truncate { font-size: 13.5px; color: var(--dpl-muted); }\n.dpl-entry-main .dpl-truncate.is-unread { color: var(--dpl-fg); font-weight: 500; }\n.dpl-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }\n.dpl-dot.is-unseen { background: var(--dpl-accent); }\n.dpl-dot.is-seen { background: var(--dpl-border); }\n.dpl-dot.is-skipped { background: var(--dpl-faint); }\n.dpl-entry-sum { margin: 3px 0 0 15px; font-size: 12px; color: var(--dpl-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n\n.dpl-icon-btn .dpl-fill { fill: currentColor; }\n.dpl-new-pill {\n  display: inline-flex;\n  align-items: center;\n  flex: none;\n  margin-right: 4px;\n  padding: 2px 8px;\n  border: none;\n  border-radius: 999px;\n  background: color-mix(in srgb, var(--dpl-accent) 12%, transparent);\n  color: var(--dpl-accent);\n  font-size: 11.5px;\n  font-weight: 500;\n  cursor: pointer;\n  transition: opacity 0.12s;\n}\n.dpl-new-pill:hover { opacity: 0.8; }\n\n/* preview pane */\n.dpl-preview { position: relative; }\n.dpl-preview-empty { display: grid; place-items: center; flex: 1; width: 100%; font-size: 13.5px; color: var(--dpl-faint); background: var(--dpl-bg); }\n.dpl-preview-scroll { display: flex; flex-direction: column; height: 100%; width: 100%; overflow: auto; }\n.dpl-reader-actions-float {\n  position: sticky;\n  top: 0;\n  z-index: 5;\n  display: flex;\n  align-items: center;\n  justify-content: flex-end;\n  gap: 2px;\n  padding: 8px 24px 16px 0;\n  background: linear-gradient(to bottom, var(--dpl-bg) 55%, transparent);\n}\n.dpl-round-btn {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 32px;\n  height: 32px;\n  border: none;\n  border-radius: 50%;\n  background: transparent;\n  color: var(--dpl-muted);\n  cursor: pointer;\n}\n.dpl-round-btn:hover:not(:disabled) { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-round-btn:disabled { opacity: 0.4; cursor: default; }\n/* The \u6587 button while the translated version is on screen. */\n.dpl-round-btn.is-on { color: var(--dpl-accent); background: color-mix(in srgb, var(--dpl-accent) 12%, transparent); }\n.dpl-lang-mark { font-size: 12.5px; font-weight: 600; }\n/* Favicon badge: same 16px box as the letter mark, square-cropped. */\n.dpl-badge-img { object-fit: cover; display: inline-block; }\n/* Translation banner shown between actions and the article head. */\n.dpl-translation-notice {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  margin: 0 auto 8px;\n  width: 100%;\n  max-width: var(--dpl-measure);\n  padding: 5px 12px;\n  border-radius: 8px;\n  background: color-mix(in srgb, var(--dpl-accent) 7%, transparent);\n  color: var(--dpl-muted);\n  font-size: 12px;\n}\n.dpl-inline-btn { border: none; background: transparent; padding: 2px 6px; border-radius: 5px; color: var(--dpl-accent); font-size: 12px; cursor: pointer; }\n.dpl-inline-btn:hover { background: var(--dpl-bg-hover); }\n.dpl-notice { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; padding: 6px 10px; border-radius: 8px; background: color-mix(in srgb, var(--dpl-accent) 10%, transparent); color: var(--dpl-accent); font-size: 12.5px; }\n.dpl-article-head { margin: 0 auto; width: 100%; max-width: var(--dpl-measure); padding: 0 32px 16px; }\n.dpl-article-head h1 { font-size: 20px; font-weight: 700; line-height: 1.4; color: var(--dpl-fg); margin: 0; }\n.dpl-article-meta { display: flex; align-items: center; gap: 6px; margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--dpl-border); font-size: 13px; color: var(--dpl-muted); }\n.dpl-meta-source { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.dpl-meta-state { color: var(--dpl-muted); }\n.dpl-short-notice {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 8px;\n  margin: 0 auto 8px;\n  width: 100%;\n  max-width: var(--dpl-measure);\n  padding: 6px 12px;\n  border-radius: 8px;\n  background: color-mix(in srgb, var(--dpl-accent) 7%, transparent);\n  color: var(--dpl-muted);\n  font-size: 12px;\n}\n.dpl-short-notice.is-empty { background: var(--dpl-bg-2); }\n.dpl-inline-link { font-weight: 500; text-decoration: underline; text-underline-offset: 2px; color: var(--dpl-accent); }\n.dpl-article-body-wrap { margin: 0 auto; width: 100%; max-width: var(--dpl-measure); padding: 0 32px 40px; }\n.dpl-article-plain { white-space: pre-wrap; color: var(--dpl-fg); font-size: 14.5px; line-height: 1.75; }\n.dpl-reader-notice { margin: 0 32px 10px; max-width: var(--dpl-measure); }\n\n/* aux rail (droplets T26) */\n\n/* manage table */\n.dpl-manage { display: flex; flex-direction: column; height: 100%; min-height: 0; width: 100%; background: var(--dpl-bg); }\n.dpl-manage-head { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 12px; border-bottom: 1px solid var(--dpl-border); flex: none; }\n.dpl-manage-title { font-size: 13.5px; font-weight: 600; }\n.dpl-manage-filters { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--dpl-border); flex: none; }\n.dpl-manage-search { width: 224px; height: 28px; border-radius: 999px; }\n.dpl-seg { display: flex; align-items: center; gap: 2px; font-size: 12px; }\n.dpl-seg-item { border: none; background: transparent; border-radius: 999px; padding: 4px 8px; color: var(--dpl-muted); cursor: pointer; font-size: 12px; }\n.dpl-seg-item:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-seg-item.is-active { background: color-mix(in srgb, var(--dpl-accent) 12%, transparent); color: var(--dpl-accent); }\n.dpl-manage-batch { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-bottom: 1px solid var(--dpl-border); background: color-mix(in srgb, var(--dpl-accent) 7%, transparent); font-size: 12px; flex: none; }\n.dpl-btn.dpl-sm { min-height: 24px; padding: 2px 8px; font-size: 12px; }\n.dpl-popover { position: absolute; left: 0; top: 100%; z-index: 30; margin-top: 4px; width: 208px; background: var(--dpl-bg); border: 1px solid var(--dpl-border); border-radius: 8px; padding: 6px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18); display: flex; flex-direction: column; gap: 6px; }\n.dpl-manage-grid { display: grid; grid-template-columns: 2rem 3rem minmax(0, 1fr) 4.5rem 6.5rem 2.5rem 2rem; align-items: center; gap: 8px; padding: 0 12px; }\n.dpl-manage-header { height: 30px; border-bottom: 1px solid var(--dpl-border); font-size: 12px; color: var(--dpl-muted); flex: none; }\n.dpl-manage-sort { border: none; background: transparent; padding: 0; font-size: 12px; color: inherit; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 2px; }\n.dpl-manage-sort.dpl-right { justify-content: flex-end; }\n.dpl-manage-sort.is-active { font-weight: 500; color: var(--dpl-accent); }\n.dpl-manage-rows { min-height: 0; flex: 1; overflow: auto; }\n.dpl-manage-row { height: 46px; border-bottom: 1px solid var(--dpl-border); cursor: pointer; transition: background-color 0.1s; }\n.dpl-manage-row:hover { background: var(--dpl-bg-hover); }\n.dpl-manage-name { display: flex; align-items: center; gap: 8px; min-width: 0; }\n.dpl-manage-title { font-size: 13.5px; font-weight: 500; }\n.dpl-manage-title.is-dim { color: var(--dpl-faint); font-weight: 400; }\n.dpl-manage-group { font-size: 12px; color: var(--dpl-faint); }\n.dpl-manage-count { font-size: 12px; color: var(--dpl-muted); }\n.dpl-manage-time { font-size: 12px; color: var(--dpl-faint); }\n.dpl-right { text-align: right; }\n.dpl-health { width: 8px; height: 8px; border-radius: 50%; justify-self: center; }\n.dpl-health.is-ok { background: #34c98e; }\n.dpl-health.is-error { background: var(--dpl-danger); }\n.dpl-health.is-off { background: var(--dpl-border); }\n.dpl-manage-empty { display: grid; place-items: center; height: 96px; font-size: 12px; color: var(--dpl-faint); }\n.dpl-manage-stats { display: flex; align-items: center; gap: 12px; padding: 6px 12px; border-top: 1px solid var(--dpl-border); font-size: 12px; color: var(--dpl-faint); flex: none; }\n\n/* dialogs */\n.dpl-form-col { display: flex; flex-direction: column; gap: 10px; padding: 4px 0 10px; }\n.dpl-field { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--dpl-muted); }\n.dpl-field.dpl-row { flex-direction: row; align-items: center; gap: 8px; }\n.dpl-warn-text { margin: 0; font-size: 12.5px; color: var(--dpl-danger); }\n.dpl-dim-text { margin: 0; font-size: 12px; color: var(--dpl-faint); word-break: break-all; }\n.dpl-form-row.dpl-end { justify-content: flex-end; }\n.dpl-form-row.dpl-between { justify-content: space-between; }\n.dpl-root .dpl-btn.dpl-primary-solid { background: var(--dpl-accent-solid); color: #fff; }\n.dpl-root .dpl-btn.dpl-primary-solid:hover { background: var(--dpl-accent-solid-hover); }\n.dpl-root .dpl-btn.dpl-danger-solid { background: var(--dpl-danger); color: #fff; }\n.dpl-switch { width: 28px; height: 16px; appearance: none; background: var(--dpl-border); border-radius: 999px; position: relative; cursor: pointer; transition: background 0.15s; min-height: 0; padding: 0; }\n.dpl-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; transition: left 0.15s; }\n.dpl-switch:checked { background: var(--dpl-accent); }\n.dpl-switch:checked::after { left: 14px; }\n\n/* ---- inbox page (droplets 1:1 port: \u7B5B\u9009 250 \u2502 \u6761\u76EE 350 \u2502 \u9605\u8BFB) ---- */\n.dpl-ib-filter, .dpl-ib-list { border-right: 1px solid var(--dpl-border); }\n.dpl-ib-reader { position: relative; }\n\n/* \u9762\u677F\u5934\uFF08\u7B5B\u9009\u5217\u65E0\u8FB9\u7EBF\uFF0C\u4E0E\u6761\u76EE/\u9605\u8BFB\u5217\u540C\u9AD8\u540C\u4F4D\uFF09 */\n.dpl-ib-panehead {\n  display: flex;\n  height: 44px;\n  flex: none;\n  align-items: center;\n  justify-content: space-between;\n  padding: 0 10px;\n}\n.dpl-ib-pansub { font-size: 12px; font-weight: 500; color: var(--dpl-faint); }\n\n/* \u64CD\u4F5C\u884C\uFF1A\u6DFB\u52A0 URL / \u5BFC\u5165\uFF08viewToggle \u53CC\u6309\u94AE\uFF0C\u6216\u5185\u8054 URL \u8F93\u5165\uFF09 */\n.dpl-ib-actions { display: flex; flex: none; align-items: center; gap: 6px; padding: 0 10px 8px; }\n/* \u64CD\u4F5C\u884C: \u6DFB\u52A0 URL / \u5BFC\u5165 \u2014 buttons are .dpl-pane-btn (\u7EDF\u4E00\u9762\u677F\u63A7\u5236\u6309\u94AE). */\n.dpl-ib-urlrow { display: flex; width: 100%; align-items: center; gap: 4px; }\n.dpl-ib-urlrow input { min-width: 0; flex: 1; }\n.dpl-ib-cancelurl {\n  display: grid;\n  place-items: center;\n  width: 24px;\n  height: 24px;\n  flex: none;\n  border: none;\n  border-radius: 6px;\n  background: transparent;\n  color: var(--dpl-faint);\n  cursor: pointer;\n}\n.dpl-ib-cancelurl:hover { background: var(--dpl-bg-2); color: var(--dpl-fg); }\n.dpl-ib-adderror {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  border-bottom: 1px solid var(--dpl-border);\n  background: color-mix(in srgb, var(--dpl-danger) 9%, transparent);\n  padding: 6px 10px;\n  font-size: 12px;\n  color: var(--dpl-danger);\n  flex: none;\n}\n.dpl-ib-adderror span { flex: 1; word-break: break-all; }\n.dpl-ib-adderror button { border: none; background: transparent; color: inherit; cursor: pointer; padding: 2px; }\n\n/* \u7B5B\u9009\u6EDA\u52A8\u533A\uFF1A\u72B6\u6001\u89C6\u56FE + \u6807\u7B7E */\n.dpl-ib-scroll { min-height: 0; flex: 1; overflow: auto; padding: 8px; }\n.dpl-ib-statusviews { display: grid; gap: 2px; }\n.dpl-ib-statusrow {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  border: none;\n  background: transparent;\n  border-radius: 6px;\n  padding: 6px 10px;\n  font-size: 13px;\n  color: var(--dpl-muted);\n  cursor: pointer;\n  text-align: left;\n  transition: background-color 0.12s;\n}\n.dpl-ib-statusrow:hover { background: var(--dpl-bg-2); }\n.dpl-ib-statusrow.is-active { background: var(--dpl-accent-soft); font-weight: 500; color: var(--dpl-accent); }\n.dpl-ib-statuslabel { flex: 1; }\n.dpl-ib-statuscount { font-size: 12px; color: var(--dpl-faint); }\n.dpl-dot.is-accent { background: var(--dpl-accent); }\n.dpl-dot.is-gray { background: var(--dpl-faint); }\n.dpl-dot.is-danger { background: var(--dpl-danger); }\n\n.dpl-ib-tagstitle { margin-top: 16px; padding: 0 10px; font-size: 12px; font-weight: 500; color: var(--dpl-faint); }\n.dpl-ib-tags { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; padding: 0 6px; }\n.dpl-ib-tag {\n  border: none;\n  background: var(--dpl-bg-2);\n  border-radius: 999px;\n  padding: 2px 8px;\n  font-size: 12px;\n  color: var(--dpl-muted);\n  cursor: pointer;\n  transition: background-color 0.12s, color 0.12s;\n}\n.dpl-ib-tag:hover { background: var(--dpl-bg-active); color: var(--dpl-fg); }\n.dpl-ib-tag.is-active { background: var(--dpl-accent-soft); color: var(--dpl-accent); }\n.dpl-ib-tag span { color: var(--dpl-faint); }\n\n/* \u6761\u76EE\u5217 */\n.dpl-ib-listhead {\n  display: flex;\n  height: 44px;\n  flex: none;\n  align-items: center;\n  gap: 4px;\n  border-bottom: 1px solid var(--dpl-border);\n  padding: 0 12px;\n  font-size: 12px;\n  color: var(--dpl-faint);\n}\n.dpl-ib-listhead > span:first-child { min-width: 0; flex: 1; }\n.dpl-ib-retryall {\n  flex: none;\n  border: none;\n  background: var(--dpl-bg-2);\n  border-radius: 6px;\n  padding: 2px 6px;\n  font-size: 12px;\n  color: var(--dpl-muted);\n  cursor: pointer;\n}\n.dpl-ib-retryall:hover:not(:disabled) { background: var(--dpl-bg-active); color: var(--dpl-fg); }\n.dpl-ib-retryall:disabled { opacity: 0.5; cursor: default; }\n.dpl-ib-listscroll { min-height: 0; flex: 1; overflow: auto; }\n.dpl-ib-listempty {\n  display: grid;\n  place-items: center;\n  height: 160px;\n  padding: 0 16px;\n  text-align: center;\n  font-size: 12px;\n  color: var(--dpl-faint);\n}\n.dpl-ib-row {\n  position: relative;\n  border-bottom: 1px solid var(--dpl-border);\n  padding: 10px 12px;\n  cursor: pointer;\n  transition: background-color 0.12s;\n  content-visibility: auto;\n  contain-intrinsic-size: auto 68px;\n}\n.dpl-ib-row:hover { background: var(--dpl-bg-hover); }\n.dpl-ib-row.is-active { background: color-mix(in srgb, var(--dpl-accent) 7%, transparent); }\n.dpl-ib-rowmain { display: flex; align-items: flex-start; gap: 8px; }\n.dpl-ib-rowmain .dpl-dot { margin-top: 6px; width: 8px; height: 8px; }\n.dpl-ib-rowbody { min-width: 0; flex: 1; }\n.dpl-ib-rowtitle {\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  font-size: 13px;\n  font-weight: 500;\n  color: var(--dpl-fg);\n}\n.dpl-ib-rowtitle.is-done { color: var(--dpl-faint); font-weight: 400; text-decoration: line-through; }\n.dpl-ib-rowmeta { margin-top: 4px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--dpl-faint); }\n.dpl-ib-faillabel { color: var(--dpl-danger); }\n.dpl-ib-rowtags { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; }\n.dpl-ib-rowtag {\n  border-radius: 999px;\n  background: var(--dpl-bg-active);\n  padding: 1px 6px;\n  font-size: 12px;\n  color: var(--dpl-muted);\n}\n.dpl-ib-rowtagbtn {\n  display: grid;\n  place-items: center;\n  width: 24px;\n  height: 24px;\n  margin-top: 2px;\n  flex: none;\n  border: none;\n  border-radius: 6px;\n  background: transparent;\n  color: var(--dpl-faint);\n  cursor: pointer;\n  opacity: 0;\n  transition: opacity 0.12s;\n}\n.dpl-ib-row:hover .dpl-ib-rowtagbtn, .dpl-ib-rowtagbtn:focus-visible { opacity: 1; }\n.dpl-ib-rowtagbtn:hover { background: var(--dpl-bg-active); color: var(--dpl-fg); }\n\n/* \u6761\u76EE\u5217\u6807\u7B7E\u5F39\u5C42 */\n.dpl-ib-tageditor {\n  position: absolute;\n  right: 8px;\n  top: 8px;\n  z-index: 20;\n  width: 224px;\n  border: 1px solid var(--dpl-border);\n  border-radius: 8px;\n  background: var(--dpl-bg);\n  padding: 8px;\n  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);\n}\n.dpl-ib-tageditor input { width: 100%; }\n.dpl-ib-tageditorfoot { margin-top: 6px; display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--dpl-faint); }\n.dpl-ib-tagconfirm {\n  display: inline-flex;\n  align-items: center;\n  gap: 4px;\n  border: none;\n  background: transparent;\n  border-radius: 6px;\n  padding: 2px 6px;\n  font-size: 12px;\n  color: var(--dpl-accent);\n  cursor: pointer;\n}\n.dpl-ib-tagconfirm:hover { background: var(--dpl-accent-soft); }\n\n/* \u9605\u8BFB\u5217 */\n.dpl-ib-readerbody { position: relative; display: flex; min-width: 0; flex: 1; min-height: 0; flex-direction: column; }\n.dpl-ib-readercenter { display: grid; flex: 1; place-items: center; font-size: 13px; color: var(--dpl-faint); padding: 16px; text-align: center; }\n.dpl-ib-readerhead {\n  display: flex;\n  height: 44px;\n  flex: none;\n  align-items: center;\n  gap: 4px;\n  border-bottom: 1px solid var(--dpl-border);\n  background: var(--dpl-bg);\n  padding: 0 12px;\n}\n.dpl-ib-readertitle { margin-right: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 600; color: var(--dpl-fg); }\n.dpl-ib-headbtn { width: 28px; height: 28px; flex: none; }\n.dpl-ib-headbtn.is-accent { color: var(--dpl-accent); }\n.dpl-ib-donebtn { min-height: 28px; padding: 4px 10px; font-size: 12.5px; flex: none; margin-left: 4px; }\n.dpl-ib-tagpopup {\n  position: absolute;\n  right: 12px;\n  top: 44px;\n  z-index: 30;\n  width: 256px;\n  border: 1px solid var(--dpl-border);\n  border-radius: 8px;\n  background: var(--dpl-bg);\n  padding: 8px;\n  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);\n}\n.dpl-ib-tagpopup input { width: 100%; }\n\n/* \u6293\u53D6\u5931\u8D25\u5360\u4F4D\u5361 */\n.dpl-ib-readerfill { display: grid; flex: 1; place-items: center; padding: 24px; }\n.dpl-ib-failedcard {\n  width: 420px;\n  max-width: 100%;\n  border: 1px solid var(--dpl-border);\n  border-radius: 12px;\n  background: var(--dpl-bg);\n  padding: 24px;\n  text-align: center;\n  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);\n}\n.dpl-ib-warnicon { margin: 0 auto; color: #b98a1d; }\n.dpl-ib-failedcard h3 { margin: 12px 0 0; font-size: 14px; font-weight: 600; }\n.dpl-ib-failedmsg { margin: 8px 0 0; font-size: 13px; color: var(--dpl-muted); word-break: break-all; }\n.dpl-ib-failedhint { margin: 8px 0 0; font-size: 12px; color: var(--dpl-faint); }\n.dpl-ib-retrybtn { margin-top: 16px; border: 1px solid var(--dpl-border); }\n.dpl-ib-retrybtn:hover:not(:disabled) { background: var(--dpl-bg-2); }\n.dpl-ib-outlinebtn { border: 1px solid var(--dpl-border); }\n.dpl-ib-outlinebtn:hover:not(:disabled) { background: var(--dpl-bg-2); }\n\n/* \u6B63\u6587\uFF08markdown\uFF09 */\n.dpl-ib-contentscroll { min-height: 0; flex: 1; overflow: auto; }\n.dpl-ib-shortnotice {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 8px;\n  margin: 16px auto 0;\n  width: min(90%, var(--dpl-measure));\n  border-radius: 8px;\n  padding: 6px 12px;\n  font-size: 12px;\n}\n.dpl-ib-shortnotice.is-warn { background: rgba(230, 167, 0, 0.12); color: #8a6d1a; }\n.dpl-ib-shortnotice.is-info { background: color-mix(in srgb, #2f6fed 9%, transparent); color: #2f6fed; }\n.dpl-ib-shortnotice svg { flex: none; }\n.dpl-inline-link { border: none; background: transparent; padding: 0; font-weight: 500; text-decoration: underline; text-underline-offset: 2px; color: inherit; cursor: pointer; }\n.dpl-inline-link:hover { opacity: 0.8; }\n.dpl-ib-article { margin: 0 auto; padding: 32px; max-width: var(--dpl-measure); font-size: 16px; line-height: 1.7; }\n.dpl-ib-articlebody { color: var(--dpl-fg); min-width: 0; overflow-x: auto; }\n.dpl-ib-articlebody > *:first-child { margin-top: 0; }\n.dpl-ib-articlebody > *:last-child { margin-bottom: 0; }\n.dpl-ib-articlebody h1, .dpl-ib-articlebody h2, .dpl-ib-articlebody h3,\n.dpl-ib-articlebody h4, .dpl-ib-articlebody h5, .dpl-ib-articlebody h6 {\n  margin: 1.4em 0 0.6em;\n  font-weight: 600;\n  line-height: 1.4;\n}\n.dpl-ib-articlebody h1 { font-size: 1.5em; }\n.dpl-ib-articlebody h2 { font-size: 1.3em; }\n.dpl-ib-articlebody h3 { font-size: 1.15em; }\n.dpl-ib-articlebody h4, .dpl-ib-articlebody h5, .dpl-ib-articlebody h6 { font-size: 1em; }\n.dpl-ib-articlebody p { margin: 0.8em 0; }\n.dpl-ib-articlebody a { color: var(--dpl-link); text-decoration: none; }\n.dpl-ib-articlebody a:hover { text-decoration: underline; }\n.dpl-ib-articlebody img { max-width: 100%; height: auto; border-radius: 8px; }\n.dpl-ib-articlebody ul, .dpl-ib-articlebody ol { margin: 0.8em 0; padding-left: 1.6em; }\n.dpl-ib-articlebody li { margin: 0.25em 0; }\n.dpl-ib-articlebody blockquote { margin: 0.9em 0; border-left: 3px solid var(--dpl-border); padding: 2px 14px; color: var(--dpl-muted); }\n.dpl-ib-articlebody pre { overflow: auto; margin: 0.9em 0; border-radius: 8px; background: var(--dpl-bg-2); padding: 12px; font-size: 13px; line-height: 1.6; max-width: 100%; }\n.dpl-ib-articlebody code { font-size: 0.88em; background: var(--dpl-bg-2); border-radius: 4px; padding: 1px 5px; }\n.dpl-ib-articlebody pre code { background: transparent; padding: 0; }\n.dpl-ib-articlebody hr { border: none; border-top: 1px solid var(--dpl-border); margin: 1.6em 0; }\n.dpl-ib-articlebody table { border-collapse: collapse; margin: 0.9em 0; max-width: 100%; display: block; overflow-x: auto; }\n.dpl-ib-articlebody th, .dpl-ib-articlebody td { border: 1px solid var(--dpl-border); padding: 5px 10px; font-size: 0.92em; text-align: left; }\n.dpl-ib-articlebody th { background: var(--dpl-bg-2); font-weight: 600; }\n\n/* PDF / EPUB \u9605\u8BFB\u5668\uFF08droplets \u5F62\u72B6\uFF1A\u9876\u90E8\u5BFC\u822A\u6761 + \u6EDA\u52A8\u6B63\u6587\uFF09 */\n.dpl-ib-docpane { display: flex; min-height: 0; flex: 1; flex-direction: column; }\n.dpl-ib-docnav {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  gap: 8px;\n  border-bottom: 1px solid var(--dpl-border);\n  padding: 6px 12px;\n  font-size: 12px;\n  color: var(--dpl-muted);\n  flex: none;\n}\n.dpl-ib-docnav > span { min-width: 0; }\n.dpl-ib-docnavbtn { border: 1px solid var(--dpl-border); min-height: 24px; padding: 2px 8px; font-size: 12px; }\n.dpl-ib-docnavbtn:hover:not(:disabled) { background: var(--dpl-bg-2); }\n.dpl-ib-docscroll { min-height: 0; flex: 1; overflow: auto; background: var(--dpl-bg-2); padding: 16px; }\n.dpl-ib-pdfcanvas { display: block; margin: 0 auto; background: #fff; box-shadow: 0 4px 18px rgba(15, 23, 42, 0.16); }\n.dpl-ib-epubscroll { background: var(--dpl-bg); padding: 0; }\n.dpl-ib-epubbody { margin: 0 auto; padding: 32px; max-width: var(--dpl-measure); font-size: 16px; line-height: 1.7; color: var(--dpl-fg); }\n.dpl-ib-epubbody img { max-width: 100%; height: auto; }\n\n/* \u5904\u7406\u5B8C\u6210\u5F39\u5C42 */\n.dpl-ib-donescrim {\n  position: absolute;\n  inset: 0;\n  z-index: 40;\n  display: grid;\n  place-items: center;\n  background: rgba(15, 23, 42, 0.2);\n}\n.dpl-ib-donedialog {\n  width: 380px;\n  max-width: calc(100% - 32px);\n  border: 1px solid var(--dpl-border);\n  border-radius: 12px;\n  background: var(--dpl-bg);\n  padding: 20px;\n  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.24);\n}\n.dpl-ib-donedialoghead { display: flex; align-items: center; justify-content: space-between; gap: 10px; }\n.dpl-ib-donedialoghead h3 { margin: 0; font-size: 13.5px; font-weight: 600; }\n.dpl-ib-donesub { margin: 8px 0 0; font-size: 13px; color: var(--dpl-muted); }\n.dpl-ib-donebtns { margin-top: 16px; display: grid; gap: 8px; }\n.dpl-ib-donebtns .dpl-btn { justify-content: center; min-height: 30px; }\n.dpl-ib-doneresult {\n  margin: 12px 0 0;\n  border-radius: 8px;\n  background: color-mix(in srgb, #2f6fed 9%, transparent);\n  padding: 8px 12px;\n  font-size: 12px;\n  color: #2f6fed;\n  word-break: break-all;\n}\n\n/* ---- pdf / epub ---- */\n.dpl-pdf { display: flex; flex-direction: column; align-items: center; gap: 12px; }\n.dpl-pdf-canvas { max-width: 100%; box-shadow: 0 2px 14px rgba(15, 23, 42, 0.18); border-radius: 6px; background: #fff; }\n.dpl-pager { display: flex; align-items: center; gap: 10px; color: var(--dpl-muted); font-size: 13px; }\n\n/* ---- vault ---- */\n.dpl-vault-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--dpl-muted); }\n.dpl-tree-stats { font-size: 12px; color: var(--dpl-faint); flex: 1; padding-left: 4px; }\n.dpl-tree details { margin-left: 4px; }\n.dpl-tree summary {\n  cursor: pointer;\n  padding: 4px 8px;\n  font-size: 12px;\n  font-weight: 600;\n  color: var(--dpl-muted);\n  border-radius: 6px;\n  list-style: none;\n  display: flex;\n  align-items: center;\n  gap: 4px;\n}\n.dpl-tree summary::before { content: '\u25B8'; font-size: 10px; transition: transform 0.12s; color: var(--dpl-faint); }\n.dpl-tree details[open] > summary::before { transform: rotate(90deg); }\n.dpl-tree summary:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-tree-file {\n  display: flex;\n  width: calc(100% - 8px);\n  margin: 0 4px;\n  border: none;\n  background: transparent;\n  text-align: left;\n  padding: 4px 10px;\n  cursor: pointer;\n  color: var(--dpl-fg);\n  border-radius: 6px;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  font-size: 13px;\n}\n.dpl-tree-file:hover { background: var(--dpl-bg-hover); }\n.dpl-tree-file.is-active { background: var(--dpl-bg-active); font-weight: 600; }\n.dpl-note-body { line-height: 1.75; font-size: 14.5px; }\n.dpl-note-body h1, .dpl-note-body h2 { border-bottom: 1px solid var(--dpl-border); padding-bottom: 6px; margin: 1.2em 0 0.6em; }\n.dpl-note-body pre { overflow: auto; padding: 12px; border-radius: var(--dpl-radius-sm); background: var(--dpl-bg-2); font-size: 13px; }\n.dpl-note-body code { background: var(--dpl-bg-2); border-radius: 4px; padding: 1px 5px; font-size: 0.92em; }\n.dpl-note-editor {\n  width: 100%;\n  min-height: 62vh;\n  font-family: var(--dsw-alias-font-mono, ui-monospace, 'SF Mono', monospace);\n  font-size: 13px;\n  line-height: 1.7;\n  border-radius: var(--dpl-radius);\n  border: 1px solid var(--dpl-border);\n  padding: 14px;\n  resize: vertical;\n  background: var(--dpl-bg);\n  color: var(--dpl-fg);\n}\n.dpl-note-editor:focus { border-color: var(--dpl-accent); }\n.dpl-wikilink { color: var(--dpl-link); text-decoration: none; border-bottom: 1px dashed currentColor; }\n.dpl-tag { color: var(--dpl-muted); background: var(--dpl-bg-2); border-radius: 4px; padding: 0 4px; font-size: 0.9em; }\n.dpl-backlinks h2, .dpl-search-results h2 { font-size: 14px; margin: 20px 0 8px; font-weight: 600; }\n.dpl-backlinks ul, .dpl-search-results ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }\n.dpl-backlinks button, .dpl-search-results button {\n  border: none;\n  background: transparent;\n  text-align: left;\n  cursor: pointer;\n  padding: 7px 9px;\n  border-radius: var(--dpl-radius-sm);\n  color: var(--dpl-fg);\n  display: block;\n  width: 100%;\n}\n.dpl-backlinks button:hover, .dpl-search-results button:hover { background: var(--dpl-bg-hover); }\n.dpl-search-results p { margin: 2px 0 0; font-size: 12px; color: var(--dpl-faint); }\n\n.dpl-graph { position: relative; height: 100%; }\n.dpl-graph svg { width: 100%; height: 100%; }\n.dpl-graph-edge { stroke: color-mix(in srgb, var(--dpl-fg) 20%, transparent); stroke-width: 1; }\n.dpl-graph-node { fill: var(--dpl-accent); cursor: pointer; }\n.dpl-graph-node.is-dangling { fill: color-mix(in srgb, var(--dpl-fg) 25%, transparent); }\n.dpl-graph-node.is-hover { stroke: var(--dpl-fg); stroke-width: 2; }\n.dpl-graph-label { position: absolute; top: 8px; left: 12px; font-size: 12px; color: var(--dpl-muted); }\n\n/* ---- companion (droplets: docked right panel) ---- */\n.dpl-companion {\n  width: 40%;\n  min-width: 360px;\n  flex: none;\n  display: flex;\n  flex-direction: column;\n  border-left: 1px solid var(--dpl-border);\n  min-height: 0;\n  background: var(--dpl-bg);\n}\n.dpl-companion-header { display: flex; align-items: center; gap: 4px; height: 40px; padding: 0 8px 0 12px; border-bottom: 1px solid var(--dpl-border); }\n.dpl-companion-header strong { flex: 1; font-size: 13px; font-weight: 600; }\n.dpl-companion-context { padding: 8px 12px; border-bottom: 1px solid var(--dpl-border); display: flex; flex-direction: column; gap: 2px; overflow: hidden; }\n.dpl-companion-context strong { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.dpl-companion-context small { font-size: 12px; color: var(--dpl-muted); }\n.dpl-native-chat { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }\n.dpl-companion-loading { padding: 24px; text-align: center; color: var(--dpl-faint); flex: 1; font-size: 13px; }\n.dpl-companion-error { margin: 10px; padding: 10px; border-radius: var(--dpl-radius-sm); background: color-mix(in srgb, var(--dpl-danger) 10%, transparent); color: var(--dpl-danger); font-size: 13px; }\n.dpl-companion-error p { margin: 6px 0 10px; font-size: 12px; word-break: break-all; }\n.dpl-companion-error button { margin-top: 2px; }\n.dpl-companion-notice { display: flex; align-items: center; gap: 6px; margin: 6px 10px; padding: 6px 10px; border-radius: var(--dpl-radius-sm); background: var(--dpl-bg-2); color: var(--dpl-muted); font-size: 12px; }\n.dpl-companion-notice span { flex: 1; }\n.dpl-companion-quote { margin: 8px 10px; border-left: 3px solid var(--dpl-accent); padding: 6px 10px; background: var(--dpl-bg-2); border-radius: 0 var(--dpl-radius-sm) var(--dpl-radius-sm) 0; }\n.dpl-companion-quote strong { font-size: 11px; color: var(--dpl-muted); display: block; margin-bottom: 4px; }\n.dpl-companion-quote blockquote { margin: 0; font-size: 12px; max-height: 90px; overflow: auto; white-space: pre-wrap; }\n.dpl-companion-prompt-strip { display: flex; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--dpl-border); flex: none; overflow-x: auto; }\n.dpl-prompt-ghost { border: 1px solid var(--dpl-border); background: transparent; border-radius: 999px; padding: 4px 12px; font-size: 12px; cursor: pointer; color: var(--dpl-fg); white-space: nowrap; }\n.dpl-prompt-ghost:hover { background: var(--dpl-bg-hover); }\n.dpl-prompt-ghost:disabled { opacity: 0.45; cursor: default; }\n\n/* ---- modal (DSH dialog feel) ---- */\n.dpl-form-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }\n.dpl-form-row input { flex: 1; min-width: 120px; }\n.dpl-sub-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }\n.dpl-sub-list li { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: var(--dpl-radius-sm); }\n.dpl-sub-list li:hover { background: var(--dpl-bg-hover); }\n.dpl-sub-list label { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }\n.dpl-sub-list label.is-dim { opacity: 0.5; }\n.dpl-sub-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }\n.dpl-sub-meta { font-size: 12px; color: var(--dpl-faint); }\n.dpl-opml-input { width: 100%; }\n.dpl-settings-block h3 { font-size: 13px; margin: 14px 0 6px; font-weight: 600; }\n.dpl-settings-block h3:first-child { margin-top: 0; }\n.dpl-path { display: block; padding: 6px 9px; border-radius: 6px; background: var(--dpl-bg-2); font-size: 12px; font-family: var(--dsw-alias-font-mono, ui-monospace, monospace); word-break: break-all; margin: 6px 0; }\n.dpl-toggle { display: flex; align-items: center; gap: 8px; }\n.dpl-conflict-excerpt { margin: 8px 0; padding: 8px 10px; border-left: 3px solid var(--dpl-danger); font-size: 12px; color: var(--dpl-muted); max-height: 120px; overflow: auto; }\n\n/* ---- responsive: narrow windows stack companion below (qiaomu pattern) ---- */\n\n/* ---- feed page v2 (droplets interaction port) ---- */\n.dpl-flex-fill { flex: 1; min-width: 0; }\n.dpl-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.dpl-spin { animation: dpl-spin 0.9s linear infinite; }\n@keyframes dpl-spin { to { transform: rotate(360deg); } }\n\n.dpl-source { gap: 7px; }\n.dpl-source .dpl-badge { flex: none; }\n.dpl-source-error { color: var(--dpl-danger); flex: none; }\n.dpl-source em { margin-left: auto; }\n.dpl-source em:empty { display: none; }\n\n.dpl-icon-btn.is-on { color: var(--dpl-accent); }\n.dpl-icon-btn .dpl-fill { fill: currentColor; }\n\n.dpl-entry-scroll { min-height: 0; flex: 1; overflow: auto; }\n.dpl-entry-row {\n  cursor: pointer;\n  border-bottom: 1px solid var(--dpl-border);\n  padding: 9px 10px 9px 12px;\n  transition: background-color 0.1s;\n  content-visibility: auto;\n  contain-intrinsic-size: auto 74px;\n}\n.dpl-entry-row:hover { background: var(--dpl-bg-hover); }\n.dpl-entry-row.is-active { background: color-mix(in srgb, var(--dpl-accent) 9%, transparent); }\n.dpl-entry-src { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--dpl-faint); }\n.dpl-entry-src .dpl-star { padding: 0; font-size: 13px; opacity: 0; }\n.dpl-entry-row:hover .dpl-entry-src .dpl-star { opacity: 0.5; }\n.dpl-entry-src .dpl-star.is-on { opacity: 1; }\n.dpl-entry-main { display: flex; align-items: center; gap: 8px; margin-top: 4px; }\n.dpl-entry-main span:last-child { font-size: 13.5px; color: var(--dpl-muted); min-width: 0; flex: 1; }\n.dpl-entry-main span.is-unread { color: var(--dpl-fg); font-weight: 550; }\n.dpl-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--dpl-accent); flex: none; }\n.dpl-dot.is-read { background: var(--dpl-border); }\n.dpl-entry-sum { margin: 3px 0 0 15px; font-size: 12px; color: var(--dpl-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n\n.dpl-badge {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 16px;\n  border-radius: 5px;\n  font-size: 10px;\n  font-weight: 700;\n  flex: none;\n}\n\n.dpl-new-pill {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  gap: 4px;\n  margin: 6px 10px 0;\n  padding: 4px 10px;\n  border: none;\n  border-radius: 999px;\n  background: color-mix(in srgb, var(--dpl-accent) 14%, transparent);\n  color: var(--dpl-accent);\n  font-size: 12px;\n  font-weight: 600;\n  cursor: pointer;\n  flex: none;\n}\n.dpl-new-pill:hover { background: color-mix(in srgb, var(--dpl-accent) 22%, transparent); }\n\n.dpl-reader-actions-float {\n  position: sticky;\n  top: 0;\n  z-index: 5;\n  display: flex;\n  align-items: center;\n  justify-content: flex-end;\n  gap: 2px;\n  padding: 6px 0 14px;\n  background: linear-gradient(to bottom, var(--dpl-bg) 55%, transparent);\n}\n.dpl-round-btn {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 32px;\n  height: 32px;\n  border: none;\n  border-radius: 50%;\n  background: transparent;\n  color: var(--dpl-muted);\n  cursor: pointer;\n}\n.dpl-round-btn:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n\n.dpl-notice {\n  margin: 0 0 10px;\n  padding: 6px 10px;\n  border-radius: var(--dpl-radius-sm);\n  background: color-mix(in srgb, var(--dpl-accent) 10%, transparent);\n  color: var(--dpl-accent);\n  font-size: 12.5px;\n}\n\n/* ---- companion: floating window / docked pane (droplets AiPanel) ---- */\n.dpl-companion.is-floating {\n  position: fixed;\n  z-index: 40;\n  width: min(480px, calc(100vw - 2rem));\n  height: min(70vh, 640px);\n  min-width: 0;\n  border: 1px solid var(--dpl-border);\n  border-radius: 14px;\n  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.3);\n}\n.dpl-companion.is-docked {\n  position: relative;\n  flex: 0 0 auto;\n  min-width: 320px;\n  border-left: 1px solid var(--dpl-border);\n}\n/* Left-edge resize handle (droplets ai-panel-resize): always-visible thin\n   line on a wide invisible hit area; accent while hovering/dragging. */\n.dpl-companion-resize {\n  position: absolute;\n  top: 0;\n  bottom: 0;\n  left: -3px;\n  z-index: 10;\n  width: 8px;\n  cursor: col-resize;\n}\n.dpl-companion-resize::after {\n  content: '';\n  position: absolute;\n  top: 8px;\n  bottom: 8px;\n  left: 50%;\n  width: 1px;\n  transform: translateX(-50%);\n  background: var(--dpl-border);\n}\n.dpl-companion-resize:hover::after,\n.dpl-companion-resize:active::after { background: var(--dpl-accent); }\n.dpl-companion-header.is-draggable { cursor: move; user-select: none; touch-action: none; }\n.dpl-companion-spark { color: var(--dpl-accent); flex: none; }\n.dpl-companion-header .dpl-icon-btn { width: 24px; height: 24px; }\n\n/* AuxRail ask-AI button: droplets shape \u2014 round accent chip, white spark. */\n\n/* ---- global tooltip layer (body-level, JS-positioned) ---- */\n.dpl-gtip {\n  position: fixed;\n  z-index: 300;\n  background: var(--dsw-alias-label-primary, #0f1115);\n  color: var(--dsw-alias-bg-base, #fff);\n  font-size: 12px;\n  line-height: 1;\n  padding: 5px 8px;\n  border-radius: 6px;\n  white-space: nowrap;\n  max-width: 320px;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  opacity: 0;\n  pointer-events: none;\n  transition: opacity 0.12s ease 0.25s;\n  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.24);\n}\n.dpl-gtip[data-empty] { display: none; }\n\n/* Edit-dialog error panel (droplets feed-edit-error shape) */\n.dpl-dialog-errorpanel { margin: 0 20px 10px; display: flex; flex-direction: column; gap: 3px; }\n.dpl-dialog-errortitle { font-weight: 600; }\n.dpl-dialog-errortext { word-break: break-all; }\n.dpl-dialog-errormeta { color: var(--dpl-faint); }\n.dpl-list-empty p { margin: 0 0 10px; }\n.dpl-entry-row:focus-visible { outline: 2px solid var(--dpl-accent); outline-offset: -2px; }\n\n/* Wide article content (tables, long URLs) must scroll inside the reader,\n   never push the panel layout sideways (flex children default to\n   min-width:auto \u2014 the classic blowout). */\n.dpl-preview { min-width: 0; }\n.dpl-article-body-wrap { min-width: 0; }\n.dpl-article-body { min-width: 0; overflow-x: auto; }\n.dpl-article-body table { display: block; max-width: 100%; overflow-x: auto; }\n.dpl-article-body pre { max-width: 100%; }\n.dpl-note-body { min-width: 0; overflow-x: auto; }\n\n/* aux rail (droplets T26: ticks are 2px bars; back-to-top & ask-AI are 22px circles) */\n.dpl-aux-rail {\n  position: absolute;\n  top: 50%;\n  right: 10px;\n  transform: translateY(-50%);\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  gap: 3px;\n  z-index: 6;\n}\n.dpl-aux-tick { display: flex; height: 12px; align-items: center; justify-content: center; padding: 0 4px; border: none; background: transparent; cursor: pointer; }\n.dpl-aux-bar { display: block; height: 2px; border-radius: 1px; background: var(--dpl-faint); transition: background-color 0.12s; }\n.dpl-aux-tick:hover .dpl-aux-bar { background: var(--dpl-fg); }\n.dpl-aux-tick.is-active .dpl-aux-bar { background: var(--dpl-accent); }\n.dpl-aux-round, .dpl-aux-ask {\n  display: grid;\n  place-items: center;\n  width: 22px;\n  height: 22px;\n  padding: 0;\n  border: none;\n  border-radius: 9999px;\n  cursor: pointer;\n}\n.dpl-aux-round {\n  background: var(--dpl-bg-2);\n  color: var(--dpl-muted);\n  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.14);\n}\n.dpl-aux-round:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-root .dpl-aux-ask { background: var(--dpl-accent-solid); color: #fff; }\n.dpl-root .dpl-aux-ask:hover { background: var(--dpl-accent-solid-hover); }\n.dpl-aux-popover {\n  position: absolute;\n  top: 50%;\n  right: 34px;\n  transform: translateY(-50%);\n  min-width: 180px;\n  max-width: 280px;\n  max-height: 60vh;\n  overflow: auto;\n  background: var(--dpl-bg);\n  border: 1px solid var(--dpl-border);\n  border-radius: 10px;\n  padding: 6px;\n  box-shadow: 0 10px 32px rgba(15, 23, 42, 0.2);\n  z-index: 7;\n}\n.dpl-aux-pop { display: block; width: 100%; text-align: left; border: none; background: transparent; padding: 3px 8px; border-radius: 6px; font-size: 12.5px; color: var(--dpl-muted); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.dpl-aux-pop:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-aux-pop.is-active { color: var(--dpl-accent); font-weight: 600; }\n/* Shown when the rail dropped deep levels to fit: the popover is still the\n   full outline, this says so in one glance. */\n.dpl-aux-popcount { padding: 5px 8px 4px; margin-bottom: 2px; font-size: 11px; color: var(--dpl-faint); border-bottom: 1px solid var(--dpl-border); }\n\n.dpl-search-results h2 { display: flex; align-items: center; gap: 10px; }\n.dpl-search-results h2 .dpl-btn { margin-left: auto; }\n.dpl-dialog-field textarea { width: 100%; resize: vertical; font-size: 12px; line-height: 1.5; }\n.dpl-import-summary { font-size: 12px; color: var(--dpl-muted); }\n\n/* ---- OPML import dialog: entry choices + preview list ---- */\n.dpl-import-dialog { width: 560px; }\n.dpl-import-choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 6px 20px 18px; }\n.dpl-import-choice {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  gap: 6px;\n  padding: 22px 12px 16px;\n  border: 1px solid var(--dpl-border);\n  border-radius: 12px;\n  background: transparent;\n  cursor: pointer;\n  color: var(--dpl-fg);\n  transition: border-color 0.12s, background-color 0.12s;\n}\n.dpl-import-choice:hover { border-color: var(--dpl-accent); background: var(--dpl-accent-soft); }\n.dpl-import-choice svg { color: var(--dpl-accent); }\n.dpl-import-choice strong { font-size: 13px; }\n.dpl-import-choice span { font-size: 11.5px; color: var(--dpl-faint); text-align: center; }\n.dpl-import-preview { display: flex; flex-direction: column; min-height: 0; max-height: 56vh; }\n.dpl-import-summary {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 10px;\n  margin: 0 20px;\n  padding: 8px 0;\n  border-top: 1px solid var(--dpl-border);\n  font-size: 12.5px;\n  color: var(--dpl-muted);\n}\n.dpl-import-list { overflow: auto; padding: 4px 12px 8px; display: flex; flex-direction: column; }\n.dpl-import-row {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  padding: 6px 8px;\n  border-radius: 8px;\n  cursor: pointer;\n}\n.dpl-import-row:hover { background: var(--dpl-bg-hover); }\n.dpl-import-row.is-dim { opacity: 0.5; cursor: default; }\n.dpl-import-name { flex: 1; min-width: 0; font-size: 13px; }\n.dpl-import-group { font-size: 11.5px; color: var(--dpl-faint); flex: none; }\n.dpl-import-dup { font-size: 11.5px; color: var(--dpl-faint); flex: none; }\n\n/* ---- dialogs: authoritative set (fixed centered modal, .dpl-root prefix) ---- */\n.dpl-root .dpl-dialog-backdrop, .dpl-companion .dpl-dialog-backdrop {\n  position: fixed;\n  inset: 0;\n  z-index: 200;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  background: rgba(15, 23, 42, 0.32);\n  padding: 24px;\n}\n.dpl-root .dpl-dialog, .dpl-companion .dpl-dialog {\n  display: flex;\n  flex-direction: column;\n  max-width: 100%;\n  max-height: min(80vh, 720px);\n  border-radius: 14px;\n  background: var(--dpl-bg);\n  border: 1px solid var(--dpl-border);\n  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.32);\n}\n.dpl-root .dpl-add-dialog { width: 440px; }\n.dpl-root .dpl-edit-dialog { width: 520px; }\n.dpl-root .dpl-import-dialog { width: 560px; }\n.dpl-root .dpl-dialog-headline { display: flex; align-items: center; gap: 10px; padding: 16px 20px 10px; flex: none; }\n.dpl-root .dpl-icon-btn.dpl-round { width: 28px; height: 28px; border-radius: 50%; }\n.dpl-root .dpl-dialog-rows { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--dpl-border); padding: 12px 20px; font-size: 12px; }\n.dpl-root .dpl-dialog-row { display: flex; align-items: center; gap: 8px; }\n.dpl-root .dpl-dialog-label { width: 64px; flex: none; color: var(--dpl-faint); }\n.dpl-root .dpl-row-flex { display: flex; align-items: center; gap: 4px; }\n.dpl-root .dpl-group-menu { top: calc(100% + 4px); left: 64px; min-width: 180px; max-height: 176px; overflow: auto; }\n.dpl-root .dpl-dialog-url { flex: 1; min-width: 0; color: var(--dpl-muted); word-break: break-all; font-size: 12px; }\n.dpl-root .dpl-dialog-switch-hint { color: var(--dpl-muted); font-size: 12px; }\n.dpl-root .dpl-dialog-pad { margin: 0 20px 8px; }\n.dpl-root .dpl-dialog-footer { display: flex; align-items: center; gap: 8px; border-top: 1px solid var(--dpl-border); padding: 12px 20px; flex: none; }\n.dpl-root .dpl-import-preview { display: flex; flex-direction: column; min-height: 0; flex: 1; }\n.dpl-root .dpl-import-summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 20px; padding: 8px 0; border-top: 1px solid var(--dpl-border); font-size: 12.5px; color: var(--dpl-muted); flex: none; }\n.dpl-root .dpl-import-list { overflow: auto; padding: 4px 12px 8px; display: flex; flex-direction: column; min-height: 0; }\n.dpl-root .dpl-import-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; cursor: pointer; }\n.dpl-root .dpl-import-row:hover { background: var(--dpl-bg-hover); }\n.dpl-root .dpl-import-row.is-dim { opacity: 0.5; cursor: default; }\n.dpl-root .dpl-import-name { flex: 1; min-width: 0; font-size: 13px; }\n.dpl-root .dpl-import-group { font-size: 11.5px; color: var(--dpl-faint); flex: none; }\n.dpl-root .dpl-import-dup { font-size: 11.5px; color: var(--dpl-faint); flex: none; }\n.dpl-root .dpl-import-choice { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 22px 12px 16px; border: 1px solid var(--dpl-border); border-radius: 12px; background: transparent; cursor: pointer; color: var(--dpl-fg); transition: border-color 0.12s, background-color 0.12s; }\n.dpl-root .dpl-import-choice:hover { border-color: var(--dpl-accent); background: var(--dpl-accent-soft); }\n.dpl-root .dpl-import-choice svg { color: var(--dpl-accent); }\n.dpl-root .dpl-import-filestatus { padding: 0 20px; }\n.dpl-root .dpl-import-parsing { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--dpl-muted); padding: 6px 0; }\n.dpl-root .dpl-import-filestatus .dpl-dialog-error { display: flex; align-items: center; gap: 8px; }\n.dpl-root .dpl-import-successbar {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  margin: 8px 12px 0;\n  padding: 7px 10px;\n  border-radius: 8px;\n  background: color-mix(in srgb, #34c98e 12%, transparent);\n  color: #1e9e6a;\n  font-size: 12.5px;\n}\n.dpl-root .dpl-import-successbar span { flex: 1; }\n\n.dpl-root .dpl-refresh-progress { padding: 0 10px 8px; flex: none; }\n.dpl-root .dpl-refresh-progress-head {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  border: none;\n  background: transparent;\n  padding: 0;\n  font-size: 11.5px;\n  color: var(--dpl-muted);\n  cursor: pointer;\n  width: 100%;\n  text-align: left;\n}\n.dpl-root .dpl-refresh-progress-head:hover { color: var(--dpl-fg); }\n.dpl-root .dpl-refresh-bar { height: 2px; border-radius: 1px; background: var(--dpl-border); margin-top: 5px; overflow: hidden; }\n.dpl-root .dpl-refresh-bar-fill { height: 100%; background: var(--dpl-accent); transition: width 0.4s ease; }\n.dpl-root .dpl-refresh-errors {\n  max-height: 200px;\n  overflow: auto;\n  margin-top: 6px;\n  border: 1px solid var(--dpl-border);\n  border-radius: 8px;\n  padding: 4px;\n  background: var(--dpl-bg-2);\n}\n.dpl-root .dpl-refresh-error { display: flex; flex-direction: column; gap: 1px; padding: 4px 6px; font-size: 11px; }\n.dpl-root .dpl-refresh-error span { color: var(--dpl-fg); }\n.dpl-root .dpl-refresh-error em { font-style: normal; color: var(--dpl-danger); word-break: break-all; }\n\n/* ---- settings screen (droplets two-pane settings) ---- */\n.dpl-root .dpl-header-gear {\n  display: grid;\n  place-items: center;\n  width: 26px;\n  height: 26px;\n  flex: none;\n  margin-left: auto;\n  border: none;\n  border-radius: 7px;\n  background: transparent;\n  color: var(--dpl-muted);\n  cursor: pointer;\n}\n.dpl-root .dpl-header-gear:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-root .dpl-header-gear.is-active { background: var(--dpl-accent-soft); color: var(--dpl-accent); }\n.dpl-root .dpl-settings { display: flex; flex: 1; min-height: 0; height: 100%; }\n.dpl-root .dpl-settings-nav {\n  width: 176px;\n  flex: none;\n  border-right: 1px solid var(--dpl-border);\n  padding: 10px 8px;\n  display: flex;\n  flex-direction: column;\n  gap: 2px;\n  overflow: auto;\n}\n.dpl-root .dpl-settings-navhead { display: flex; align-items: center; gap: 6px; padding: 2px 4px 10px; font-size: 13px; }\n.dpl-root .dpl-settings-navitem {\n  display: block;\n  width: 100%;\n  text-align: left;\n  border: none;\n  background: transparent;\n  padding: 7px 10px;\n  border-radius: 8px;\n  font-size: 13px;\n  color: var(--dpl-muted);\n  cursor: pointer;\n}\n.dpl-root .dpl-settings-navitem:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-root .dpl-settings-navitem.is-active { background: var(--dpl-accent-soft); color: var(--dpl-accent); font-weight: 500; }\n.dpl-root .dpl-settings-body { flex: 1; min-width: 0; overflow: auto; padding: 18px 22px 40px; }\n.dpl-root .dpl-settings-section { max-width: 720px; display: flex; flex-direction: column; gap: 14px; }\n.dpl-root .dpl-settings-section h2 { margin: 0 0 2px; font-size: 15px; font-weight: 600; }\n.dpl-root .dpl-settings-card {\n  border: 1px solid var(--dpl-border);\n  border-radius: 12px;\n  padding: 14px 16px;\n  display: flex;\n  flex-direction: column;\n  gap: 10px;\n  background: var(--dpl-bg);\n}\n.dpl-root .dpl-settings-rowname { font-size: 12.5px; color: var(--dpl-muted); }\n.dpl-root .dpl-settings-pathrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }\n.dpl-root .dpl-settings-pathrow code { flex: 1; min-width: 220px; font-size: 12.5px; word-break: break-all; }\n.dpl-root .dpl-settings-hint { margin: 0; font-size: 12px; color: var(--dpl-faint); line-height: 1.6; }\n.dpl-root .dpl-settings-dirs { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }\n.dpl-root .dpl-settings-dir {\n  display: grid;\n  grid-template-columns: auto 1fr;\n  grid-template-areas: 'icon name' 'label label';\n  gap: 2px 6px;\n  align-items: center;\n  text-align: left;\n  border: 1px solid var(--dpl-border);\n  border-radius: 10px;\n  background: transparent;\n  padding: 9px 10px;\n  cursor: pointer;\n  color: var(--dpl-fg);\n}\n.dpl-root .dpl-settings-dir:hover { border-color: var(--dpl-accent); background: var(--dpl-accent-soft); }\n.dpl-root .dpl-settings-dir.is-missing { opacity: 0.55; }\n.dpl-root .dpl-settings-dir svg { grid-area: icon; color: var(--dpl-accent); }\n.dpl-root .dpl-settings-dirname { grid-area: name; font-size: 12.5px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }\n.dpl-root .dpl-settings-dir em { display: none; }\n.dpl-root .dpl-settings-dirlabel { grid-area: label; font-size: 11.5px; color: var(--dpl-faint); }\n.dpl-root .dpl-settings-metrics { display: flex; flex-direction: column; gap: 8px; }\n.dpl-root .dpl-settings-metrics > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 12.5px; }\n.dpl-root .dpl-settings-metrics span { color: var(--dpl-faint); }\n.dpl-root .dpl-settings-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; word-break: break-all; text-align: right; }\n.dpl-root .dpl-settings-segmented { display: flex; gap: 8px; flex-wrap: wrap; }\n.dpl-root .dpl-settings-seg {\n  border: 1px solid var(--dpl-border);\n  background: transparent;\n  border-radius: 8px;\n  padding: 6px 12px;\n  font-size: 12.5px;\n  color: var(--dpl-muted);\n  cursor: pointer;\n}\n.dpl-root .dpl-settings-seg:hover { border-color: var(--dpl-accent); color: var(--dpl-fg); }\n.dpl-root .dpl-settings-seg.is-active { background: var(--dpl-accent-solid); border-color: var(--dpl-accent-solid); color: #fff; }\n.dpl-root .dpl-settings-toggle { display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--dpl-fg); cursor: pointer; }\n.dpl-root .dpl-settings-toggle input { width: 14px; height: 14px; flex: none; }\n.dpl-root .dpl-settings-field { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12.5px; color: var(--dpl-fg); }\n.dpl-root .dpl-settings-field input { width: 96px; flex: none; text-align: right; }\n.dpl-root .dpl-settings-busy, .dpl-root .dpl-settings-saved {\n  position: sticky;\n  bottom: 0;\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  margin-top: 12px;\n  padding: 6px 10px;\n  border-radius: 8px;\n  font-size: 12px;\n  background: var(--dpl-bg-2);\n  color: var(--dpl-muted);\n}\n.dpl-root .dpl-settings-saved { color: #1e9e6a; background: color-mix(in srgb, #34c98e 12%, transparent); }\n.dpl-root .dpl-settings-shared {\n  display: flex;\n  align-items: flex-start;\n  gap: 7px;\n  padding: 9px 12px;\n  border-radius: 10px;\n  background: color-mix(in srgb, #34c98e 12%, transparent);\n  color: #1e9e6a;\n  font-size: 12px;\n  line-height: 1.55;\n}\n.dpl-root .dpl-settings-shared svg { flex: none; margin-top: 2px; }\n.dpl-root .dpl-settings-presets { display: flex; gap: 8px; flex-wrap: wrap; }\n\n/* ---- dialog base rules lost in the 0.4.25 cleanup \u2014 restored ---- */\n.dpl-root .dpl-dialog-title { font-size: 13.5px; font-weight: 600; }\n.dpl-root .dpl-dialog-badge { display: inline-flex; transform: scale(1.3); transform-origin: left center; }\n.dpl-root .dpl-dialog-name { font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.dpl-root .dpl-dialog-sub { font-size: 12px; color: var(--dpl-faint); margin-top: 1px; }\n.dpl-root .dpl-dialog-body { display: flex; flex-direction: column; gap: 10px; padding: 4px 20px 14px; font-size: 12px; overflow: auto; }\n.dpl-root .dpl-dialog-field { display: flex; flex-direction: column; gap: 6px; color: var(--dpl-muted); }\n.dpl-root .dpl-dialog-field span { font-size: 12px; }\n.dpl-root .dpl-dialog-field input { width: 100%; }\n.dpl-root .dpl-dialog-hint { font-size: 12px; color: var(--dpl-faint); line-height: 1.6; margin: 0; }\n.dpl-root .dpl-dialog-error {\n  border-radius: 8px;\n  background: color-mix(in srgb, var(--dpl-danger) 10%, transparent);\n  color: var(--dpl-danger);\n  padding: 6px 8px;\n  font-size: 12px;\n  word-break: break-all;\n}\n.dpl-root .dpl-dialog-warn { border-radius: 8px; background: rgba(230, 167, 0, 0.12); color: #8a6d1a; padding: 6px 8px; font-size: 12px; }\n.dpl-root .dpl-switch {\n  width: 28px; height: 16px; appearance: none; -webkit-appearance: none;\n  background: var(--dpl-border); border-radius: 999px; position: relative;\n  cursor: pointer; transition: background 0.15s; min-height: 0; padding: 0;\n}\n.dpl-root .dpl-switch::after {\n  content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px;\n  border-radius: 50%; background: #fff; transition: left 0.15s;\n}\n.dpl-root .dpl-switch:checked { background: var(--dpl-accent); }\n.dpl-root .dpl-switch:checked::after { left: 14px; }\n\n/* ---- workspace picker dialog ---- */\n.dpl-root .dpl-ws-dialog { width: 640px; }\n.dpl-root .dpl-ws-dialog .dpl-dialog-field input {\n  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;\n  font-size: 12.5px;\n}\n.dpl-root .dpl-settings-presets {\n  display: flex;\n  gap: 8px;\n  flex-wrap: wrap;\n  padding: 2px 0 4px;\n}\n.dpl-root .dpl-settings-presets .dpl-btn {\n  border: 1px solid var(--dpl-border);\n  border-radius: 8px;\n  background: var(--dpl-bg);\n  color: var(--dpl-muted);\n  font-size: 12px;\n}\n.dpl-root .dpl-settings-presets .dpl-btn:hover {\n  border-color: var(--dpl-accent);\n  color: var(--dpl-accent);\n  background: var(--dpl-accent-soft);\n}\n\n/* ---- legacy .dpl-modal* aliases: every confirm dialog now shares the one\n   dialog system, so all modals look and behave identically ---- */\n.dpl-root .dpl-modal-backdrop, .dpl-companion .dpl-modal-backdrop {\n  position: fixed;\n  inset: 0;\n  z-index: 200;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  padding: 24px;\n  background: rgba(15, 23, 42, 0.32);\n}\n.dpl-root .dpl-modal, .dpl-companion .dpl-modal {\n  display: flex;\n  flex-direction: column;\n  width: 440px;\n  max-width: 100%;\n  max-height: min(80vh, 720px);\n  border-radius: 14px;\n  background: var(--dpl-bg);\n  border: 1px solid var(--dpl-border);\n  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.32);\n  padding: 16px 20px 12px;\n  gap: 10px;\n}\n.dpl-root .dpl-modal.is-wide { width: min(680px, 94vw); }\n.dpl-root .dpl-modal header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 10px;\n  margin: -2px 0 2px;\n  font-size: 13.5px;\n  font-weight: 600;\n}\n.dpl-root .dpl-modal-body { overflow: auto; font-size: 12.5px; color: var(--dpl-muted); }\n.dpl-root .dpl-modal-title { font-size: 13.5px; font-weight: 600; }\n.dpl-root .dpl-modal-text { margin: 0; font-size: 12.5px; color: var(--dpl-muted); line-height: 1.65; }\n.dpl-root .dpl-modal strong { color: var(--dpl-fg); }\n\n/* Long lists (\u5168\u90E8\u6E90 can hold thousands of rows): let the browser skip\n   off-screen rows instead of laying them all out. */\n.dpl-root .dpl-entry-row {\n  content-visibility: auto;\n  contain-intrinsic-size: auto 72px;\n}\n\n/* ---- vault2: Obsidian workbench P0 (tree 240 \u2502 tabs+read+AuxRail) ---- */\n.dpl-vault2 { display: flex; flex: 1; min-width: 0; min-height: 0; position: relative; }\n.dpl-vault2-tree { width: 240px; flex: none; min-height: 0; border-right: 1px solid var(--dpl-border); display: flex; flex-direction: column; }\n.dpl-vault2-treeactions { display: flex; align-items: center; gap: 2px; }\n.dpl-vault2-treeactions .dpl-icon-btn { width: 22px; height: 22px; }\n\n.dpl-vault2-filter {\n  display: flex; align-items: center; gap: 6px;\n  margin: 0 8px 6px; padding: 4px 8px;\n  border: 1px solid var(--dpl-border); border-radius: 7px;\n  color: var(--dpl-faint); flex: none;\n}\n.dpl-vault2-filter input { flex: 1; min-width: 0; border: none; background: transparent; padding: 0; min-height: 20px; }\n.dpl-vault2-filter button { border: none; background: transparent; color: var(--dpl-faint); cursor: pointer; display: grid; place-items: center; padding: 0; }\n\n.dpl-vault2-treescroll { flex: 1; min-height: 0; overflow: auto; padding: 0 4px 8px; }\n.dpl-vault2-treeroot { display: flex; flex-direction: column; }\n.dpl-vault2-sortrow { display: flex; align-items: center; gap: 4px; padding: 0 8px 6px; }\n.dpl-vault2-sortbtn { border: none; background: transparent; border-radius: 999px; padding: 2px 8px; font-size: 11px; color: var(--dpl-faint); cursor: pointer; }\n.dpl-vault2-sortbtn.is-active { background: var(--dpl-accent-soft); color: var(--dpl-accent); }\n\n.dpl-vault2-row { position: relative; display: flex; align-items: center; border-radius: 6px; min-height: 26px; }\n.dpl-vault2-row:hover { background: var(--dpl-bg-hover); }\n.dpl-vault2-row.is-active { background: color-mix(in srgb, var(--dpl-accent) 9%, transparent); }\n.dpl-vault2-row .dpl-vault2-rowactions { position: absolute; right: 4px; display: none; align-items: center; gap: 1px; background: var(--dpl-bg); border-radius: 6px; padding: 1px; }\n.dpl-vault2-row:hover .dpl-vault2-rowactions { display: flex; }\n.dpl-vault2-rowactions button { display: grid; place-items: center; width: 20px; height: 20px; border: none; background: transparent; border-radius: 4px; color: var(--dpl-faint); cursor: pointer; }\n.dpl-vault2-rowactions button:hover { background: var(--dpl-bg-active); color: var(--dpl-fg); }\n\n.dpl-vault2-dir, .dpl-vault2-file {\n  display: flex; align-items: center; gap: 5px; width: 100%;\n  border: none; background: transparent; text-align: left;\n  padding: 3px 6px 3px 8px; border-radius: 6px;\n  color: var(--dpl-fg); font-size: 12.5px; cursor: pointer; min-width: 0;\n}\n.dpl-vault2-dir { color: var(--dpl-muted); font-weight: 500; }\n.dpl-vault2-chevron { display: grid; place-items: center; width: 14px; flex: none; color: var(--dpl-faint); }\n.dpl-vault2-dir svg:first-of-type { flex: none; }\n.dpl-vault2-file svg { flex: none; color: var(--dpl-faint); }\n.dpl-vault2-file.is-active { color: var(--dpl-accent); font-weight: 500; }\n.dpl-vault2-filedir { margin-left: auto; font-size: 10.5px; color: var(--dpl-faint); flex: none; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.dpl-vault2-filemtime { margin-left: auto; font-size: 10.5px; color: var(--dpl-faint); flex: none; }\n.dpl-vault2-children { padding-left: 14px; }\n.dpl-vault2-loading { display: flex; justify-content: center; padding: 6px; color: var(--dpl-faint); }\n.dpl-vault2-flatlist { display: flex; flex-direction: column; }\n.dpl-vault2-treefoot { display: flex; gap: 6px; padding: 6px 8px; border-top: 1px solid var(--dpl-border); flex: none; }\n.dpl-vault2-footbtn { display: inline-flex; align-items: center; gap: 4px; border: none; background: transparent; border-radius: 6px; padding: 3px 6px; font-size: 11.5px; color: var(--dpl-faint); cursor: pointer; }\n.dpl-vault2-footbtn:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n\n.dpl-vault2-sidepane { flex: none; max-height: 38%; border-top: 1px solid var(--dpl-border); display: flex; flex-direction: column; min-height: 0; }\n.dpl-vault2-sidetabs { display: flex; gap: 2px; padding: 6px 8px 0; }\n.dpl-vault2-sidetabs button { border: none; background: transparent; border-radius: 6px 6px 0 0; padding: 3px 10px; font-size: 11.5px; color: var(--dpl-faint); cursor: pointer; }\n.dpl-vault2-sidetabs button.is-active { background: var(--dpl-bg-2); color: var(--dpl-fg); font-weight: 600; }\n.dpl-vault2-sidebody { flex: 1; min-height: 60px; overflow: auto; padding: 6px 8px; display: flex; flex-direction: column; gap: 2px; }\n.dpl-vault2-backlink { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; border: none; background: transparent; text-align: left; padding: 4px 6px; border-radius: 6px; font-size: 12px; color: var(--dpl-fg); cursor: pointer; width: 100%; }\n.dpl-vault2-backlink:hover { background: var(--dpl-bg-hover); }\n.dpl-vault2-backlink .dpl-vault2-filedir { margin: 0; max-width: 100%; }\n.dpl-vault2-tags { flex-direction: row; flex-wrap: wrap; gap: 4px; }\n.dpl-vault2-tags button { border: none; background: var(--dpl-bg-2); border-radius: 999px; padding: 2px 8px; font-size: 11px; color: var(--dpl-muted); cursor: pointer; }\n.dpl-vault2-tags button:hover { background: var(--dpl-bg-active); color: var(--dpl-fg); }\n.dpl-vault2-tags button span { color: var(--dpl-faint); margin-left: 2px; }\n\n.dpl-vault2-main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }\n.dpl-vault2-tabstrip { display: flex; align-items: center; gap: 2px; height: 36px; flex: none; padding: 0 8px; border-bottom: 1px solid var(--dpl-border); overflow-x: auto; scrollbar-width: none; }\n.dpl-vault2-tabspring { flex: 1; }\n.dpl-vault2-tab {\n  display: flex; align-items: center; gap: 5px; max-width: 180px; min-width: 0;\n  padding: 3px 6px 3px 9px; border-radius: 7px; font-size: 12px; color: var(--dpl-muted); cursor: pointer; flex: none;\n}\n.dpl-vault2-tab:hover { background: var(--dpl-bg-hover); }\n.dpl-vault2-tab.is-active { background: var(--dpl-bg-active); color: var(--dpl-fg); font-weight: 500; }\n.dpl-vault2-tab.is-dirty .dpl-vault2-tabclose { color: transparent; position: relative; }\n.dpl-vault2-tab.is-dirty .dpl-vault2-tabclose::before { content: ''; position: absolute; width: 6px; height: 6px; border-radius: 50%; background: var(--dpl-accent); }\n.dpl-vault2-tabclose { display: grid; place-items: center; width: 16px; height: 16px; border: none; background: transparent; border-radius: 4px; color: var(--dpl-faint); cursor: pointer; flex: none; }\n.dpl-vault2-tabclose:hover { background: var(--dpl-bg-active); color: var(--dpl-fg); }\n.dpl-icon-btn.is-toggled { color: var(--dpl-accent); background: color-mix(in srgb, var(--dpl-accent) 12%, transparent); }\n\n.dpl-vault2-searchbar { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-bottom: 1px solid var(--dpl-border); flex: none; color: var(--dpl-faint); }\n.dpl-vault2-searchbar input { flex: 1; min-width: 0; }\n.dpl-vault2-searchcount { font-size: 11.5px; color: var(--dpl-faint); flex: none; }\n.dpl-vault2-searchresults { flex: 1; min-height: 0; overflow: auto; padding: 10px 16px; display: flex; flex-direction: column; gap: 4px; }\n.dpl-vault2-hit { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; border: none; background: transparent; text-align: left; padding: 8px 10px; border-radius: 8px; cursor: pointer; color: var(--dpl-fg); }\n.dpl-vault2-hit:hover { background: var(--dpl-bg-hover); }\n.dpl-vault2-hit strong { font-size: 13px; }\n.dpl-vault2-hit p { margin: 0; font-size: 12px; color: var(--dpl-muted); }\n\n.dpl-vault2-content { flex: 1; min-height: 0; display: flex; position: relative; }\n.dpl-vault2-note { flex: 1; min-width: 0; display: flex; flex-direction: column; }\n.dpl-vault2-notehead { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 24px 0; }\n.dpl-vault2-notehead h1 { margin: 0; font-size: 19px; font-weight: 650; }\n.dpl-vault2-noteactions { display: flex; gap: 4px; flex: none; }\n.dpl-vault2-notemeta { padding: 2px 24px 10px; font-size: 12px; color: var(--dpl-faint); border-bottom: 1px solid var(--dpl-border); }\n.dpl-vault2-readerscroll { flex: 1; min-height: 0; overflow: auto; }\n.dpl-vault2-body { max-width: 720px; margin: 0 auto; padding: 18px 28px 48px; font-size: 15px; line-height: 1.75; }\n.dpl-vault2-bodyend { height: 40px; }\n.dpl-vault2-editor { flex: 1; min-height: 0; resize: none; border: none; outline: none; padding: 16px 28px; font-family: var(--dsw-alias-font-mono, ui-monospace, 'SF Mono', monospace); font-size: 13px; line-height: 1.7; background: var(--dpl-bg); color: var(--dpl-fg); border-radius: 0; }\n.dpl-vault2-editor:focus { border: none; }\n.dpl-vault2-readerempty { flex: 1; }\n\n.dpl-vault2-statusbar { display: flex; align-items: center; gap: 14px; height: 24px; flex: none; padding: 0 12px; border-top: 1px solid var(--dpl-border); font-size: 11px; color: var(--dpl-faint); }\n.dpl-vault2-statuslink { border: none; background: transparent; padding: 0; font-size: 11px; color: var(--dpl-faint); cursor: pointer; }\n.dpl-vault2-statuslink:hover { color: var(--dpl-accent); }\n.dpl-vault2-statusnotice, .dpl-vault2-statuserror { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; }\n.dpl-vault2-statusnotice { color: #1e9e6a; }\n.dpl-vault2-statuserror { color: var(--dpl-danger); }\n.dpl-vault2-statusnotice button, .dpl-vault2-statuserror button { border: none; background: transparent; color: inherit; cursor: pointer; padding: 0; display: grid; place-items: center; }\n\n.dpl-vault2-graphhead { position: absolute; top: 8px; left: 12px; right: 12px; display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--dpl-muted); z-index: 2; }\n\n.dpl-vault2-scrim { position: absolute; inset: 0; z-index: 60; display: flex; justify-content: center; align-items: flex-start; padding-top: 48px; background: rgba(15, 23, 42, 0.24); }\n.dpl-vault2-quick { width: min(520px, 90%); border: 1px solid var(--dpl-border); border-radius: 12px; background: var(--dpl-bg); box-shadow: 0 18px 48px rgba(15, 23, 42, 0.3); overflow: hidden; }\n.dpl-vault2-quick > input { width: 100%; border: none; border-bottom: 1px solid var(--dpl-border); border-radius: 0; background: transparent; padding: 10px 14px; min-height: 38px; font-size: 14px; }\n.dpl-vault2-quick > input:focus { border-color: transparent; }\n.dpl-vault2-quicklist { max-height: 320px; overflow: auto; padding: 4px; }\n.dpl-vault2-quicklist button { display: flex; align-items: center; gap: 10px; width: 100%; border: none; background: transparent; text-align: left; padding: 7px 10px; border-radius: 7px; font-size: 13px; color: var(--dpl-fg); cursor: pointer; }\n.dpl-vault2-quicklist button:hover, .dpl-vault2-quicklist button.is-first { background: var(--dpl-bg-hover); }\n.dpl-vault2-empty { display: grid; place-items: center; padding: 16px; font-size: 12px; color: var(--dpl-faint); gap: 6px; }\n\n/* ---- vault2 P1: CM6 editor + live preview decorations ---- */\n.dpl-vault2-viewswitch { display: flex; gap: 1px; background: var(--dpl-bg-2); border-radius: 7px; padding: 2px; }\n.dpl-vault2-viewswitch button { border: none; background: transparent; border-radius: 5px; padding: 2px 10px; font-size: 11.5px; color: var(--dpl-muted); cursor: pointer; }\n.dpl-vault2-viewswitch button:hover { color: var(--dpl-fg); }\n.dpl-vault2-viewswitch button.is-active { background: var(--dpl-bg); color: var(--dpl-fg); font-weight: 600; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.1); }\n.dpl-btn.is-on { color: var(--dpl-accent); }\n.dpl-vault2-editwrap { flex: 1; min-height: 0; display: flex; }\n.dpl-vault2-cmhost { flex: 1; min-width: 0; overflow: hidden; }\n.dpl-vault2-cmhost .cm-editor { height: 100%; font-size: 13.5px; background: var(--dpl-bg); }\n.dpl-vault2-cmhost .cm-editor.cm-focused { outline: none; }\n.dpl-vault2-cmhost .cm-scroller { font-family: var(--dsw-alias-font-mono, ui-monospace, 'SF Mono', monospace); line-height: 1.7; padding-bottom: 48px; }\n.dpl-vault2-cmhost .cm-content { caret-color: var(--dpl-accent); }\n.dpl-vault2-cmhost .cm-gutters { background: var(--dpl-bg); border-right: 1px solid var(--dpl-border); color: var(--dpl-faint); }\n.dpl-vault2-cmhost .cm-activeLineGutter { background: transparent; color: var(--dpl-muted); }\n.dpl-vault2-cmhost .cm-activeLine { background: color-mix(in srgb, var(--dpl-fg) 3%, transparent); }\n\n/* live preview: rendered weight where the caret isn't */\n.cm-live-h1 { font-size: 1.55em; font-weight: 700; }\n.cm-live-h2 { font-size: 1.32em; font-weight: 700; }\n.cm-live-h3 { font-size: 1.16em; font-weight: 650; }\n.cm-live-h4 { font-size: 1em; font-weight: 650; }\n.cm-live-strong { font-weight: 700; }\n.cm-live-em { font-style: italic; }\n.cm-live-strike { text-decoration: line-through; }\n.cm-live-code { font-family: var(--dsw-alias-font-mono, ui-monospace, monospace); font-size: 0.9em; background: var(--dpl-bg-2); border-radius: 4px; padding: 0 3px; }\n.cm-live-wikilink { color: var(--dpl-link); cursor: pointer; }\n.cm-live-wikilink:hover { text-decoration: underline; }\n\n/* vault2 P2: unlinked mentions + rename preview */\n.dpl-vault2-unlinkedhead { margin-top: 8px; padding: 0 4px 2px; font-size: 10.5px; font-weight: 600; color: #b98a1d; }\n.dpl-vault2-unlinked { position: relative; display: flex; align-items: center; }\n.dpl-vault2-unlinked .dpl-vault2-backlink { flex: 1; }\n.dpl-vault2-unlinkbtn { position: absolute; right: 4px; display: grid; place-items: center; width: 20px; height: 20px; border: none; background: var(--dpl-bg); border-radius: 4px; color: var(--dpl-faint); cursor: pointer; opacity: 0; }\n.dpl-vault2-unlinked:hover .dpl-vault2-unlinkbtn { opacity: 1; }\n.dpl-vault2-unlinkbtn:hover { background: var(--dpl-bg-active); color: var(--dpl-accent); }\n.dpl-vault2-hit mark { background: color-mix(in srgb, var(--dpl-accent) 22%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }\n\n/* vault2 P3: trash browser */\n.dpl-vault2-trash { width: min(560px, 92%); }\n.dpl-vault2-trashhead { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 8px; font-size: 13px; }\n.dpl-vault2-trashrow { display: flex; align-items: center; gap: 8px; padding: 5px 10px; border-radius: 7px; }\n.dpl-vault2-trashrow:hover { background: var(--dpl-bg-hover); }\n.dpl-vault2-trashinfo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; font-size: 12.5px; }\n\n/* ---- vault2 alignment (native Droplets parity): seg / dot toolbar / breadcrumb / menus ---- */\n.dpl-vault2-treehead {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  height: 40px;\n  flex: none;\n  padding: 0 10px 0 14px;\n}\n.dpl-vault2-treehead span { font-size: 12.5px; font-weight: 600; color: var(--dpl-fg); }\n\n.dpl-vault2-seg { display: flex; gap: 6px; padding: 0 10px 8px; flex: none; }\n/* \u56FE\u8C31/\u6807\u7B7E\u4E91 buttons are .dpl-pane-btn (\u7EDF\u4E00\u9762\u677F\u63A7\u5236\u6309\u94AE) with is-active. */\n\n.dpl-vault2-tbrow { position: relative; height: 28px; flex: none; margin: 0 10px 6px; }\n.dpl-vault2-tbdots {\n  position: absolute;\n  inset: 0;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  gap: 16px;\n  transition: opacity 0.12s;\n  /* Decorative placeholder: must never capture pointer events (same\n     hit-test lesson as the feed toolbar dots). */\n  pointer-events: none;\n}\n.dpl-vault2-tbdots span { width: 4px; height: 4px; border-radius: 50%; background: var(--dpl-faint); }\n.dpl-vault2-tbactions {\n  position: absolute;\n  inset: 0;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  gap: 2px;\n  opacity: 0;\n  pointer-events: none;\n  background: var(--dpl-bg);\n  transition: opacity 0.12s;\n}\n.dpl-vault2-tbrow:hover .dpl-vault2-tbdots { opacity: 0; }\n.dpl-vault2-tbrow:hover .dpl-vault2-tbactions { opacity: 1; pointer-events: auto; }\n/* Direct children ONLY: a plain descendant selector here once styled the\n   sort-menu buttons nested inside .dpl-relative as 24\xD724 grid cells \u2014 the\n   whole menu collapsed into cramped squares with clipped labels and an\n   orphaned checkmark (reproduced in a real browser against this CSS). */\n.dpl-vault2-tbactions > button,\n.dpl-vault2-tbactions > .dpl-relative > button {\n  display: grid;\n  place-items: center;\n  width: 24px;\n  height: 24px;\n  border: none;\n  background: transparent;\n  border-radius: 6px;\n  color: var(--dpl-faint);\n  cursor: pointer;\n}\n.dpl-vault2-tbactions > button:hover,\n.dpl-vault2-tbactions > .dpl-relative > button:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-vault2-tbactions > button.is-on,\n.dpl-vault2-tbactions > .dpl-relative > button.is-on { color: var(--dpl-accent); background: color-mix(in srgb, var(--dpl-accent) 12%, transparent); }\n.dpl-relative { position: relative; }\n\n.dpl-vault2-popmenu {\n  position: absolute;\n  right: 0;\n  top: 100%;\n  z-index: 60;\n  margin-top: 4px;\n  min-width: 150px;\n  max-height: 60vh;\n  overflow: auto;\n  background: var(--dpl-bg);\n  border: 1px solid var(--dpl-border);\n  border-radius: 8px;\n  padding: 4px;\n  box-shadow: 0 10px 32px rgba(15, 23, 42, 0.18);\n  display: flex;\n  flex-direction: column;\n}\n/* The help popover lives in a 240px tree pane; right-anchored at the toolbar\n   row it must stay narrower than the pane or the window clips its left edge\n   (the old single-line help text measured ~420px). */\n.dpl-vault2-popmenu.is-wide { min-width: 188px; max-width: 224px; }\n\n/* \u53F3\u952E\u83DC\u5355\uFF08fixed\uFF0C\u5149\u6807\u5904\uFF09 */\n.dpl-vault2-ctxmenu {\n  position: fixed;\n  z-index: 300;\n  min-width: 160px;\n  background: var(--dpl-bg);\n  border: 1px solid var(--dpl-border);\n  border-radius: 8px;\n  padding: 4px;\n  box-shadow: 0 12px 36px rgba(15, 23, 42, 0.22);\n  display: flex;\n  flex-direction: column;\n}\n.dpl-vault2-ctxitem {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  width: 100%;\n  border: none;\n  background: transparent;\n  text-align: left;\n  padding: 5px 8px;\n  border-radius: 6px;\n  font-size: 12.5px;\n  color: var(--dpl-fg);\n  cursor: pointer;\n  white-space: nowrap;\n}\n.dpl-vault2-ctxitem:hover { background: var(--dpl-bg-hover); }\n.dpl-vault2-ctxitem.is-danger { color: var(--dpl-danger); }\n.dpl-vault2-ctxitem.is-danger:hover { background: color-mix(in srgb, var(--dpl-danger) 10%, transparent); }\n.dpl-vault2-ctxdivider { height: 1px; background: var(--dpl-border); margin: 4px 6px; }\n\n/* \u9762\u5305\u5C51\u884C */\n.dpl-vault2-crumbbar {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 10px;\n  height: 38px;\n  flex: none;\n  padding: 0 12px;\n  border-bottom: 1px solid var(--dpl-border);\n}\n.dpl-vault2-crumb { display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; font-size: 12.5px; color: var(--dpl-muted); }\n.dpl-vault2-crumb span { white-space: nowrap; }\n.dpl-vault2-crumb .is-last { color: var(--dpl-fg); font-weight: 600; }\n.dpl-vault2-crumbsep { color: var(--dpl-faint); }\n.dpl-vault2-crumbright { display: flex; align-items: center; gap: 4px; flex: none; }\n.dpl-vault2-crumbbtn {\n  display: inline-flex;\n  align-items: center;\n  gap: 3px;\n  height: 26px;\n  padding: 0 6px;\n  border: none;\n  background: transparent;\n  border-radius: 6px;\n  color: var(--dpl-muted);\n  cursor: pointer;\n}\n.dpl-vault2-crumbbtn:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n\n/* \u683C\u5F0F\u5DE5\u5177\u680F */\n.dpl-vault2-fmtbar {\n  display: flex;\n  align-items: center;\n  gap: 1px;\n  flex: none;\n  padding: 3px 12px;\n  border-bottom: 1px solid var(--dpl-border);\n  overflow-x: auto;\n  scrollbar-width: none;\n}\n.dpl-vault2-fmtbtn {\n  display: grid;\n  place-items: center;\n  min-width: 26px;\n  height: 26px;\n  padding: 0 4px;\n  border: none;\n  background: transparent;\n  border-radius: 6px;\n  color: var(--dpl-muted);\n  cursor: pointer;\n}\n.dpl-vault2-fmtbtn:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-vault2-fmtmore { position: relative; display: flex; }\n.dpl-vault2-fmtmoremenu {\n  display: none;\n  position: absolute;\n  right: 0;\n  top: 100%;\n  z-index: 60;\n  min-width: 130px;\n  background: var(--dpl-bg);\n  border: 1px solid var(--dpl-border);\n  border-radius: 8px;\n  padding: 4px;\n  box-shadow: 0 10px 32px rgba(15, 23, 42, 0.18);\n  flex-direction: column;\n}\n.dpl-vault2-fmtmoremenu.is-open { display: flex; }\n\n/* \u53CD\u5411\u94FE\u63A5\u62BD\u5C49 */\n.dpl-vault2-bldrawer {\n  flex: none;\n  max-height: 38%;\n  border-top: 1px solid var(--dpl-border);\n  display: flex;\n  flex-direction: column;\n  min-height: 0;\n}\n.dpl-vault2-bldrawhead {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  padding: 6px 12px 4px;\n  font-size: 12px;\n  font-weight: 600;\n  color: var(--dpl-muted);\n  flex: none;\n}\n.dpl-vault2-bldrawbody { flex: 1; min-height: 60px; overflow: auto; padding: 4px 8px 8px; display: flex; flex-direction: column; gap: 2px; }\n\n/* \u5E95\u90E8\u6574\u5E93\u95EE AI */\n.dpl-vault2-askall {\n  flex: none;\n  min-height: 34px;\n  border: none;\n  border-top: 1px solid var(--dpl-border);\n  background: var(--dpl-bg);\n  color: var(--dpl-fg);\n  font-size: 12.5px;\n  font-weight: 600;\n  cursor: pointer;\n}\n.dpl-vault2-askall:hover { background: var(--dpl-bg-2); }\n.dpl-vault2-helplist { padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; }\n.dpl-vault2-helprow { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--dpl-muted); line-height: 1.5; }\n.dpl-vault2-helprow.is-plain span { color: var(--dpl-faint); }\n.dpl-vault2-helprow kbd {\n  flex: none;\n  min-width: 20px;\n  text-align: center;\n  padding: 1px 5px;\n  border: 1px solid var(--dpl-border);\n  border-bottom-width: 2px;\n  border-radius: 5px;\n  background: var(--dpl-bg-2);\n  font-family: inherit;\n  font-size: 10.5px;\n  color: var(--dpl-fg);\n}\n";
+var styles_default = "/* droplets \xB7 panel styles.\n * Skin: DSH design tokens (--dsw-alias-*) so the panel follows the host\n * theme (light/dark) automatically. Layout & interaction: droplets'\n * three-pane shapes (sources 240 / entries 320 / reader, docked companion).\n * Details (measure, ghost buttons, list rhythm): qiaomu-rss refinements. */\n.dpl-root {\n  --dpl-bg: var(--dsw-alias-bg-base, #fff);\n  --dpl-bg-2: var(--dsw-alias-bg-layer-1, rgba(15, 23, 42, 0.03));\n  --dpl-bg-active: var(--dsw-alias-interactive-bg-active, rgba(15, 23, 42, 0.08));\n  --dpl-bg-hover: var(--dsw-alias-interactive-bg-hover, rgba(15, 23, 42, 0.05));\n  --dpl-border: var(--dsw-alias-border-l1, rgba(15, 23, 42, 0.08));\n  --dpl-fg: var(--dsw-alias-label-primary, #0f1115);\n  --dpl-muted: var(--dsw-alias-label-secondary, rgba(15, 23, 42, 0.6));\n  --dpl-faint: var(--dsw-alias-label-tertiary, rgba(15, 23, 42, 0.4));\n  /* Accent follows the DSH system exactly: interactive/link blue for\n     selection & unread, the host's black primary fill for solid actions. */\n  --dpl-accent: var(--dsw-alias-link, #4176e6);\n  --dpl-accent-solid: var(--dsw-alias-button-primary-fill, #0f1115);\n  --dpl-accent-solid-hover: var(--dsw-alias-button-primary-hover, #43454a);\n  --dpl-accent-soft: var(--dsw-alias-interactive-bg-hover-accent, rgba(38, 49, 72, 0.14));\n  --dpl-link: var(--dsw-alias-link, #4176e6);\n  --dpl-danger: var(--dsw-alias-state-error-primary, #d5484f);\n  --dpl-radius: 10px;\n  --dpl-radius-sm: 8px;\n  --dpl-sources-width: 240px;\n  --dpl-list-width: 320px;\n  --dpl-measure: 720px;\n  display: flex;\n  flex-direction: column;\n  height: 100%;\n  min-height: 0;\n  background: var(--dpl-bg);\n  color: var(--dpl-fg);\n  font-size: 14px;\n  container-type: inline-size;\n}\n.dpl-root *, .dpl-root *::before, .dpl-root *::after { box-sizing: border-box; }\n.dpl-root button { font: inherit; color: inherit; }\n\n/* ---- header (droplets Topbar shape) ---- */\n.dpl-header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  height: 44px;\n  /* Follow the host frame's leading clearance: when the DSH sidebar is\n     collapsed the macOS traffic lights sit over this header, and the frame\n     publishes the required inset as --dsh-frame-leading-clearance (same\n     formula the host's own title cluster uses). */\n  padding-inline-start: max(0px, var(--dsh-frame-leading-clearance, 0px));\n  padding-inline-end: 12px;\n  border-bottom: 1px solid var(--dpl-border);\n  flex: none;\n}\n.dpl-brand { display: flex; align-items: center; gap: 8px; min-width: 0; }\n.dpl-brand strong { font-size: 14px; font-weight: 600; }\n.dpl-spaces { display: flex; gap: 2px; margin-left: 10px; background: var(--dpl-bg-2); border-radius: var(--dpl-radius); padding: 2px; }\n.dpl-space-tab {\n  border: none;\n  background: transparent;\n  padding: 4px 12px;\n  border-radius: calc(var(--dpl-radius) - 2px);\n  cursor: pointer;\n  color: var(--dpl-muted);\n  font-size: 13px;\n}\n.dpl-space-tab:hover { color: var(--dpl-fg); background: var(--dpl-bg-hover); }\n.dpl-space-tab.is-active { background: var(--dpl-bg); color: var(--dpl-fg); font-weight: 600; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.1); }\n.dpl-header-actions { display: flex; gap: 6px; align-items: center; }\n\n.dpl-body { display: flex; flex: 1; min-height: 0; }\n.dpl-space { flex: 1; min-width: 0; display: flex; }\n.dpl-space > * { flex: 1; min-width: 0; }\n\n/* ---- shared controls (DSH ghost-button feel) ---- */\n.dpl-btn {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  border: none;\n  background: transparent;\n  border-radius: var(--dpl-radius-sm);\n  padding: 5px 10px;\n  min-height: 28px;\n  cursor: pointer;\n  font-size: 13px;\n  color: var(--dpl-fg);\n  white-space: nowrap;\n}\n.dpl-btn:hover { background: var(--dpl-bg-hover); }\n.dpl-btn.is-danger { color: var(--dpl-danger); }\n.dpl-btn.is-danger:hover { background: color-mix(in srgb, var(--dpl-danger) 12%, transparent); }\n.dpl-btn.is-on { background: var(--dpl-bg-active); }\n.dpl-root .dpl-btn.is-primary { background: var(--dpl-accent-solid); color: #fff; }\n.dpl-root .dpl-btn.is-primary:hover { background: var(--dpl-accent-solid-hover); }\n.dpl-btn:disabled { opacity: 0.45; cursor: default; background: transparent; }\n\n/* \u7EDF\u4E00\u9762\u677F\u63A7\u5236\u6309\u94AE\uFF1A\u4FE1\u606F\u6D41 \u5237\u65B0/\u7BA1\u7406 \xB7 \u6536\u4EF6\u7BB1 \u6DFB\u52A0URL/\u5BFC\u5165 \xB7 \u77E5\u8BC6\u5E93\n   \u56FE\u8C31/\u6807\u7B7E\u4E91\u2014\u2014\u540C\u4E00\u7A7A\u95F4\u4F4D\u7F6E\uFF08\u5DE6\u680F\u7B2C\u4E8C\u884C\uFF09\u7684\u4E09\u7EC4\u63A7\u4EF6\uFF0C\u540C\u4E00\u51E0\u4F55\n   (28px \u9AD8 / 12.5px \u5B57 / 8px \u5706\u89D2 / 14px \u56FE\u6807) \u4E0E\u540C\u4E00\u8282\u594F\uFF08\u7B49\u5BBD\u534A\u5206\u3001\n   gap 6\u3001\u884C\u4E0B\u8DDD 8\uFF09\u3002\u7070\u5E95\u8272\u5757\u662F\u300C\u9762\u677F\u63A7\u4EF6\u300D\u5BB6\u65CF\u8BED\u8A00\uFF1Bis-active \u9009\u4E2D\u6001\n   \u53EA\u7528\u4E8E\u5206\u6BB5\u9009\u62E9\uFF08\u56FE\u8C31/\u6807\u7B7E\u4E91\uFF09\uFF0C\u52A8\u4F5C\u6309\u94AE\u4E0D\u5E38\u9A7B\u9AD8\u4EAE\u3002\n   .dpl-root \u524D\u7F00\u4E0D\u662F\u88C5\u9970\uFF1A\u9876\u90E8\u7684 .dpl-root button { font: inherit } \u91CD\u7F6E\n   \uFF08\u7279\u5F02\u5EA6 0,1,1\uFF09\u4F1A\u538B\u8FC7\u4EFB\u4F55\u5355\u7C7B\u6309\u94AE\u89C4\u5219\u7684\u5B57\u53F7/\u989C\u8272\u2014\u2014\u8001\u7248\u4E09\u7EC4\u6309\u94AE\n   \u5404\u81EA\u6F02\u79FB\u6B63\u662F\u56E0\u4E3A\u8FD9\u4E2A\u3002 */\n.dpl-root .dpl-pane-btn {\n  flex: 1;\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  gap: 6px;\n  min-height: 28px;\n  padding: 5px 10px;\n  border: none;\n  background: var(--dpl-bg-2);\n  border-radius: var(--dpl-radius-sm);\n  font-size: 12.5px;\n  color: var(--dpl-muted);\n  cursor: pointer;\n  white-space: nowrap;\n}\n.dpl-root .dpl-pane-btn:hover:not(:disabled) { background: var(--dpl-bg-active); color: var(--dpl-fg); }\n.dpl-root .dpl-pane-btn:disabled { opacity: 0.45; cursor: default; }\n.dpl-root .dpl-pane-btn.is-active { background: var(--dpl-accent-soft); color: var(--dpl-accent); font-weight: 600; }\n.dpl-root .dpl-pane-btn.is-active:hover:not(:disabled) { background: var(--dpl-accent-soft); color: var(--dpl-accent); }\n.dpl-icon-btn {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 28px;\n  height: 28px;\n  border: none;\n  background: transparent;\n  border-radius: var(--dpl-radius-sm);\n  cursor: pointer;\n  color: var(--dpl-muted);\n  font-size: 14px;\n  line-height: 1;\n}\n.dpl-icon-btn:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-chip {\n  border: none;\n  background: transparent;\n  border-radius: 999px;\n  padding: 3px 10px;\n  min-height: 24px;\n  cursor: pointer;\n  color: var(--dpl-muted);\n  font-size: 12px;\n}\n.dpl-chip:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-chip.is-active { background: var(--dpl-bg-active); color: var(--dpl-fg); font-weight: 600; }\n.dpl-root input, .dpl-root textarea {\n  font: inherit;\n  color: var(--dpl-fg);\n  background: var(--dpl-bg-2);\n  border: 1px solid transparent;\n  border-radius: var(--dpl-radius-sm);\n  padding: 5px 10px;\n  min-height: 30px;\n  outline: none;\n}\n.dpl-root input:focus, .dpl-root textarea:focus { border-color: var(--dpl-accent); background: var(--dpl-bg); }\n.dpl-root input::placeholder, .dpl-root textarea::placeholder { color: var(--dpl-faint); }\n\n/* ---- panes ---- */\n.dpl-feed, .dpl-inbox, .dpl-vault { display: flex; flex: 1; min-width: 0; }\n.dpl-col { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--dpl-border); background: var(--dpl-bg); }\n.dpl-vault-tree { width: var(--dpl-sources-width); flex: none; }\n.dpl-inbox-list { width: var(--dpl-list-width); flex: none; }\n.dpl-reader { flex: 1; min-width: 0; overflow: auto; padding: 20px clamp(16px, 3%, 36px); }\n.dpl-col-head {\n  display: flex;\n  align-items: center;\n  gap: 4px;\n  height: 40px;\n  padding: 0 8px;\n  border-bottom: 1px solid var(--dpl-border);\n  flex: none;\n}\n.dpl-pane-title { font-size: 12px; font-weight: 600; color: var(--dpl-muted); padding: 0 4px; }\n.dpl-search { padding: 8px; flex: none; }\n.dpl-search input { width: 100%; }\n\n/* ---- sources pane (droplets: title row, search+refresh row, collapsible groups) ---- */\n.dpl-source-tools { display: flex; gap: 6px; padding: 0 8px 8px; }\n.dpl-source-tools .dpl-search { flex: 1; padding: 0; }\n.dpl-source {\n  display: flex;\n  width: 100%;\n  align-items: center;\n  justify-content: space-between;\n  gap: 6px;\n  border: none;\n  background: transparent;\n  padding: 6px 10px;\n  cursor: pointer;\n  color: var(--dpl-fg);\n  text-align: left;\n  border-radius: var(--dpl-radius-sm);\n  margin: 0 4px;\n  width: calc(100% - 8px);\n}\n.dpl-source span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }\n.dpl-source em { font-style: normal; font-size: 12px; font-weight: 600; color: var(--dpl-accent); flex: none; }\n.dpl-source:hover { background: var(--dpl-bg-hover); }\n.dpl-source.is-active { background: var(--dpl-bg-active); font-weight: 600; }\n.dpl-source.has-error span { color: var(--dpl-danger); }\n.dpl-source-group-name {\n  padding: 10px 12px 2px;\n  font-size: 11px;\n  font-weight: 600;\n  letter-spacing: 0.02em;\n  text-transform: uppercase;\n  color: var(--dpl-faint);\n}\n.dpl-sources-list { overflow: auto; flex: 1; padding-bottom: 8px; }\n\n/* ---- entry list ---- */\n.dpl-entry-list { list-style: none; margin: 0; padding: 0; overflow: auto; flex: 1; }\n.dpl-entry-list li { display: flex; align-items: stretch; }\n.dpl-entry {\n  flex: 1;\n  min-width: 0;\n  border: none;\n  background: transparent;\n  text-align: left;\n  padding: 9px 10px 9px 14px;\n  cursor: pointer;\n  color: var(--dpl-fg);\n  display: flex;\n  flex-direction: column;\n  gap: 3px;\n}\n.dpl-entry:hover { background: var(--dpl-bg-hover); }\n.dpl-entry.is-active { background: var(--dpl-bg-active); }\n.dpl-entry-title { font-weight: 550; font-size: 13px; line-height: 1.45; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }\n.dpl-entry.is-unread .dpl-entry-title::before {\n  content: '';\n  display: inline-block;\n  width: 6px;\n  height: 6px;\n  border-radius: 50%;\n  background: var(--dpl-accent);\n  margin-right: 7px;\n  vertical-align: 2px;\n}\n.dpl-entry-meta { font-size: 12px; color: var(--dpl-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.dpl-warn { color: var(--dpl-danger); }\n.dpl-star {\n  border: none;\n  background: transparent;\n  cursor: pointer;\n  color: var(--dpl-faint);\n  padding: 0 8px 0 2px;\n  flex: none;\n  font-size: 14px;\n}\n.dpl-star:hover { color: var(--dpl-muted); }\n.dpl-star.is-on { color: #e6a700; }\n\n.dpl-empty { padding: 32px 20px; text-align: center; color: var(--dpl-faint); font-size: 13px; }\n.dpl-reader-empty { display: flex; align-items: center; justify-content: center; height: 100%; }\n.dpl-hint { font-size: 12px; color: var(--dpl-faint); }\n.dpl-error {\n  margin: 8px;\n  padding: 8px 10px;\n  border-radius: var(--dpl-radius-sm);\n  background: color-mix(in srgb, var(--dpl-danger) 10%, transparent);\n  color: var(--dpl-danger);\n  font-size: 12px;\n  word-break: break-all;\n}\n\n/* ---- reader ---- */\n.dpl-article, .dpl-note { max-width: var(--dpl-measure); margin: 0 auto; }\n.dpl-article h1, .dpl-note h1 { font-size: 22px; line-height: 1.35; margin: 0 0 8px; font-weight: 650; }\n.dpl-article-meta { display: flex; gap: 10px; font-size: 13px; color: var(--dpl-muted); margin-bottom: 18px; flex-wrap: wrap; }\n.dpl-article-meta a { color: var(--dpl-link); text-decoration: none; }\n.dpl-article-meta a:hover { text-decoration: underline; }\n.dpl-article-body { line-height: 1.75; font-size: 14.5px; }\n.dpl-article-body img { max-width: 100%; height: auto; border-radius: var(--dpl-radius-sm); }\n.dpl-article-body pre { overflow: auto; padding: 12px; border-radius: var(--dpl-radius-sm); background: var(--dpl-bg-2); font-size: 13px; }\n.dpl-article-body code { font-size: 0.92em; background: var(--dpl-bg-2); border-radius: 4px; padding: 1px 5px; }\n.dpl-article-body pre code { background: transparent; padding: 0; }\n.dpl-article-body blockquote { border-left: 3px solid var(--dpl-border); margin: 8px 0; padding: 2px 14px; color: var(--dpl-muted); }\n.dpl-reader-toolbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }\n.dpl-reader-toolbar h1 { font-size: 20px; margin: 0 0 4px; }\n.dpl-reader-actions { display: flex; gap: 4px; flex: none; }\n\n/* ---- pdf / epub ---- */\n.dpl-pdf { display: flex; flex-direction: column; align-items: center; gap: 12px; }\n.dpl-pdf-canvas { max-width: 100%; box-shadow: 0 2px 14px rgba(15, 23, 42, 0.18); border-radius: 6px; background: #fff; }\n.dpl-pager { display: flex; align-items: center; gap: 10px; color: var(--dpl-muted); font-size: 13px; }\n\n/* ---- vault ---- */\n.dpl-vault-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--dpl-muted); }\n.dpl-tree-stats { font-size: 12px; color: var(--dpl-faint); flex: 1; padding-left: 4px; }\n.dpl-tree details { margin-left: 4px; }\n.dpl-tree summary {\n  cursor: pointer;\n  padding: 4px 8px;\n  font-size: 12px;\n  font-weight: 600;\n  color: var(--dpl-muted);\n  border-radius: 6px;\n  list-style: none;\n  display: flex;\n  align-items: center;\n  gap: 4px;\n}\n.dpl-tree summary::before { content: '\u25B8'; font-size: 10px; transition: transform 0.12s; color: var(--dpl-faint); }\n.dpl-tree details[open] > summary::before { transform: rotate(90deg); }\n.dpl-tree summary:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-tree-file {\n  display: flex;\n  width: calc(100% - 8px);\n  margin: 0 4px;\n  border: none;\n  background: transparent;\n  text-align: left;\n  padding: 4px 10px;\n  cursor: pointer;\n  color: var(--dpl-fg);\n  border-radius: 6px;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  font-size: 13px;\n}\n.dpl-tree-file:hover { background: var(--dpl-bg-hover); }\n.dpl-tree-file.is-active { background: var(--dpl-bg-active); font-weight: 600; }\n.dpl-note-body { line-height: 1.75; font-size: 14.5px; }\n.dpl-note-body h1, .dpl-note-body h2 { border-bottom: 1px solid var(--dpl-border); padding-bottom: 6px; margin: 1.2em 0 0.6em; }\n.dpl-note-body pre { overflow: auto; padding: 12px; border-radius: var(--dpl-radius-sm); background: var(--dpl-bg-2); font-size: 13px; }\n.dpl-note-body code { background: var(--dpl-bg-2); border-radius: 4px; padding: 1px 5px; font-size: 0.92em; }\n.dpl-note-editor {\n  width: 100%;\n  min-height: 62vh;\n  font-family: var(--dsw-alias-font-mono, ui-monospace, 'SF Mono', monospace);\n  font-size: 13px;\n  line-height: 1.7;\n  border-radius: var(--dpl-radius);\n  border: 1px solid var(--dpl-border);\n  padding: 14px;\n  resize: vertical;\n  background: var(--dpl-bg);\n  color: var(--dpl-fg);\n}\n.dpl-note-editor:focus { border-color: var(--dpl-accent); }\n.dpl-wikilink { color: var(--dpl-link); text-decoration: none; border-bottom: 1px dashed currentColor; }\n.dpl-tag { color: var(--dpl-muted); background: var(--dpl-bg-2); border-radius: 4px; padding: 0 4px; font-size: 0.9em; }\n.dpl-backlinks h2, .dpl-search-results h2 { font-size: 14px; margin: 20px 0 8px; font-weight: 600; }\n.dpl-backlinks ul, .dpl-search-results ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }\n.dpl-backlinks button, .dpl-search-results button {\n  border: none;\n  background: transparent;\n  text-align: left;\n  cursor: pointer;\n  padding: 7px 9px;\n  border-radius: var(--dpl-radius-sm);\n  color: var(--dpl-fg);\n  display: block;\n  width: 100%;\n}\n.dpl-backlinks button:hover, .dpl-search-results button:hover { background: var(--dpl-bg-hover); }\n.dpl-search-results p { margin: 2px 0 0; font-size: 12px; color: var(--dpl-faint); }\n\n.dpl-graph { position: relative; height: 100%; }\n.dpl-graph svg { width: 100%; height: 100%; }\n.dpl-graph-edge { stroke: color-mix(in srgb, var(--dpl-fg) 20%, transparent); stroke-width: 1; }\n.dpl-graph-node { fill: var(--dpl-accent); cursor: pointer; }\n.dpl-graph-node.is-dangling { fill: color-mix(in srgb, var(--dpl-fg) 25%, transparent); }\n.dpl-graph-node.is-hover { stroke: var(--dpl-fg); stroke-width: 2; }\n.dpl-graph-label { position: absolute; top: 8px; left: 12px; font-size: 12px; color: var(--dpl-muted); }\n\n/* ---- companion (droplets: docked right panel) ---- */\n.dpl-companion {\n  width: 40%;\n  min-width: 360px;\n  flex: none;\n  display: flex;\n  flex-direction: column;\n  border-left: 1px solid var(--dpl-border);\n  min-height: 0;\n  background: var(--dpl-bg);\n}\n.dpl-companion-header { display: flex; align-items: center; gap: 4px; height: 40px; padding: 0 8px 0 12px; border-bottom: 1px solid var(--dpl-border); }\n.dpl-companion-header strong { flex: 1; font-size: 13px; font-weight: 600; }\n.dpl-companion-context { padding: 8px 12px; border-bottom: 1px solid var(--dpl-border); display: flex; flex-direction: column; gap: 2px; overflow: hidden; }\n.dpl-companion-context strong { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.dpl-companion-context small { font-size: 12px; color: var(--dpl-muted); }\n.dpl-native-chat { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }\n.dpl-companion-loading { padding: 24px; text-align: center; color: var(--dpl-faint); flex: 1; font-size: 13px; }\n.dpl-companion-error { margin: 10px; padding: 10px; border-radius: var(--dpl-radius-sm); background: color-mix(in srgb, var(--dpl-danger) 10%, transparent); color: var(--dpl-danger); font-size: 13px; }\n.dpl-companion-error p { margin: 6px 0 10px; font-size: 12px; word-break: break-all; }\n.dpl-companion-error button { margin-top: 2px; }\n.dpl-companion-notice { display: flex; align-items: center; gap: 6px; margin: 6px 10px; padding: 6px 10px; border-radius: var(--dpl-radius-sm); background: var(--dpl-bg-2); color: var(--dpl-muted); font-size: 12px; }\n.dpl-companion-notice span { flex: 1; }\n.dpl-companion-quote { margin: 8px 10px; border-left: 3px solid var(--dpl-accent); padding: 6px 10px; background: var(--dpl-bg-2); border-radius: 0 var(--dpl-radius-sm) var(--dpl-radius-sm) 0; }\n.dpl-companion-quote strong { font-size: 11px; color: var(--dpl-muted); display: block; margin-bottom: 4px; }\n.dpl-companion-quote blockquote { margin: 0; font-size: 12px; max-height: 90px; overflow: auto; white-space: pre-wrap; }\n.dpl-companion-prompt-strip { display: flex; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--dpl-border); flex: none; overflow-x: auto; }\n.dpl-prompt-ghost { border: 1px solid var(--dpl-border); background: transparent; border-radius: 999px; padding: 4px 12px; font-size: 12px; cursor: pointer; color: var(--dpl-fg); white-space: nowrap; }\n.dpl-prompt-ghost:hover { background: var(--dpl-bg-hover); }\n.dpl-prompt-ghost:disabled { opacity: 0.45; cursor: default; }\n\n/* ---- modal (DSH dialog feel) ---- */\n.dpl-form-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }\n.dpl-form-row input { flex: 1; min-width: 120px; }\n.dpl-sub-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }\n.dpl-sub-list li { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: var(--dpl-radius-sm); }\n.dpl-sub-list li:hover { background: var(--dpl-bg-hover); }\n.dpl-sub-list label { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }\n.dpl-sub-list label.is-dim { opacity: 0.5; }\n.dpl-sub-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }\n.dpl-sub-meta { font-size: 12px; color: var(--dpl-faint); }\n.dpl-opml-input { width: 100%; }\n.dpl-settings-block h3 { font-size: 13px; margin: 14px 0 6px; font-weight: 600; }\n.dpl-settings-block h3:first-child { margin-top: 0; }\n.dpl-path { display: block; padding: 6px 9px; border-radius: 6px; background: var(--dpl-bg-2); font-size: 12px; font-family: var(--dsw-alias-font-mono, ui-monospace, monospace); word-break: break-all; margin: 6px 0; }\n.dpl-toggle { display: flex; align-items: center; gap: 8px; }\n.dpl-conflict-excerpt { margin: 8px 0; padding: 8px 10px; border-left: 3px solid var(--dpl-danger); font-size: 12px; color: var(--dpl-muted); max-height: 120px; overflow: auto; }\n\n/* ---- responsive: narrow windows stack companion below (qiaomu pattern) ---- */\n@container (max-width: 860px) {\n  .dpl-body { flex-direction: column; }\n  .dpl-companion { width: 100%; min-width: 0; min-height: 240px; border-left: none; border-top: 1px solid var(--dpl-border); }\n}\n\n/* ---- feed page (droplets 1:1 port) ---- */\n.dpl-flex-fill { flex: 1; min-width: 0; }\n.dpl-grow { flex: 1 1 auto; min-width: 0; }\n.dpl-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.dpl-spin { animation: dpl-spin 0.9s linear infinite; }\n@keyframes dpl-spin { to { transform: rotate(360deg); } }\n.dpl-relative { position: relative; }\n.dpl-center { display: flex; align-items: center; justify-content: center; }\n.dpl-min0 { min-width: 0; }\n\n/* panel group: columns + separators + rails */\n.dpl-panel-group { display: flex; flex: 1; min-width: 0; min-height: 0; }\n.dpl-panel { display: flex; min-width: 0; min-height: 0; }\n.dpl-panel-separator { flex: 0 0 1px; background: var(--dpl-border); cursor: col-resize; position: relative; }\n.dpl-panel-separator::before { content: ''; position: absolute; inset: 0 -3px; }\n.dpl-panel-separator:hover, .dpl-panel-separator.is-adjacent-collapsed { background: var(--dpl-accent); }\n.dpl-panel-rail {\n  flex: 1;\n  display: flex;\n  align-items: flex-start;\n  justify-content: center;\n  padding-top: 12px;\n  border: none;\n  background: transparent;\n  color: var(--dpl-faint);\n  cursor: pointer;\n}\n.dpl-panel-rail:hover { color: var(--dpl-fg); background: var(--dpl-bg-hover); }\n.dpl-panel-collapse { flex: none; }\n\n/* pane frame (droplets panel chrome: head 44px, no side borders between) */\n.dpl-pane { display: flex; flex-direction: column; height: 100%; min-width: 0; min-height: 0; width: 100%; background: var(--dpl-bg); }\n.dpl-pane-head {\n  display: flex;\n  align-items: center;\n  gap: 2px;\n  height: 44px;\n  padding: 0 10px;\n  flex: none;\n}\n.dpl-pane-title { font-size: 12px; font-weight: 500; color: var(--dpl-muted); }\n\n/* sources pane */\n.dpl-sources { border-right: 1px solid var(--dpl-border); }\n.dpl-sources-actions { display: flex; gap: 6px; padding: 0 10px 8px; flex: none; }\n.dpl-sources-toolbar {\n  position: relative;\n  display: flex;\n  align-items: center;\n  height: 28px;\n  padding: 0 10px;\n  flex: none;\n}\n.dpl-toolbar-actions {\n  display: flex;\n  width: 100%;\n  align-items: center;\n  justify-content: center;\n  gap: 2px;\n}\n.dpl-icon-btn.dpl-tb { width: 24px; height: 24px; }\n.dpl-icon-btn.is-toggled { color: var(--dpl-accent); background: color-mix(in srgb, var(--dpl-accent) 12%, transparent); }\n.dpl-menu {\n  position: absolute;\n  top: 100%;\n  left: 0;\n  z-index: 40;\n  margin-top: 4px;\n  min-width: 148px;\n  background: var(--dpl-bg);\n  border: 1px solid var(--dpl-border);\n  border-radius: 8px;\n  padding: 4px;\n  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16);\n}\n.dpl-menu-item { display: block; width: 100%; text-align: left; border: none; background: transparent; padding: 5px 8px; border-radius: 6px; font-size: 12.5px; cursor: pointer; color: var(--dpl-fg); }\n.dpl-menu-item:hover { background: var(--dpl-bg-hover); }\n\n.dpl-sources-list { min-height: 0; flex: 1; overflow: auto; padding: 8px; }\n.dpl-source {\n  display: flex;\n  width: 100%;\n  align-items: center;\n  gap: 6px;\n  border: none;\n  background: transparent;\n  padding: 6px 10px;\n  border-radius: 7px;\n  cursor: pointer;\n  color: var(--dpl-fg);\n  text-align: left;\n  font-size: 13.5px;\n}\n.dpl-source em { font-style: normal; font-size: 12px; font-weight: 500; color: var(--dpl-accent); flex: none; }\n.dpl-source em:empty { display: none; }\n.dpl-source:hover { background: var(--dpl-bg-hover); }\n.dpl-source.is-selected { background: color-mix(in srgb, var(--dpl-accent) 12%, transparent); font-weight: 500; color: var(--dpl-accent); }\n.dpl-source.is-disabled { opacity: 0.5; }\n.dpl-source.dpl-in-group { padding-left: 22px; }\n.dpl-source-error { color: var(--dpl-danger); flex: none; }\n.dpl-source-group { }\n.dpl-group-row { margin-top: 6px; }\n.dpl-group-head {\n  display: flex;\n  width: 100%;\n  align-items: center;\n  gap: 4px;\n  border: none;\n  background: transparent;\n  padding: 4px 10px 4px 26px;\n  border-radius: 7px;\n  cursor: pointer;\n  color: var(--dpl-muted);\n  text-align: left;\n  font-size: 12px;\n  font-weight: 500;\n}\n.dpl-group-head em { font-style: normal; font-size: 12px; font-weight: 500; color: var(--dpl-accent); flex: none; }\n.dpl-group-head:hover { background: var(--dpl-bg-hover); }\n.dpl-group-head.is-selected { background: color-mix(in srgb, var(--dpl-accent) 12%, transparent); color: var(--dpl-accent); font-weight: 500; }\n.dpl-group-chevron {\n  position: absolute;\n  top: 50%;\n  left: 4px;\n  transform: translateY(-50%);\n  display: grid;\n  place-items: center;\n  width: 20px;\n  height: 20px;\n  border: none;\n  border-radius: 6px;\n  background: transparent;\n  color: var(--dpl-faint);\n  cursor: pointer;\n}\n.dpl-group-chevron:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-group-chevron .is-rotated { transform: rotate(-90deg); }\n\n.dpl-badge {\n  display: inline-grid;\n  place-items: center;\n  width: 16px;\n  height: 16px;\n  border-radius: 5px;\n  font-size: 10px;\n  font-weight: 600;\n  line-height: 1;\n  flex: none;\n}\n\n/* items pane */\n.dpl-items { border-right: 1px solid var(--dpl-border); }\n.dpl-entry-scroll { min-height: 0; flex: 1; overflow: auto; }\n.dpl-list-loading { display: grid; place-items: center; height: 64px; color: var(--dpl-faint); }\n.dpl-list-empty { display: grid; place-items: center; height: 128px; padding: 0 16px; text-align: center; font-size: 12px; color: var(--dpl-faint); }\n.dpl-entry-row {\n  cursor: pointer;\n  border-bottom: 1px solid var(--dpl-border);\n  padding: 10px 12px;\n  transition: background-color 0.1s;\n  content-visibility: auto;\n  contain-intrinsic-size: auto 76px;\n}\n.dpl-entry-row:hover { background: var(--dpl-bg-hover); }\n.dpl-entry-row.is-active { background: color-mix(in srgb, var(--dpl-accent) 14%, transparent); box-shadow: inset 2px 0 0 var(--dpl-accent); }\n.dpl-entry-src { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--dpl-faint); }\n.dpl-entry-main { display: flex; align-items: center; gap: 8px; margin-top: 4px; }\n.dpl-entry-main .dpl-truncate { font-size: 13.5px; color: var(--dpl-faint); }\n.dpl-entry-main .dpl-truncate.is-unread { color: var(--dpl-fg); font-weight: 600; }\n.dpl-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }\n.dpl-dot.is-unseen { background: var(--dpl-accent); }\n.dpl-dot.is-seen { background: var(--dpl-muted); }\n.dpl-dot.is-skipped { background: var(--dpl-faint); }\n.dpl-entry-sum { margin: 3px 0 0 15px; font-size: 12px; color: var(--dpl-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n\n.dpl-icon-btn .dpl-fill { fill: currentColor; }\n.dpl-new-pill {\n  display: inline-flex;\n  align-items: center;\n  flex: none;\n  margin-right: 4px;\n  padding: 2px 8px;\n  border: none;\n  border-radius: 999px;\n  background: color-mix(in srgb, var(--dpl-accent) 12%, transparent);\n  color: var(--dpl-accent);\n  font-size: 11.5px;\n  font-weight: 500;\n  cursor: pointer;\n  transition: opacity 0.12s;\n}\n.dpl-new-pill:hover { opacity: 0.8; }\n\n/* preview pane */\n.dpl-preview { position: relative; }\n.dpl-preview-empty { display: grid; place-items: center; flex: 1; width: 100%; font-size: 13.5px; color: var(--dpl-faint); background: var(--dpl-bg); }\n.dpl-preview-scroll { display: flex; flex-direction: column; height: 100%; width: 100%; overflow: auto; }\n.dpl-reader-actions-float {\n  position: sticky;\n  top: 0;\n  z-index: 5;\n  display: flex;\n  align-items: center;\n  justify-content: flex-end;\n  gap: 2px;\n  padding: 8px 24px 16px 0;\n  background: linear-gradient(to bottom, var(--dpl-bg) 55%, transparent);\n}\n.dpl-round-btn {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 32px;\n  height: 32px;\n  border: none;\n  border-radius: 50%;\n  background: transparent;\n  color: var(--dpl-muted);\n  cursor: pointer;\n}\n.dpl-round-btn:hover:not(:disabled) { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-round-btn:disabled { opacity: 0.4; cursor: default; }\n/* The \u6587 button while the translated version is on screen. */\n.dpl-round-btn.is-on { color: var(--dpl-accent); background: color-mix(in srgb, var(--dpl-accent) 12%, transparent); }\n.dpl-lang-mark { font-size: 12.5px; font-weight: 600; }\n/* Favicon badge: same 16px box as the letter mark, square-cropped. */\n.dpl-badge-img { object-fit: cover; display: inline-block; }\n/* Translation banner shown between actions and the article head. */\n.dpl-translation-notice {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  margin: 0 auto 8px;\n  width: 100%;\n  max-width: var(--dpl-measure);\n  padding: 5px 12px;\n  border-radius: 8px;\n  background: color-mix(in srgb, var(--dpl-accent) 7%, transparent);\n  color: var(--dpl-muted);\n  font-size: 12px;\n}\n.dpl-inline-btn { border: none; background: transparent; padding: 2px 6px; border-radius: 5px; color: var(--dpl-accent); font-size: 12px; cursor: pointer; }\n.dpl-inline-btn:hover { background: var(--dpl-bg-hover); }\n.dpl-notice { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; padding: 6px 10px; border-radius: 8px; background: color-mix(in srgb, var(--dpl-accent) 10%, transparent); color: var(--dpl-accent); font-size: 12.5px; }\n.dpl-article-head { margin: 0 auto; width: 100%; max-width: var(--dpl-measure); padding: 0 32px 16px; }\n.dpl-article-head h1 { font-size: 20px; font-weight: 700; line-height: 1.4; color: var(--dpl-fg); margin: 0; }\n.dpl-article-meta { display: flex; align-items: center; gap: 6px; margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--dpl-border); font-size: 13px; color: var(--dpl-muted); }\n.dpl-meta-source { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.dpl-meta-state { color: var(--dpl-muted); }\n.dpl-short-notice {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 8px;\n  margin: 0 auto 8px;\n  width: 100%;\n  max-width: var(--dpl-measure);\n  padding: 6px 12px;\n  border-radius: 8px;\n  background: color-mix(in srgb, var(--dpl-accent) 7%, transparent);\n  color: var(--dpl-muted);\n  font-size: 12px;\n}\n.dpl-short-notice.is-empty { background: var(--dpl-bg-2); }\n.dpl-inline-link { font-weight: 500; text-decoration: underline; text-underline-offset: 2px; color: var(--dpl-accent); }\n.dpl-article-body-wrap { margin: 0 auto; width: 100%; max-width: var(--dpl-measure); padding: 0 32px 40px; }\n.dpl-article-plain { white-space: pre-wrap; color: var(--dpl-fg); font-size: 14.5px; line-height: 1.75; }\n.dpl-reader-notice { margin: 0 32px 10px; max-width: var(--dpl-measure); }\n\n/* aux rail (droplets T26) */\n\n/* manage table */\n.dpl-manage { display: flex; flex-direction: column; height: 100%; min-height: 0; width: 100%; background: var(--dpl-bg); }\n.dpl-manage-head { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 12px; border-bottom: 1px solid var(--dpl-border); flex: none; }\n.dpl-manage-title { font-size: 13.5px; font-weight: 600; }\n.dpl-manage-filters { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--dpl-border); flex: none; }\n.dpl-manage-search { width: 224px; height: 28px; border-radius: 999px; }\n.dpl-seg { display: flex; align-items: center; gap: 2px; font-size: 12px; }\n.dpl-seg-item { border: none; background: transparent; border-radius: 999px; padding: 4px 8px; color: var(--dpl-muted); cursor: pointer; font-size: 12px; }\n.dpl-seg-item:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-seg-item.is-active { background: color-mix(in srgb, var(--dpl-accent) 12%, transparent); color: var(--dpl-accent); }\n.dpl-manage-batch { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-bottom: 1px solid var(--dpl-border); background: color-mix(in srgb, var(--dpl-accent) 7%, transparent); font-size: 12px; flex: none; }\n.dpl-btn.dpl-sm { min-height: 24px; padding: 2px 8px; font-size: 12px; }\n.dpl-popover { position: absolute; left: 0; top: 100%; z-index: 30; margin-top: 4px; width: 208px; background: var(--dpl-bg); border: 1px solid var(--dpl-border); border-radius: 8px; padding: 6px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18); display: flex; flex-direction: column; gap: 6px; }\n.dpl-manage-grid { display: grid; grid-template-columns: 2rem 3rem minmax(0, 1fr) 4.5rem 6.5rem 2.5rem 2rem; align-items: center; gap: 8px; padding: 0 12px; }\n.dpl-manage-header { height: 30px; border-bottom: 1px solid var(--dpl-border); font-size: 12px; color: var(--dpl-muted); flex: none; }\n.dpl-manage-sort { border: none; background: transparent; padding: 0; font-size: 12px; color: inherit; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 2px; }\n.dpl-manage-sort.dpl-right { justify-content: flex-end; }\n.dpl-manage-sort.is-active { font-weight: 500; color: var(--dpl-accent); }\n.dpl-manage-rows { min-height: 0; flex: 1; overflow: auto; }\n.dpl-manage-row { height: 46px; border-bottom: 1px solid var(--dpl-border); cursor: pointer; transition: background-color 0.1s; }\n.dpl-manage-row:hover { background: var(--dpl-bg-hover); }\n.dpl-manage-name { display: flex; align-items: center; gap: 8px; min-width: 0; }\n.dpl-manage-title { font-size: 13.5px; font-weight: 500; }\n.dpl-manage-title.is-dim { color: var(--dpl-faint); font-weight: 400; }\n.dpl-manage-group { font-size: 12px; color: var(--dpl-faint); }\n.dpl-manage-count { font-size: 12px; color: var(--dpl-muted); }\n.dpl-manage-time { font-size: 12px; color: var(--dpl-faint); }\n.dpl-right { text-align: right; }\n.dpl-health { width: 8px; height: 8px; border-radius: 50%; justify-self: center; }\n.dpl-health.is-ok { background: #34c98e; }\n.dpl-health.is-error { background: var(--dpl-danger); }\n.dpl-health.is-off { background: var(--dpl-border); }\n.dpl-manage-empty { display: grid; place-items: center; height: 96px; font-size: 12px; color: var(--dpl-faint); }\n.dpl-manage-stats { display: flex; align-items: center; gap: 12px; padding: 6px 12px; border-top: 1px solid var(--dpl-border); font-size: 12px; color: var(--dpl-faint); flex: none; }\n\n/* dialogs */\n.dpl-form-col { display: flex; flex-direction: column; gap: 10px; padding: 4px 0 10px; }\n.dpl-field { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--dpl-muted); }\n.dpl-field.dpl-row { flex-direction: row; align-items: center; gap: 8px; }\n.dpl-warn-text { margin: 0; font-size: 12.5px; color: var(--dpl-danger); }\n.dpl-dim-text { margin: 0; font-size: 12px; color: var(--dpl-faint); word-break: break-all; }\n.dpl-form-row.dpl-end { justify-content: flex-end; }\n.dpl-form-row.dpl-between { justify-content: space-between; }\n.dpl-root .dpl-btn.dpl-primary-solid { background: var(--dpl-accent-solid); color: #fff; }\n.dpl-root .dpl-btn.dpl-primary-solid:hover { background: var(--dpl-accent-solid-hover); }\n.dpl-root .dpl-btn.dpl-danger-solid { background: var(--dpl-danger); color: #fff; }\n.dpl-switch { width: 28px; height: 16px; appearance: none; background: var(--dpl-border); border-radius: 999px; position: relative; cursor: pointer; transition: background 0.15s; min-height: 0; padding: 0; }\n.dpl-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; transition: left 0.15s; }\n.dpl-switch:checked { background: var(--dpl-accent); }\n.dpl-switch:checked::after { left: 14px; }\n\n/* ---- inbox page (droplets 1:1 port: \u7B5B\u9009 250 \u2502 \u6761\u76EE 350 \u2502 \u9605\u8BFB) ---- */\n.dpl-ib-filter, .dpl-ib-list { border-right: 1px solid var(--dpl-border); }\n.dpl-ib-reader { position: relative; }\n\n/* \u9762\u677F\u5934\uFF08\u7B5B\u9009\u5217\u65E0\u8FB9\u7EBF\uFF0C\u4E0E\u6761\u76EE/\u9605\u8BFB\u5217\u540C\u9AD8\u540C\u4F4D\uFF09 */\n.dpl-ib-panehead {\n  display: flex;\n  height: 44px;\n  flex: none;\n  align-items: center;\n  justify-content: space-between;\n  padding: 0 10px;\n}\n.dpl-ib-pansub { font-size: 12px; font-weight: 500; color: var(--dpl-faint); }\n\n/* \u64CD\u4F5C\u884C\uFF1A\u6DFB\u52A0 URL / \u5BFC\u5165\uFF08viewToggle \u53CC\u6309\u94AE\uFF0C\u6216\u5185\u8054 URL \u8F93\u5165\uFF09 */\n.dpl-ib-actions { display: flex; flex: none; align-items: center; gap: 6px; padding: 0 10px 8px; }\n/* \u64CD\u4F5C\u884C: \u6DFB\u52A0 URL / \u5BFC\u5165 \u2014 buttons are .dpl-pane-btn (\u7EDF\u4E00\u9762\u677F\u63A7\u5236\u6309\u94AE). */\n.dpl-ib-urlrow { display: flex; width: 100%; align-items: center; gap: 4px; }\n.dpl-ib-urlrow input { min-width: 0; flex: 1; }\n.dpl-ib-cancelurl {\n  display: grid;\n  place-items: center;\n  width: 24px;\n  height: 24px;\n  flex: none;\n  border: none;\n  border-radius: 6px;\n  background: transparent;\n  color: var(--dpl-faint);\n  cursor: pointer;\n}\n.dpl-ib-cancelurl:hover { background: var(--dpl-bg-2); color: var(--dpl-fg); }\n.dpl-ib-adderror {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  border-bottom: 1px solid var(--dpl-border);\n  background: color-mix(in srgb, var(--dpl-danger) 9%, transparent);\n  padding: 6px 10px;\n  font-size: 12px;\n  color: var(--dpl-danger);\n  flex: none;\n}\n.dpl-ib-adderror span { flex: 1; word-break: break-all; }\n.dpl-ib-adderror button { border: none; background: transparent; color: inherit; cursor: pointer; padding: 2px; }\n\n/* \u7B5B\u9009\u6EDA\u52A8\u533A\uFF1A\u72B6\u6001\u89C6\u56FE + \u6807\u7B7E */\n.dpl-ib-scroll { min-height: 0; flex: 1; overflow: auto; padding: 8px; }\n.dpl-ib-statusviews { display: grid; gap: 2px; }\n.dpl-ib-statusrow {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  border: none;\n  background: transparent;\n  border-radius: 6px;\n  padding: 6px 10px;\n  font-size: 13px;\n  color: var(--dpl-muted);\n  cursor: pointer;\n  text-align: left;\n  transition: background-color 0.12s;\n}\n.dpl-ib-statusrow:hover { background: var(--dpl-bg-2); }\n.dpl-ib-statusrow.is-active { background: var(--dpl-accent-soft); font-weight: 500; color: var(--dpl-accent); }\n.dpl-ib-statuslabel { flex: 1; }\n.dpl-ib-statuscount { font-size: 12px; color: var(--dpl-faint); }\n.dpl-dot.is-accent { background: var(--dpl-accent); }\n.dpl-dot.is-gray { background: var(--dpl-faint); }\n.dpl-dot.is-danger { background: var(--dpl-danger); }\n\n.dpl-ib-tagstitle { margin-top: 16px; padding: 0 10px; font-size: 12px; font-weight: 500; color: var(--dpl-faint); }\n.dpl-ib-tags { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; padding: 0 6px; }\n.dpl-ib-tag {\n  border: none;\n  background: var(--dpl-bg-2);\n  border-radius: 999px;\n  padding: 2px 8px;\n  font-size: 12px;\n  color: var(--dpl-muted);\n  cursor: pointer;\n  transition: background-color 0.12s, color 0.12s;\n}\n.dpl-ib-tag:hover { background: var(--dpl-bg-active); color: var(--dpl-fg); }\n.dpl-ib-tag.is-active { background: var(--dpl-accent-soft); color: var(--dpl-accent); }\n.dpl-ib-tag span { color: var(--dpl-faint); }\n\n/* \u6761\u76EE\u5217 */\n.dpl-ib-listhead {\n  display: flex;\n  height: 44px;\n  flex: none;\n  align-items: center;\n  gap: 4px;\n  border-bottom: 1px solid var(--dpl-border);\n  padding: 0 12px;\n  font-size: 12px;\n  color: var(--dpl-faint);\n}\n.dpl-ib-listhead > span:first-child { min-width: 0; flex: 1; }\n.dpl-ib-retryall {\n  flex: none;\n  border: none;\n  background: var(--dpl-bg-2);\n  border-radius: 6px;\n  padding: 2px 6px;\n  font-size: 12px;\n  color: var(--dpl-muted);\n  cursor: pointer;\n}\n.dpl-ib-retryall:hover:not(:disabled) { background: var(--dpl-bg-active); color: var(--dpl-fg); }\n.dpl-ib-retryall:disabled { opacity: 0.5; cursor: default; }\n.dpl-ib-listscroll { min-height: 0; flex: 1; overflow: auto; }\n.dpl-ib-listempty {\n  display: grid;\n  place-items: center;\n  height: 160px;\n  padding: 0 16px;\n  text-align: center;\n  font-size: 12px;\n  color: var(--dpl-faint);\n}\n.dpl-ib-row {\n  position: relative;\n  border-bottom: 1px solid var(--dpl-border);\n  padding: 10px 12px;\n  cursor: pointer;\n  transition: background-color 0.12s;\n  content-visibility: auto;\n  contain-intrinsic-size: auto 68px;\n}\n.dpl-ib-row:hover { background: var(--dpl-bg-hover); }\n.dpl-ib-row.is-active { background: color-mix(in srgb, var(--dpl-accent) 7%, transparent); }\n.dpl-ib-rowmain { display: flex; align-items: flex-start; gap: 8px; }\n.dpl-ib-rowmain .dpl-dot { margin-top: 6px; width: 8px; height: 8px; }\n.dpl-ib-rowbody { min-width: 0; flex: 1; }\n.dpl-ib-rowtitle {\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  font-size: 13px;\n  font-weight: 500;\n  color: var(--dpl-fg);\n}\n.dpl-ib-rowtitle.is-done { color: var(--dpl-faint); font-weight: 400; text-decoration: line-through; }\n.dpl-ib-rowmeta { margin-top: 4px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--dpl-faint); }\n.dpl-ib-faillabel { color: var(--dpl-danger); }\n.dpl-ib-rowtags { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; }\n.dpl-ib-rowtag {\n  border-radius: 999px;\n  background: var(--dpl-bg-active);\n  padding: 1px 6px;\n  font-size: 12px;\n  color: var(--dpl-muted);\n}\n.dpl-ib-rowtagbtn {\n  display: grid;\n  place-items: center;\n  width: 24px;\n  height: 24px;\n  margin-top: 2px;\n  flex: none;\n  border: none;\n  border-radius: 6px;\n  background: transparent;\n  color: var(--dpl-faint);\n  cursor: pointer;\n  opacity: 0;\n  transition: opacity 0.12s;\n}\n.dpl-ib-row:hover .dpl-ib-rowtagbtn, .dpl-ib-rowtagbtn:focus-visible { opacity: 1; }\n.dpl-ib-rowtagbtn:hover { background: var(--dpl-bg-active); color: var(--dpl-fg); }\n\n/* \u6761\u76EE\u5217\u6807\u7B7E\u5F39\u5C42 */\n.dpl-ib-tageditor {\n  position: absolute;\n  right: 8px;\n  top: 8px;\n  z-index: 20;\n  width: 224px;\n  border: 1px solid var(--dpl-border);\n  border-radius: 8px;\n  background: var(--dpl-bg);\n  padding: 8px;\n  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);\n}\n.dpl-ib-tageditor input { width: 100%; }\n.dpl-ib-tageditorfoot { margin-top: 6px; display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--dpl-faint); }\n.dpl-ib-tagconfirm {\n  display: inline-flex;\n  align-items: center;\n  gap: 4px;\n  border: none;\n  background: transparent;\n  border-radius: 6px;\n  padding: 2px 6px;\n  font-size: 12px;\n  color: var(--dpl-accent);\n  cursor: pointer;\n}\n.dpl-ib-tagconfirm:hover { background: var(--dpl-accent-soft); }\n\n/* \u9605\u8BFB\u5217 */\n.dpl-ib-readerbody { position: relative; display: flex; min-width: 0; flex: 1; min-height: 0; flex-direction: column; }\n.dpl-ib-readercenter { display: grid; flex: 1; place-items: center; font-size: 13px; color: var(--dpl-faint); padding: 16px; text-align: center; }\n.dpl-ib-readerhead {\n  display: flex;\n  height: 44px;\n  flex: none;\n  align-items: center;\n  gap: 4px;\n  border-bottom: 1px solid var(--dpl-border);\n  background: var(--dpl-bg);\n  padding: 0 12px;\n}\n.dpl-ib-readertitle { margin-right: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 600; color: var(--dpl-fg); }\n.dpl-ib-headbtn { width: 28px; height: 28px; flex: none; }\n.dpl-ib-headbtn.is-accent { color: var(--dpl-accent); }\n.dpl-ib-donebtn { min-height: 28px; padding: 4px 10px; font-size: 12.5px; flex: none; margin-left: 4px; }\n.dpl-ib-tagpopup {\n  position: absolute;\n  right: 12px;\n  top: 44px;\n  z-index: 30;\n  width: 256px;\n  border: 1px solid var(--dpl-border);\n  border-radius: 8px;\n  background: var(--dpl-bg);\n  padding: 8px;\n  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);\n}\n.dpl-ib-tagpopup input { width: 100%; }\n\n/* \u6293\u53D6\u5931\u8D25\u5360\u4F4D\u5361 */\n.dpl-ib-readerfill { display: grid; flex: 1; place-items: center; padding: 24px; }\n.dpl-ib-failedcard {\n  width: 420px;\n  max-width: 100%;\n  border: 1px solid var(--dpl-border);\n  border-radius: 12px;\n  background: var(--dpl-bg);\n  padding: 24px;\n  text-align: center;\n  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);\n}\n.dpl-ib-warnicon { margin: 0 auto; color: #b98a1d; }\n.dpl-ib-failedcard h3 { margin: 12px 0 0; font-size: 14px; font-weight: 600; }\n.dpl-ib-failedmsg { margin: 8px 0 0; font-size: 13px; color: var(--dpl-muted); word-break: break-all; }\n.dpl-ib-failedhint { margin: 8px 0 0; font-size: 12px; color: var(--dpl-faint); }\n.dpl-ib-retrybtn { margin-top: 16px; border: 1px solid var(--dpl-border); }\n.dpl-ib-retrybtn:hover:not(:disabled) { background: var(--dpl-bg-2); }\n.dpl-ib-outlinebtn { border: 1px solid var(--dpl-border); }\n.dpl-ib-outlinebtn:hover:not(:disabled) { background: var(--dpl-bg-2); }\n\n/* \u6B63\u6587\uFF08markdown\uFF09 */\n.dpl-ib-contentscroll { min-height: 0; flex: 1; overflow: auto; }\n.dpl-ib-shortnotice {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 8px;\n  margin: 16px auto 0;\n  width: min(90%, var(--dpl-measure));\n  border-radius: 8px;\n  padding: 6px 12px;\n  font-size: 12px;\n}\n.dpl-ib-shortnotice.is-warn { background: rgba(230, 167, 0, 0.12); color: #8a6d1a; }\n.dpl-ib-shortnotice.is-info { background: color-mix(in srgb, #2f6fed 9%, transparent); color: #2f6fed; }\n.dpl-ib-shortnotice svg { flex: none; }\n.dpl-inline-link { border: none; background: transparent; padding: 0; font-weight: 500; text-decoration: underline; text-underline-offset: 2px; color: inherit; cursor: pointer; }\n.dpl-inline-link:hover { opacity: 0.8; }\n.dpl-ib-article { margin: 0 auto; padding: 32px; max-width: var(--dpl-measure); font-size: 16px; line-height: 1.7; }\n.dpl-ib-articlebody { color: var(--dpl-fg); min-width: 0; overflow-x: auto; }\n.dpl-ib-articlebody > *:first-child { margin-top: 0; }\n.dpl-ib-articlebody > *:last-child { margin-bottom: 0; }\n.dpl-ib-articlebody h1, .dpl-ib-articlebody h2, .dpl-ib-articlebody h3,\n.dpl-ib-articlebody h4, .dpl-ib-articlebody h5, .dpl-ib-articlebody h6 {\n  margin: 1.4em 0 0.6em;\n  font-weight: 600;\n  line-height: 1.4;\n}\n.dpl-ib-articlebody h1 { font-size: 1.5em; }\n.dpl-ib-articlebody h2 { font-size: 1.3em; }\n.dpl-ib-articlebody h3 { font-size: 1.15em; }\n.dpl-ib-articlebody h4, .dpl-ib-articlebody h5, .dpl-ib-articlebody h6 { font-size: 1em; }\n.dpl-ib-articlebody p { margin: 0.8em 0; }\n.dpl-ib-articlebody a { color: var(--dpl-link); text-decoration: none; }\n.dpl-ib-articlebody a:hover { text-decoration: underline; }\n.dpl-ib-articlebody img { max-width: 100%; height: auto; border-radius: 8px; }\n.dpl-ib-articlebody ul, .dpl-ib-articlebody ol { margin: 0.8em 0; padding-left: 1.6em; }\n.dpl-ib-articlebody li { margin: 0.25em 0; }\n.dpl-ib-articlebody blockquote { margin: 0.9em 0; border-left: 3px solid var(--dpl-border); padding: 2px 14px; color: var(--dpl-muted); }\n.dpl-ib-articlebody pre { overflow: auto; margin: 0.9em 0; border-radius: 8px; background: var(--dpl-bg-2); padding: 12px; font-size: 13px; line-height: 1.6; max-width: 100%; }\n.dpl-ib-articlebody code { font-size: 0.88em; background: var(--dpl-bg-2); border-radius: 4px; padding: 1px 5px; }\n.dpl-ib-articlebody pre code { background: transparent; padding: 0; }\n.dpl-ib-articlebody hr { border: none; border-top: 1px solid var(--dpl-border); margin: 1.6em 0; }\n.dpl-ib-articlebody table { border-collapse: collapse; margin: 0.9em 0; max-width: 100%; display: block; overflow-x: auto; }\n.dpl-ib-articlebody th, .dpl-ib-articlebody td { border: 1px solid var(--dpl-border); padding: 5px 10px; font-size: 0.92em; text-align: left; }\n.dpl-ib-articlebody th { background: var(--dpl-bg-2); font-weight: 600; }\n\n/* PDF / EPUB \u9605\u8BFB\u5668\uFF08droplets \u5F62\u72B6\uFF1A\u9876\u90E8\u5BFC\u822A\u6761 + \u6EDA\u52A8\u6B63\u6587\uFF09 */\n.dpl-ib-docpane { display: flex; min-height: 0; flex: 1; flex-direction: column; }\n.dpl-ib-docnav {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  gap: 8px;\n  border-bottom: 1px solid var(--dpl-border);\n  padding: 6px 12px;\n  font-size: 12px;\n  color: var(--dpl-muted);\n  flex: none;\n}\n.dpl-ib-docnav > span { min-width: 0; }\n.dpl-ib-docnavbtn { border: 1px solid var(--dpl-border); min-height: 24px; padding: 2px 8px; font-size: 12px; }\n.dpl-ib-docnavbtn:hover:not(:disabled) { background: var(--dpl-bg-2); }\n.dpl-ib-docscroll { min-height: 0; flex: 1; overflow: auto; background: var(--dpl-bg-2); padding: 16px; }\n.dpl-ib-pdfcanvas { display: block; margin: 0 auto; background: #fff; box-shadow: 0 4px 18px rgba(15, 23, 42, 0.16); }\n.dpl-ib-epubscroll { background: var(--dpl-bg); padding: 0; }\n.dpl-ib-epubbody { margin: 0 auto; padding: 32px; max-width: var(--dpl-measure); font-size: 16px; line-height: 1.7; color: var(--dpl-fg); }\n.dpl-ib-epubbody img { max-width: 100%; height: auto; }\n\n/* \u5904\u7406\u5B8C\u6210\u5F39\u5C42 */\n.dpl-ib-donescrim {\n  position: absolute;\n  inset: 0;\n  z-index: 40;\n  display: grid;\n  place-items: center;\n  background: rgba(15, 23, 42, 0.2);\n}\n.dpl-ib-donedialog {\n  width: 380px;\n  max-width: calc(100% - 32px);\n  border: 1px solid var(--dpl-border);\n  border-radius: 12px;\n  background: var(--dpl-bg);\n  padding: 20px;\n  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.24);\n}\n.dpl-ib-donedialoghead { display: flex; align-items: center; justify-content: space-between; gap: 10px; }\n.dpl-ib-donedialoghead h3 { margin: 0; font-size: 13.5px; font-weight: 600; }\n.dpl-ib-donesub { margin: 8px 0 0; font-size: 13px; color: var(--dpl-muted); }\n.dpl-ib-donebtns { margin-top: 16px; display: grid; gap: 8px; }\n.dpl-ib-donebtns .dpl-btn { justify-content: center; min-height: 30px; }\n.dpl-ib-doneresult {\n  margin: 12px 0 0;\n  border-radius: 8px;\n  background: color-mix(in srgb, #2f6fed 9%, transparent);\n  padding: 8px 12px;\n  font-size: 12px;\n  color: #2f6fed;\n  word-break: break-all;\n}\n\n/* ---- pdf / epub ---- */\n.dpl-pdf { display: flex; flex-direction: column; align-items: center; gap: 12px; }\n.dpl-pdf-canvas { max-width: 100%; box-shadow: 0 2px 14px rgba(15, 23, 42, 0.18); border-radius: 6px; background: #fff; }\n.dpl-pager { display: flex; align-items: center; gap: 10px; color: var(--dpl-muted); font-size: 13px; }\n\n/* ---- vault ---- */\n.dpl-vault-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--dpl-muted); }\n.dpl-tree-stats { font-size: 12px; color: var(--dpl-faint); flex: 1; padding-left: 4px; }\n.dpl-tree details { margin-left: 4px; }\n.dpl-tree summary {\n  cursor: pointer;\n  padding: 4px 8px;\n  font-size: 12px;\n  font-weight: 600;\n  color: var(--dpl-muted);\n  border-radius: 6px;\n  list-style: none;\n  display: flex;\n  align-items: center;\n  gap: 4px;\n}\n.dpl-tree summary::before { content: '\u25B8'; font-size: 10px; transition: transform 0.12s; color: var(--dpl-faint); }\n.dpl-tree details[open] > summary::before { transform: rotate(90deg); }\n.dpl-tree summary:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-tree-file {\n  display: flex;\n  width: calc(100% - 8px);\n  margin: 0 4px;\n  border: none;\n  background: transparent;\n  text-align: left;\n  padding: 4px 10px;\n  cursor: pointer;\n  color: var(--dpl-fg);\n  border-radius: 6px;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  font-size: 13px;\n}\n.dpl-tree-file:hover { background: var(--dpl-bg-hover); }\n.dpl-tree-file.is-active { background: var(--dpl-bg-active); font-weight: 600; }\n.dpl-note-body { line-height: 1.75; font-size: 14.5px; }\n.dpl-note-body h1, .dpl-note-body h2 { border-bottom: 1px solid var(--dpl-border); padding-bottom: 6px; margin: 1.2em 0 0.6em; }\n.dpl-note-body pre { overflow: auto; padding: 12px; border-radius: var(--dpl-radius-sm); background: var(--dpl-bg-2); font-size: 13px; }\n.dpl-note-body code { background: var(--dpl-bg-2); border-radius: 4px; padding: 1px 5px; font-size: 0.92em; }\n.dpl-note-editor {\n  width: 100%;\n  min-height: 62vh;\n  font-family: var(--dsw-alias-font-mono, ui-monospace, 'SF Mono', monospace);\n  font-size: 13px;\n  line-height: 1.7;\n  border-radius: var(--dpl-radius);\n  border: 1px solid var(--dpl-border);\n  padding: 14px;\n  resize: vertical;\n  background: var(--dpl-bg);\n  color: var(--dpl-fg);\n}\n.dpl-note-editor:focus { border-color: var(--dpl-accent); }\n.dpl-wikilink { color: var(--dpl-link); text-decoration: none; border-bottom: 1px dashed currentColor; }\n.dpl-tag { color: var(--dpl-muted); background: var(--dpl-bg-2); border-radius: 4px; padding: 0 4px; font-size: 0.9em; }\n.dpl-backlinks h2, .dpl-search-results h2 { font-size: 14px; margin: 20px 0 8px; font-weight: 600; }\n.dpl-backlinks ul, .dpl-search-results ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }\n.dpl-backlinks button, .dpl-search-results button {\n  border: none;\n  background: transparent;\n  text-align: left;\n  cursor: pointer;\n  padding: 7px 9px;\n  border-radius: var(--dpl-radius-sm);\n  color: var(--dpl-fg);\n  display: block;\n  width: 100%;\n}\n.dpl-backlinks button:hover, .dpl-search-results button:hover { background: var(--dpl-bg-hover); }\n.dpl-search-results p { margin: 2px 0 0; font-size: 12px; color: var(--dpl-faint); }\n\n.dpl-graph { position: relative; height: 100%; }\n.dpl-graph svg { width: 100%; height: 100%; }\n.dpl-graph-edge { stroke: color-mix(in srgb, var(--dpl-fg) 20%, transparent); stroke-width: 1; }\n.dpl-graph-node { fill: var(--dpl-accent); cursor: pointer; }\n.dpl-graph-node.is-dangling { fill: color-mix(in srgb, var(--dpl-fg) 25%, transparent); }\n.dpl-graph-node.is-hover { stroke: var(--dpl-fg); stroke-width: 2; }\n.dpl-graph-label { position: absolute; top: 8px; left: 12px; font-size: 12px; color: var(--dpl-muted); }\n\n/* ---- companion (droplets: docked right panel) ---- */\n.dpl-companion {\n  width: 40%;\n  min-width: 360px;\n  flex: none;\n  display: flex;\n  flex-direction: column;\n  border-left: 1px solid var(--dpl-border);\n  min-height: 0;\n  background: var(--dpl-bg);\n}\n.dpl-companion-header { display: flex; align-items: center; gap: 4px; height: 40px; padding: 0 8px 0 12px; border-bottom: 1px solid var(--dpl-border); }\n.dpl-companion-header strong { flex: 1; font-size: 13px; font-weight: 600; }\n.dpl-companion-context { padding: 8px 12px; border-bottom: 1px solid var(--dpl-border); display: flex; flex-direction: column; gap: 2px; overflow: hidden; }\n.dpl-companion-context strong { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.dpl-companion-context small { font-size: 12px; color: var(--dpl-muted); }\n.dpl-native-chat { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }\n.dpl-companion-loading { padding: 24px; text-align: center; color: var(--dpl-faint); flex: 1; font-size: 13px; }\n.dpl-companion-error { margin: 10px; padding: 10px; border-radius: var(--dpl-radius-sm); background: color-mix(in srgb, var(--dpl-danger) 10%, transparent); color: var(--dpl-danger); font-size: 13px; }\n.dpl-companion-error p { margin: 6px 0 10px; font-size: 12px; word-break: break-all; }\n.dpl-companion-error button { margin-top: 2px; }\n.dpl-companion-notice { display: flex; align-items: center; gap: 6px; margin: 6px 10px; padding: 6px 10px; border-radius: var(--dpl-radius-sm); background: var(--dpl-bg-2); color: var(--dpl-muted); font-size: 12px; }\n.dpl-companion-notice span { flex: 1; }\n.dpl-companion-quote { margin: 8px 10px; border-left: 3px solid var(--dpl-accent); padding: 6px 10px; background: var(--dpl-bg-2); border-radius: 0 var(--dpl-radius-sm) var(--dpl-radius-sm) 0; }\n.dpl-companion-quote strong { font-size: 11px; color: var(--dpl-muted); display: block; margin-bottom: 4px; }\n.dpl-companion-quote blockquote { margin: 0; font-size: 12px; max-height: 90px; overflow: auto; white-space: pre-wrap; }\n.dpl-companion-prompt-strip { display: flex; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--dpl-border); flex: none; overflow-x: auto; }\n.dpl-prompt-ghost { border: 1px solid var(--dpl-border); background: transparent; border-radius: 999px; padding: 4px 12px; font-size: 12px; cursor: pointer; color: var(--dpl-fg); white-space: nowrap; }\n.dpl-prompt-ghost:hover { background: var(--dpl-bg-hover); }\n.dpl-prompt-ghost:disabled { opacity: 0.45; cursor: default; }\n\n/* ---- modal (DSH dialog feel) ---- */\n.dpl-form-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }\n.dpl-form-row input { flex: 1; min-width: 120px; }\n.dpl-sub-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }\n.dpl-sub-list li { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: var(--dpl-radius-sm); }\n.dpl-sub-list li:hover { background: var(--dpl-bg-hover); }\n.dpl-sub-list label { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }\n.dpl-sub-list label.is-dim { opacity: 0.5; }\n.dpl-sub-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }\n.dpl-sub-meta { font-size: 12px; color: var(--dpl-faint); }\n.dpl-opml-input { width: 100%; }\n.dpl-settings-block h3 { font-size: 13px; margin: 14px 0 6px; font-weight: 600; }\n.dpl-settings-block h3:first-child { margin-top: 0; }\n.dpl-path { display: block; padding: 6px 9px; border-radius: 6px; background: var(--dpl-bg-2); font-size: 12px; font-family: var(--dsw-alias-font-mono, ui-monospace, monospace); word-break: break-all; margin: 6px 0; }\n.dpl-toggle { display: flex; align-items: center; gap: 8px; }\n.dpl-conflict-excerpt { margin: 8px 0; padding: 8px 10px; border-left: 3px solid var(--dpl-danger); font-size: 12px; color: var(--dpl-muted); max-height: 120px; overflow: auto; }\n\n/* ---- responsive: narrow windows stack companion below (qiaomu pattern) ---- */\n\n/* ---- feed page v2 (droplets interaction port) ---- */\n.dpl-flex-fill { flex: 1; min-width: 0; }\n.dpl-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.dpl-spin { animation: dpl-spin 0.9s linear infinite; }\n@keyframes dpl-spin { to { transform: rotate(360deg); } }\n\n.dpl-source { gap: 7px; }\n.dpl-source .dpl-badge { flex: none; }\n.dpl-source-error { color: var(--dpl-danger); flex: none; }\n.dpl-source em { margin-left: auto; }\n.dpl-source em:empty { display: none; }\n\n.dpl-icon-btn.is-on { color: var(--dpl-accent); }\n.dpl-icon-btn .dpl-fill { fill: currentColor; }\n\n.dpl-entry-scroll { min-height: 0; flex: 1; overflow: auto; }\n.dpl-entry-row {\n  cursor: pointer;\n  border-bottom: 1px solid var(--dpl-border);\n  padding: 9px 10px 9px 12px;\n  transition: background-color 0.1s;\n  content-visibility: auto;\n  contain-intrinsic-size: auto 74px;\n}\n.dpl-entry-row:hover { background: var(--dpl-bg-hover); }\n.dpl-entry-row.is-active { background: color-mix(in srgb, var(--dpl-accent) 14%, transparent); box-shadow: inset 2px 0 0 var(--dpl-accent); }\n.dpl-entry-src { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--dpl-faint); }\n.dpl-entry-src .dpl-star { padding: 0; font-size: 13px; opacity: 0; }\n.dpl-entry-row:hover .dpl-entry-src .dpl-star { opacity: 0.5; }\n.dpl-entry-src .dpl-star.is-on { opacity: 1; }\n.dpl-entry-main { display: flex; align-items: center; gap: 8px; margin-top: 4px; }\n.dpl-entry-main span:last-child { font-size: 13.5px; color: var(--dpl-faint); min-width: 0; flex: 1; }\n.dpl-entry-main span.is-unread { color: var(--dpl-fg); font-weight: 600; }\n.dpl-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--dpl-accent); flex: none; }\n.dpl-dot.is-read, .dpl-dot.is-seen { background: var(--dpl-muted); }\n.dpl-entry-sum { margin: 3px 0 0 15px; font-size: 12px; color: var(--dpl-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n\n.dpl-badge {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 16px;\n  border-radius: 5px;\n  font-size: 10px;\n  font-weight: 700;\n  flex: none;\n}\n\n.dpl-new-pill {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  gap: 4px;\n  margin: 6px 10px 0;\n  padding: 4px 10px;\n  border: none;\n  border-radius: 999px;\n  background: color-mix(in srgb, var(--dpl-accent) 14%, transparent);\n  color: var(--dpl-accent);\n  font-size: 12px;\n  font-weight: 600;\n  cursor: pointer;\n  flex: none;\n}\n.dpl-new-pill:hover { background: color-mix(in srgb, var(--dpl-accent) 22%, transparent); }\n\n.dpl-reader-actions-float {\n  position: sticky;\n  top: 0;\n  z-index: 5;\n  display: flex;\n  align-items: center;\n  justify-content: flex-end;\n  gap: 2px;\n  padding: 6px 0 14px;\n  background: linear-gradient(to bottom, var(--dpl-bg) 55%, transparent);\n}\n.dpl-round-btn {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 32px;\n  height: 32px;\n  border: none;\n  border-radius: 50%;\n  background: transparent;\n  color: var(--dpl-muted);\n  cursor: pointer;\n}\n.dpl-round-btn:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n\n.dpl-notice {\n  margin: 0 0 10px;\n  padding: 6px 10px;\n  border-radius: var(--dpl-radius-sm);\n  background: color-mix(in srgb, var(--dpl-accent) 10%, transparent);\n  color: var(--dpl-accent);\n  font-size: 12.5px;\n}\n\n/* ---- companion: floating window / docked pane (droplets AiPanel) ---- */\n.dpl-companion.is-floating {\n  position: fixed;\n  z-index: 40;\n  width: min(480px, calc(100vw - 2rem));\n  height: min(70vh, 640px);\n  min-width: 0;\n  border: 1px solid var(--dpl-border);\n  border-radius: 14px;\n  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.3);\n}\n.dpl-companion.is-docked {\n  position: relative;\n  flex: 0 0 auto;\n  min-width: 320px;\n  border-left: 1px solid var(--dpl-border);\n}\n/* Left-edge resize handle (droplets ai-panel-resize): always-visible thin\n   line on a wide invisible hit area; accent while hovering/dragging. */\n.dpl-companion-resize {\n  position: absolute;\n  top: 0;\n  bottom: 0;\n  left: -3px;\n  z-index: 10;\n  width: 8px;\n  cursor: col-resize;\n}\n.dpl-companion-resize::after {\n  content: '';\n  position: absolute;\n  top: 8px;\n  bottom: 8px;\n  left: 50%;\n  width: 1px;\n  transform: translateX(-50%);\n  background: var(--dpl-border);\n}\n.dpl-companion-resize:hover::after,\n.dpl-companion-resize:active::after { background: var(--dpl-accent); }\n.dpl-companion-header.is-draggable { cursor: move; user-select: none; touch-action: none; }\n.dpl-companion-spark { color: var(--dpl-accent); flex: none; }\n.dpl-companion-header .dpl-icon-btn { width: 24px; height: 24px; }\n\n/* AuxRail ask-AI button: droplets shape \u2014 round accent chip, white spark. */\n\n/* ---- global tooltip layer (body-level, JS-positioned) ---- */\n.dpl-gtip {\n  position: fixed;\n  z-index: 300;\n  background: var(--dsw-alias-label-primary, #0f1115);\n  color: var(--dsw-alias-bg-base, #fff);\n  font-size: 12px;\n  line-height: 1;\n  padding: 5px 8px;\n  border-radius: 6px;\n  white-space: nowrap;\n  max-width: 320px;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  opacity: 0;\n  pointer-events: none;\n  transition: opacity 0.12s ease 0.25s;\n  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.24);\n}\n.dpl-gtip[data-empty] { display: none; }\n\n/* Edit-dialog error panel (droplets feed-edit-error shape) */\n.dpl-dialog-errorpanel { margin: 0 20px 10px; display: flex; flex-direction: column; gap: 3px; }\n.dpl-dialog-errortitle { font-weight: 600; }\n.dpl-dialog-errortext { word-break: break-all; }\n.dpl-dialog-errormeta { color: var(--dpl-faint); }\n.dpl-list-empty p { margin: 0 0 10px; }\n.dpl-entry-row:focus-visible { outline: 2px solid var(--dpl-accent); outline-offset: -2px; }\n\n/* Wide article content (tables, long URLs) must scroll inside the reader,\n   never push the panel layout sideways (flex children default to\n   min-width:auto \u2014 the classic blowout). */\n.dpl-preview { min-width: 0; }\n.dpl-article-body-wrap { min-width: 0; }\n.dpl-article-body { min-width: 0; overflow-x: auto; }\n.dpl-article-body table { display: block; max-width: 100%; overflow-x: auto; }\n.dpl-article-body pre { max-width: 100%; }\n.dpl-note-body { min-width: 0; overflow-x: auto; }\n\n/* aux rail (droplets T26: ticks are 2px bars; back-to-top & ask-AI are 22px circles) */\n.dpl-aux-rail {\n  position: absolute;\n  top: 50%;\n  right: 10px;\n  transform: translateY(-50%);\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  gap: 3px;\n  z-index: 6;\n}\n.dpl-aux-tick { display: flex; height: 12px; align-items: center; justify-content: center; padding: 0 4px; border: none; background: transparent; cursor: pointer; }\n.dpl-aux-bar { display: block; height: 2px; border-radius: 1px; background: var(--dpl-faint); transition: background-color 0.12s; }\n.dpl-aux-tick:hover .dpl-aux-bar { background: var(--dpl-fg); }\n.dpl-aux-tick.is-active .dpl-aux-bar { background: var(--dpl-accent); }\n.dpl-aux-round, .dpl-aux-ask {\n  display: grid;\n  place-items: center;\n  width: 22px;\n  height: 22px;\n  padding: 0;\n  border: none;\n  border-radius: 9999px;\n  cursor: pointer;\n}\n.dpl-aux-round {\n  background: var(--dpl-bg-2);\n  color: var(--dpl-muted);\n  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.14);\n}\n.dpl-aux-round:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-root .dpl-aux-ask { background: var(--dpl-accent-solid); color: #fff; }\n.dpl-root .dpl-aux-ask:hover { background: var(--dpl-accent-solid-hover); }\n.dpl-aux-popover {\n  position: absolute;\n  top: 50%;\n  right: 34px;\n  transform: translateY(-50%);\n  min-width: 180px;\n  max-width: 280px;\n  max-height: 60vh;\n  overflow: auto;\n  background: var(--dpl-bg);\n  border: 1px solid var(--dpl-border);\n  border-radius: 10px;\n  padding: 6px;\n  box-shadow: 0 10px 32px rgba(15, 23, 42, 0.2);\n  z-index: 7;\n}\n.dpl-aux-pop { display: block; width: 100%; text-align: left; border: none; background: transparent; padding: 3px 8px; border-radius: 6px; font-size: 12.5px; color: var(--dpl-muted); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.dpl-aux-pop:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-aux-pop.is-active { color: var(--dpl-accent); font-weight: 600; }\n/* Shown when the rail dropped deep levels to fit: the popover is still the\n   full outline, this says so in one glance. */\n.dpl-aux-popcount { padding: 5px 8px 4px; margin-bottom: 2px; font-size: 11px; color: var(--dpl-faint); border-bottom: 1px solid var(--dpl-border); }\n\n.dpl-search-results h2 { display: flex; align-items: center; gap: 10px; }\n.dpl-search-results h2 .dpl-btn { margin-left: auto; }\n.dpl-dialog-field textarea { width: 100%; resize: vertical; font-size: 12px; line-height: 1.5; }\n.dpl-import-summary { font-size: 12px; color: var(--dpl-muted); }\n\n/* ---- OPML import dialog: entry choices + preview list ---- */\n.dpl-import-dialog { width: 560px; }\n.dpl-import-choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 6px 20px 18px; }\n.dpl-import-choice {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  gap: 6px;\n  padding: 22px 12px 16px;\n  border: 1px solid var(--dpl-border);\n  border-radius: 12px;\n  background: transparent;\n  cursor: pointer;\n  color: var(--dpl-fg);\n  transition: border-color 0.12s, background-color 0.12s;\n}\n.dpl-import-choice:hover { border-color: var(--dpl-accent); background: var(--dpl-accent-soft); }\n.dpl-import-choice svg { color: var(--dpl-accent); }\n.dpl-import-choice strong { font-size: 13px; }\n.dpl-import-choice span { font-size: 11.5px; color: var(--dpl-faint); text-align: center; }\n.dpl-import-preview { display: flex; flex-direction: column; min-height: 0; max-height: 56vh; }\n.dpl-import-summary {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 10px;\n  margin: 0 20px;\n  padding: 8px 0;\n  border-top: 1px solid var(--dpl-border);\n  font-size: 12.5px;\n  color: var(--dpl-muted);\n}\n.dpl-import-list { overflow: auto; padding: 4px 12px 8px; display: flex; flex-direction: column; }\n.dpl-import-row {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  padding: 6px 8px;\n  border-radius: 8px;\n  cursor: pointer;\n}\n.dpl-import-row:hover { background: var(--dpl-bg-hover); }\n.dpl-import-row.is-dim { opacity: 0.5; cursor: default; }\n.dpl-import-name { flex: 1; min-width: 0; font-size: 13px; }\n.dpl-import-group { font-size: 11.5px; color: var(--dpl-faint); flex: none; }\n.dpl-import-dup { font-size: 11.5px; color: var(--dpl-faint); flex: none; }\n\n/* ---- dialogs: authoritative set (fixed centered modal, .dpl-root prefix) ---- */\n.dpl-root .dpl-dialog-backdrop, .dpl-companion .dpl-dialog-backdrop {\n  position: fixed;\n  inset: 0;\n  z-index: 200;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  background: rgba(15, 23, 42, 0.32);\n  padding: 24px;\n}\n.dpl-root .dpl-dialog, .dpl-companion .dpl-dialog {\n  display: flex;\n  flex-direction: column;\n  max-width: 100%;\n  max-height: min(80vh, 720px);\n  border-radius: 14px;\n  background: var(--dpl-bg);\n  border: 1px solid var(--dpl-border);\n  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.32);\n}\n.dpl-root .dpl-add-dialog { width: 440px; }\n.dpl-root .dpl-edit-dialog { width: 520px; }\n.dpl-root .dpl-import-dialog { width: 560px; }\n.dpl-root .dpl-dialog-headline { display: flex; align-items: center; gap: 10px; padding: 16px 20px 10px; flex: none; }\n.dpl-root .dpl-icon-btn.dpl-round { width: 28px; height: 28px; border-radius: 50%; }\n.dpl-root .dpl-dialog-rows { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--dpl-border); padding: 12px 20px; font-size: 12px; }\n.dpl-root .dpl-dialog-row { display: flex; align-items: center; gap: 8px; }\n.dpl-root .dpl-dialog-label { width: 64px; flex: none; color: var(--dpl-faint); }\n.dpl-root .dpl-row-flex { display: flex; align-items: center; gap: 4px; }\n.dpl-root .dpl-group-menu { top: calc(100% + 4px); left: 64px; min-width: 180px; max-height: 176px; overflow: auto; }\n.dpl-root .dpl-dialog-url { flex: 1; min-width: 0; color: var(--dpl-muted); word-break: break-all; font-size: 12px; }\n.dpl-root .dpl-dialog-switch-hint { color: var(--dpl-muted); font-size: 12px; }\n.dpl-root .dpl-dialog-pad { margin: 0 20px 8px; }\n.dpl-root .dpl-dialog-footer { display: flex; align-items: center; gap: 8px; border-top: 1px solid var(--dpl-border); padding: 12px 20px; flex: none; }\n.dpl-root .dpl-import-preview { display: flex; flex-direction: column; min-height: 0; flex: 1; }\n.dpl-root .dpl-import-summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 20px; padding: 8px 0; border-top: 1px solid var(--dpl-border); font-size: 12.5px; color: var(--dpl-muted); flex: none; }\n.dpl-root .dpl-import-list { overflow: auto; padding: 4px 12px 8px; display: flex; flex-direction: column; min-height: 0; }\n.dpl-root .dpl-import-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; cursor: pointer; }\n.dpl-root .dpl-import-row:hover { background: var(--dpl-bg-hover); }\n.dpl-root .dpl-import-row.is-dim { opacity: 0.5; cursor: default; }\n.dpl-root .dpl-import-name { flex: 1; min-width: 0; font-size: 13px; }\n.dpl-root .dpl-import-group { font-size: 11.5px; color: var(--dpl-faint); flex: none; }\n.dpl-root .dpl-import-dup { font-size: 11.5px; color: var(--dpl-faint); flex: none; }\n.dpl-root .dpl-import-choice { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 22px 12px 16px; border: 1px solid var(--dpl-border); border-radius: 12px; background: transparent; cursor: pointer; color: var(--dpl-fg); transition: border-color 0.12s, background-color 0.12s; }\n.dpl-root .dpl-import-choice:hover { border-color: var(--dpl-accent); background: var(--dpl-accent-soft); }\n.dpl-root .dpl-import-choice svg { color: var(--dpl-accent); }\n.dpl-root .dpl-import-filestatus { padding: 0 20px; }\n.dpl-root .dpl-import-parsing { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--dpl-muted); padding: 6px 0; }\n.dpl-root .dpl-import-filestatus .dpl-dialog-error { display: flex; align-items: center; gap: 8px; }\n.dpl-root .dpl-import-successbar {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  margin: 8px 12px 0;\n  padding: 7px 10px;\n  border-radius: 8px;\n  background: color-mix(in srgb, #34c98e 12%, transparent);\n  color: #1e9e6a;\n  font-size: 12.5px;\n}\n.dpl-root .dpl-import-successbar span { flex: 1; }\n\n.dpl-root .dpl-refresh-progress { padding: 0 10px 8px; flex: none; }\n.dpl-root .dpl-refresh-progress-head {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  border: none;\n  background: transparent;\n  padding: 0;\n  font-size: 11.5px;\n  color: var(--dpl-muted);\n  cursor: pointer;\n  width: 100%;\n  text-align: left;\n}\n.dpl-root .dpl-refresh-progress-head:hover { color: var(--dpl-fg); }\n.dpl-root .dpl-refresh-bar { height: 2px; border-radius: 1px; background: var(--dpl-border); margin-top: 5px; overflow: hidden; }\n.dpl-root .dpl-refresh-bar-fill { height: 100%; background: var(--dpl-accent); transition: width 0.4s ease; }\n.dpl-root .dpl-refresh-errors {\n  max-height: 200px;\n  overflow: auto;\n  margin-top: 6px;\n  border: 1px solid var(--dpl-border);\n  border-radius: 8px;\n  padding: 4px;\n  background: var(--dpl-bg-2);\n}\n.dpl-root .dpl-refresh-error { display: flex; flex-direction: column; gap: 1px; padding: 4px 6px; font-size: 11px; }\n.dpl-root .dpl-refresh-error span { color: var(--dpl-fg); }\n.dpl-root .dpl-refresh-error em { font-style: normal; color: var(--dpl-danger); word-break: break-all; }\n\n/* ---- settings screen (droplets two-pane settings) ---- */\n.dpl-root .dpl-header-gear {\n  display: grid;\n  place-items: center;\n  width: 26px;\n  height: 26px;\n  flex: none;\n  margin-left: auto;\n  border: none;\n  border-radius: 7px;\n  background: transparent;\n  color: var(--dpl-muted);\n  cursor: pointer;\n}\n.dpl-root .dpl-header-gear:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-root .dpl-header-gear.is-active { background: var(--dpl-accent-soft); color: var(--dpl-accent); }\n.dpl-root .dpl-settings { display: flex; flex: 1; min-height: 0; height: 100%; }\n.dpl-root .dpl-settings-nav {\n  width: 176px;\n  flex: none;\n  border-right: 1px solid var(--dpl-border);\n  padding: 10px 8px;\n  display: flex;\n  flex-direction: column;\n  gap: 2px;\n  overflow: auto;\n}\n.dpl-root .dpl-settings-navhead { display: flex; align-items: center; gap: 6px; padding: 2px 4px 10px; font-size: 13px; }\n.dpl-root .dpl-settings-navitem {\n  display: block;\n  width: 100%;\n  text-align: left;\n  border: none;\n  background: transparent;\n  padding: 7px 10px;\n  border-radius: 8px;\n  font-size: 13px;\n  color: var(--dpl-muted);\n  cursor: pointer;\n}\n.dpl-root .dpl-settings-navitem:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-root .dpl-settings-navitem.is-active { background: var(--dpl-accent-soft); color: var(--dpl-accent); font-weight: 500; }\n.dpl-root .dpl-settings-body { flex: 1; min-width: 0; overflow: auto; padding: 18px 22px 40px; }\n.dpl-root .dpl-settings-section { max-width: 720px; display: flex; flex-direction: column; gap: 14px; }\n.dpl-root .dpl-settings-section h2 { margin: 0 0 2px; font-size: 15px; font-weight: 600; }\n.dpl-root .dpl-settings-card {\n  border: 1px solid var(--dpl-border);\n  border-radius: 12px;\n  padding: 14px 16px;\n  display: flex;\n  flex-direction: column;\n  gap: 10px;\n  background: var(--dpl-bg);\n}\n.dpl-root .dpl-settings-rowname { font-size: 12.5px; color: var(--dpl-muted); }\n.dpl-root .dpl-settings-pathrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }\n.dpl-root .dpl-settings-pathrow code { flex: 1; min-width: 220px; font-size: 12.5px; word-break: break-all; }\n.dpl-root .dpl-settings-hint { margin: 0; font-size: 12px; color: var(--dpl-faint); line-height: 1.6; }\n.dpl-root .dpl-settings-dirs { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }\n.dpl-root .dpl-settings-dir {\n  display: grid;\n  grid-template-columns: auto 1fr;\n  grid-template-areas: 'icon name' 'label label';\n  gap: 2px 6px;\n  align-items: center;\n  text-align: left;\n  border: 1px solid var(--dpl-border);\n  border-radius: 10px;\n  background: transparent;\n  padding: 9px 10px;\n  cursor: pointer;\n  color: var(--dpl-fg);\n}\n.dpl-root .dpl-settings-dir:hover { border-color: var(--dpl-accent); background: var(--dpl-accent-soft); }\n.dpl-root .dpl-settings-dir.is-missing { opacity: 0.55; }\n.dpl-root .dpl-settings-dir svg { grid-area: icon; color: var(--dpl-accent); }\n.dpl-root .dpl-settings-dirname { grid-area: name; font-size: 12.5px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }\n.dpl-root .dpl-settings-dir em { display: none; }\n.dpl-root .dpl-settings-dirlabel { grid-area: label; font-size: 11.5px; color: var(--dpl-faint); }\n.dpl-root .dpl-settings-metrics { display: flex; flex-direction: column; gap: 8px; }\n.dpl-root .dpl-settings-metrics > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 12.5px; }\n.dpl-root .dpl-settings-metrics span { color: var(--dpl-faint); }\n.dpl-root .dpl-settings-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; word-break: break-all; text-align: right; }\n.dpl-root .dpl-settings-segmented { display: flex; gap: 8px; flex-wrap: wrap; }\n.dpl-root .dpl-settings-seg {\n  border: 1px solid var(--dpl-border);\n  background: transparent;\n  border-radius: 8px;\n  padding: 6px 12px;\n  font-size: 12.5px;\n  color: var(--dpl-muted);\n  cursor: pointer;\n}\n.dpl-root .dpl-settings-seg:hover { border-color: var(--dpl-accent); color: var(--dpl-fg); }\n.dpl-root .dpl-settings-seg.is-active { background: var(--dpl-accent-solid); border-color: var(--dpl-accent-solid); color: #fff; }\n.dpl-root .dpl-settings-toggle { display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--dpl-fg); cursor: pointer; }\n.dpl-root .dpl-settings-toggle input { width: 14px; height: 14px; flex: none; }\n.dpl-root .dpl-settings-field { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12.5px; color: var(--dpl-fg); }\n.dpl-root .dpl-settings-field input { width: 96px; flex: none; text-align: right; }\n.dpl-root .dpl-settings-busy, .dpl-root .dpl-settings-saved {\n  position: sticky;\n  bottom: 0;\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  margin-top: 12px;\n  padding: 6px 10px;\n  border-radius: 8px;\n  font-size: 12px;\n  background: var(--dpl-bg-2);\n  color: var(--dpl-muted);\n}\n.dpl-root .dpl-settings-saved { color: #1e9e6a; background: color-mix(in srgb, #34c98e 12%, transparent); }\n.dpl-root .dpl-settings-shared {\n  display: flex;\n  align-items: flex-start;\n  gap: 7px;\n  padding: 9px 12px;\n  border-radius: 10px;\n  background: color-mix(in srgb, #34c98e 12%, transparent);\n  color: #1e9e6a;\n  font-size: 12px;\n  line-height: 1.55;\n}\n.dpl-root .dpl-settings-shared svg { flex: none; margin-top: 2px; }\n.dpl-root .dpl-settings-presets { display: flex; gap: 8px; flex-wrap: wrap; }\n\n/* ---- dialog base rules lost in the 0.4.25 cleanup \u2014 restored ---- */\n.dpl-root .dpl-dialog-title { font-size: 13.5px; font-weight: 600; }\n.dpl-root .dpl-dialog-badge { display: inline-flex; transform: scale(1.3); transform-origin: left center; }\n.dpl-root .dpl-dialog-name { font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.dpl-root .dpl-dialog-sub { font-size: 12px; color: var(--dpl-faint); margin-top: 1px; }\n.dpl-root .dpl-dialog-body { display: flex; flex-direction: column; gap: 10px; padding: 4px 20px 14px; font-size: 12px; overflow: auto; }\n.dpl-root .dpl-dialog-field { display: flex; flex-direction: column; gap: 6px; color: var(--dpl-muted); }\n.dpl-root .dpl-dialog-field span { font-size: 12px; }\n.dpl-root .dpl-dialog-field input { width: 100%; }\n.dpl-root .dpl-dialog-hint { font-size: 12px; color: var(--dpl-faint); line-height: 1.6; margin: 0; }\n.dpl-root .dpl-dialog-error {\n  border-radius: 8px;\n  background: color-mix(in srgb, var(--dpl-danger) 10%, transparent);\n  color: var(--dpl-danger);\n  padding: 6px 8px;\n  font-size: 12px;\n  word-break: break-all;\n}\n.dpl-root .dpl-dialog-warn { border-radius: 8px; background: rgba(230, 167, 0, 0.12); color: #8a6d1a; padding: 6px 8px; font-size: 12px; }\n.dpl-root .dpl-switch {\n  width: 28px; height: 16px; appearance: none; -webkit-appearance: none;\n  background: var(--dpl-border); border-radius: 999px; position: relative;\n  cursor: pointer; transition: background 0.15s; min-height: 0; padding: 0;\n}\n.dpl-root .dpl-switch::after {\n  content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px;\n  border-radius: 50%; background: #fff; transition: left 0.15s;\n}\n.dpl-root .dpl-switch:checked { background: var(--dpl-accent); }\n.dpl-root .dpl-switch:checked::after { left: 14px; }\n\n/* ---- workspace picker dialog ---- */\n.dpl-root .dpl-ws-dialog { width: 640px; }\n.dpl-root .dpl-ws-dialog .dpl-dialog-field input {\n  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;\n  font-size: 12.5px;\n}\n.dpl-root .dpl-settings-presets {\n  display: flex;\n  gap: 8px;\n  flex-wrap: wrap;\n  padding: 2px 0 4px;\n}\n.dpl-root .dpl-settings-presets .dpl-btn {\n  border: 1px solid var(--dpl-border);\n  border-radius: 8px;\n  background: var(--dpl-bg);\n  color: var(--dpl-muted);\n  font-size: 12px;\n}\n.dpl-root .dpl-settings-presets .dpl-btn:hover {\n  border-color: var(--dpl-accent);\n  color: var(--dpl-accent);\n  background: var(--dpl-accent-soft);\n}\n\n/* ---- legacy .dpl-modal* aliases: every confirm dialog now shares the one\n   dialog system, so all modals look and behave identically ---- */\n.dpl-root .dpl-modal-backdrop, .dpl-companion .dpl-modal-backdrop {\n  position: fixed;\n  inset: 0;\n  z-index: 200;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  padding: 24px;\n  background: rgba(15, 23, 42, 0.32);\n}\n.dpl-root .dpl-modal, .dpl-companion .dpl-modal {\n  display: flex;\n  flex-direction: column;\n  width: 440px;\n  max-width: 100%;\n  max-height: min(80vh, 720px);\n  border-radius: 14px;\n  background: var(--dpl-bg);\n  border: 1px solid var(--dpl-border);\n  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.32);\n  padding: 16px 20px 12px;\n  gap: 10px;\n}\n.dpl-root .dpl-modal.is-wide { width: min(680px, 94vw); }\n.dpl-root .dpl-modal header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 10px;\n  margin: -2px 0 2px;\n  font-size: 13.5px;\n  font-weight: 600;\n}\n.dpl-root .dpl-modal-body { overflow: auto; font-size: 12.5px; color: var(--dpl-muted); }\n.dpl-root .dpl-modal-title { font-size: 13.5px; font-weight: 600; }\n.dpl-root .dpl-modal-text { margin: 0; font-size: 12.5px; color: var(--dpl-muted); line-height: 1.65; }\n.dpl-root .dpl-modal strong { color: var(--dpl-fg); }\n\n/* Long lists (\u5168\u90E8\u6E90 can hold thousands of rows): let the browser skip\n   off-screen rows instead of laying them all out. */\n.dpl-root .dpl-entry-row {\n  content-visibility: auto;\n  contain-intrinsic-size: auto 72px;\n}\n\n/* ---- vault2: Obsidian workbench P0 (tree 240 \u2502 tabs+read+AuxRail) ---- */\n.dpl-vault2 { display: flex; flex: 1; min-width: 0; min-height: 0; position: relative; }\n.dpl-vault2-tree { width: 240px; flex: none; min-height: 0; border-right: 1px solid var(--dpl-border); display: flex; flex-direction: column; }\n.dpl-vault2-treeactions { display: flex; align-items: center; gap: 2px; }\n.dpl-vault2-treeactions .dpl-icon-btn { width: 22px; height: 22px; }\n\n.dpl-vault2-filter {\n  display: flex; align-items: center; gap: 6px;\n  margin: 0 8px 6px; padding: 4px 8px;\n  border: 1px solid var(--dpl-border); border-radius: 7px;\n  color: var(--dpl-faint); flex: none;\n}\n.dpl-vault2-filter input { flex: 1; min-width: 0; border: none; background: transparent; padding: 0; min-height: 20px; }\n.dpl-vault2-filter button { border: none; background: transparent; color: var(--dpl-faint); cursor: pointer; display: grid; place-items: center; padding: 0; }\n\n.dpl-vault2-treescroll { flex: 1; min-height: 0; overflow: auto; padding: 0 4px 8px; }\n.dpl-vault2-treeroot { display: flex; flex-direction: column; }\n.dpl-vault2-sortrow { display: flex; align-items: center; gap: 4px; padding: 0 8px 6px; }\n.dpl-vault2-sortbtn { border: none; background: transparent; border-radius: 999px; padding: 2px 8px; font-size: 11px; color: var(--dpl-faint); cursor: pointer; }\n.dpl-vault2-sortbtn.is-active { background: var(--dpl-accent-soft); color: var(--dpl-accent); }\n\n.dpl-vault2-row { position: relative; display: flex; align-items: center; border-radius: 6px; min-height: 26px; }\n.dpl-vault2-row:hover { background: var(--dpl-bg-hover); }\n.dpl-vault2-row.is-active { background: color-mix(in srgb, var(--dpl-accent) 9%, transparent); }\n/* .dpl-vault2-rowactions removed: no JSX consumer anywhere in src/client\n   (dead since the dot-toolbar refactor \u2014 verified by grep before deleting). */\n\n.dpl-vault2-dir, .dpl-vault2-file {\n  display: flex; align-items: center; gap: 5px; width: 100%;\n  border: none; background: transparent; text-align: left;\n  padding: 3px 6px 3px 8px; border-radius: 6px;\n  color: var(--dpl-fg); font-size: 12.5px; cursor: pointer; min-width: 0;\n}\n.dpl-vault2-dir { color: var(--dpl-muted); font-weight: 500; }\n.dpl-vault2-chevron { display: grid; place-items: center; width: 14px; flex: none; color: var(--dpl-faint); }\n.dpl-vault2-dir svg:first-of-type { flex: none; }\n.dpl-vault2-file svg { flex: none; color: var(--dpl-faint); }\n.dpl-vault2-file.is-active { color: var(--dpl-accent); font-weight: 500; }\n.dpl-vault2-filedir { margin-left: auto; font-size: 10.5px; color: var(--dpl-faint); flex: none; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.dpl-vault2-filemtime { margin-left: auto; font-size: 10.5px; color: var(--dpl-faint); flex: none; }\n.dpl-vault2-children { padding-left: 14px; }\n.dpl-vault2-loading { display: flex; justify-content: center; padding: 6px; color: var(--dpl-faint); }\n.dpl-vault2-flatlist { display: flex; flex-direction: column; }\n.dpl-vault2-treefoot { display: flex; gap: 6px; padding: 6px 8px; border-top: 1px solid var(--dpl-border); flex: none; }\n.dpl-vault2-footbtn { display: inline-flex; align-items: center; gap: 4px; border: none; background: transparent; border-radius: 6px; padding: 3px 6px; font-size: 11.5px; color: var(--dpl-faint); cursor: pointer; }\n.dpl-vault2-footbtn:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n\n.dpl-vault2-sidepane { flex: none; max-height: 38%; border-top: 1px solid var(--dpl-border); display: flex; flex-direction: column; min-height: 0; }\n.dpl-vault2-sidetabs { display: flex; gap: 2px; padding: 6px 8px 0; }\n.dpl-vault2-sidetabs button { border: none; background: transparent; border-radius: 6px 6px 0 0; padding: 3px 10px; font-size: 11.5px; color: var(--dpl-faint); cursor: pointer; }\n.dpl-vault2-sidetabs button.is-active { background: var(--dpl-bg-2); color: var(--dpl-fg); font-weight: 600; }\n.dpl-vault2-sidebody { flex: 1; min-height: 60px; overflow: auto; padding: 6px 8px; display: flex; flex-direction: column; gap: 2px; }\n.dpl-vault2-backlink { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; border: none; background: transparent; text-align: left; padding: 4px 6px; border-radius: 6px; font-size: 12px; color: var(--dpl-fg); cursor: pointer; width: 100%; }\n.dpl-vault2-backlink:hover { background: var(--dpl-bg-hover); }\n.dpl-vault2-backlink .dpl-vault2-filedir { margin: 0; max-width: 100%; }\n.dpl-vault2-tags { flex-direction: row; flex-wrap: wrap; gap: 4px; }\n.dpl-vault2-tags button { border: none; background: var(--dpl-bg-2); border-radius: 999px; padding: 2px 8px; font-size: 11px; color: var(--dpl-muted); cursor: pointer; }\n.dpl-vault2-tags button:hover { background: var(--dpl-bg-active); color: var(--dpl-fg); }\n.dpl-vault2-tags button span { color: var(--dpl-faint); margin-left: 2px; }\n\n.dpl-vault2-main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }\n.dpl-vault2-tabstrip { display: flex; align-items: center; gap: 2px; height: 36px; flex: none; padding: 0 8px; border-bottom: 1px solid var(--dpl-border); overflow-x: auto; scrollbar-width: none; }\n.dpl-vault2-tabspring { flex: 1; }\n.dpl-vault2-tab {\n  display: flex; align-items: center; gap: 5px; max-width: 180px; min-width: 0;\n  padding: 3px 6px 3px 9px; border-radius: 7px; font-size: 12px; color: var(--dpl-muted); cursor: pointer; flex: none;\n}\n.dpl-vault2-tab:hover { background: var(--dpl-bg-hover); }\n.dpl-vault2-tab.is-active { background: var(--dpl-bg-active); color: var(--dpl-fg); font-weight: 500; }\n.dpl-vault2-tab.is-dirty .dpl-vault2-tabclose { color: transparent; position: relative; }\n.dpl-vault2-tab.is-dirty .dpl-vault2-tabclose::before { content: ''; position: absolute; width: 6px; height: 6px; border-radius: 50%; background: var(--dpl-accent); }\n.dpl-vault2-tabclose { display: grid; place-items: center; width: 16px; height: 16px; border: none; background: transparent; border-radius: 4px; color: var(--dpl-faint); cursor: pointer; flex: none; }\n.dpl-vault2-tabclose:hover { background: var(--dpl-bg-active); color: var(--dpl-fg); }\n.dpl-icon-btn.is-toggled { color: var(--dpl-accent); background: color-mix(in srgb, var(--dpl-accent) 12%, transparent); }\n\n.dpl-vault2-searchbar { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-bottom: 1px solid var(--dpl-border); flex: none; color: var(--dpl-faint); }\n.dpl-vault2-searchbar input { flex: 1; min-width: 0; }\n.dpl-vault2-searchcount { font-size: 11.5px; color: var(--dpl-faint); flex: none; }\n.dpl-vault2-searchresults { flex: 1; min-height: 0; overflow: auto; padding: 10px 16px; display: flex; flex-direction: column; gap: 4px; }\n.dpl-vault2-hit { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; border: none; background: transparent; text-align: left; padding: 8px 10px; border-radius: 8px; cursor: pointer; color: var(--dpl-fg); }\n.dpl-vault2-hit:hover { background: var(--dpl-bg-hover); }\n.dpl-vault2-hit strong { font-size: 13px; }\n.dpl-vault2-hit p { margin: 0; font-size: 12px; color: var(--dpl-muted); }\n\n.dpl-vault2-content { flex: 1; min-height: 0; display: flex; position: relative; }\n.dpl-vault2-note { flex: 1; min-width: 0; display: flex; flex-direction: column; }\n.dpl-vault2-notehead { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 24px 0; }\n.dpl-vault2-notehead h1 { margin: 0; font-size: 19px; font-weight: 650; }\n.dpl-vault2-noteactions { display: flex; gap: 4px; flex: none; }\n.dpl-vault2-notemeta { padding: 2px 24px 10px; font-size: 12px; color: var(--dpl-faint); border-bottom: 1px solid var(--dpl-border); }\n.dpl-vault2-readerscroll { flex: 1; min-height: 0; overflow: auto; }\n.dpl-vault2-body { max-width: 720px; margin: 0 auto; padding: 18px 28px 48px; font-size: 15px; line-height: 1.75; }\n.dpl-vault2-bodyend { height: 40px; }\n.dpl-vault2-editor { flex: 1; min-height: 0; resize: none; border: none; outline: none; padding: 16px 28px; font-family: var(--dsw-alias-font-mono, ui-monospace, 'SF Mono', monospace); font-size: 13px; line-height: 1.7; background: var(--dpl-bg); color: var(--dpl-fg); border-radius: 0; }\n.dpl-vault2-editor:focus { border: none; }\n.dpl-vault2-readerempty { flex: 1; }\n\n.dpl-vault2-statusbar { display: flex; align-items: center; gap: 14px; height: 24px; flex: none; padding: 0 12px; border-top: 1px solid var(--dpl-border); font-size: 11px; color: var(--dpl-faint); }\n.dpl-vault2-statuslink { border: none; background: transparent; padding: 0; font-size: 11px; color: var(--dpl-faint); cursor: pointer; }\n.dpl-vault2-statuslink:hover { color: var(--dpl-accent); }\n.dpl-vault2-statusnotice, .dpl-vault2-statuserror { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; }\n.dpl-vault2-statusnotice { color: #1e9e6a; }\n.dpl-vault2-statuserror { color: var(--dpl-danger); }\n.dpl-vault2-statusnotice button, .dpl-vault2-statuserror button { border: none; background: transparent; color: inherit; cursor: pointer; padding: 0; display: grid; place-items: center; }\n\n.dpl-vault2-graphhead { position: absolute; top: 8px; left: 12px; right: 12px; display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--dpl-muted); z-index: 2; }\n\n.dpl-vault2-scrim { position: absolute; inset: 0; z-index: 60; display: flex; justify-content: center; align-items: flex-start; padding-top: 48px; background: rgba(15, 23, 42, 0.24); }\n.dpl-vault2-quick { width: min(520px, 90%); border: 1px solid var(--dpl-border); border-radius: 12px; background: var(--dpl-bg); box-shadow: 0 18px 48px rgba(15, 23, 42, 0.3); overflow: hidden; }\n.dpl-vault2-quick > input { width: 100%; border: none; border-bottom: 1px solid var(--dpl-border); border-radius: 0; background: transparent; padding: 10px 14px; min-height: 38px; font-size: 14px; }\n.dpl-vault2-quick > input:focus { border-color: transparent; }\n.dpl-vault2-quicklist { max-height: 320px; overflow: auto; padding: 4px; }\n.dpl-vault2-quicklist button { display: flex; align-items: center; gap: 10px; width: 100%; border: none; background: transparent; text-align: left; padding: 7px 10px; border-radius: 7px; font-size: 13px; color: var(--dpl-fg); cursor: pointer; }\n.dpl-vault2-quicklist button:hover, .dpl-vault2-quicklist button.is-first { background: var(--dpl-bg-hover); }\n.dpl-vault2-empty { display: grid; place-items: center; padding: 16px; font-size: 12px; color: var(--dpl-faint); gap: 6px; }\n\n/* ---- vault2 P1: CM6 editor + live preview decorations ---- */\n.dpl-vault2-viewswitch { display: flex; gap: 1px; background: var(--dpl-bg-2); border-radius: 7px; padding: 2px; }\n.dpl-vault2-viewswitch button { border: none; background: transparent; border-radius: 5px; padding: 2px 10px; font-size: 11.5px; color: var(--dpl-muted); cursor: pointer; }\n.dpl-vault2-viewswitch button:hover { color: var(--dpl-fg); }\n.dpl-vault2-viewswitch button.is-active { background: var(--dpl-bg); color: var(--dpl-fg); font-weight: 600; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.1); }\n.dpl-btn.is-on { color: var(--dpl-accent); }\n.dpl-vault2-editwrap { flex: 1; min-height: 0; display: flex; }\n.dpl-vault2-cmhost { flex: 1; min-width: 0; overflow: hidden; }\n.dpl-vault2-cmhost .cm-editor { height: 100%; font-size: 13.5px; background: var(--dpl-bg); }\n.dpl-vault2-cmhost .cm-editor.cm-focused { outline: none; }\n.dpl-vault2-cmhost .cm-scroller { font-family: var(--dsw-alias-font-mono, ui-monospace, 'SF Mono', monospace); line-height: 1.7; padding-bottom: 48px; }\n.dpl-vault2-cmhost .cm-content { caret-color: var(--dpl-accent); }\n.dpl-vault2-cmhost .cm-gutters { background: var(--dpl-bg); border-right: 1px solid var(--dpl-border); color: var(--dpl-faint); }\n.dpl-vault2-cmhost .cm-activeLineGutter { background: transparent; color: var(--dpl-muted); }\n.dpl-vault2-cmhost .cm-activeLine { background: color-mix(in srgb, var(--dpl-fg) 3%, transparent); }\n\n/* live preview: rendered weight where the caret isn't */\n.cm-live-h1 { font-size: 1.55em; font-weight: 700; }\n.cm-live-h2 { font-size: 1.32em; font-weight: 700; }\n.cm-live-h3 { font-size: 1.16em; font-weight: 650; }\n.cm-live-h4 { font-size: 1em; font-weight: 650; }\n.cm-live-strong { font-weight: 700; }\n.cm-live-em { font-style: italic; }\n.cm-live-strike { text-decoration: line-through; }\n.cm-live-code { font-family: var(--dsw-alias-font-mono, ui-monospace, monospace); font-size: 0.9em; background: var(--dpl-bg-2); border-radius: 4px; padding: 0 3px; }\n.cm-live-wikilink { color: var(--dpl-link); cursor: pointer; }\n.cm-live-wikilink:hover { text-decoration: underline; }\n\n/* vault2 P2: unlinked mentions + rename preview */\n.dpl-vault2-unlinkedhead { margin-top: 8px; padding: 0 4px 2px; font-size: 10.5px; font-weight: 600; color: #b98a1d; }\n.dpl-vault2-unlinked { position: relative; display: flex; align-items: center; }\n.dpl-vault2-unlinked .dpl-vault2-backlink { flex: 1; }\n.dpl-vault2-unlinkbtn { position: absolute; right: 4px; display: grid; place-items: center; width: 20px; height: 20px; border: none; background: var(--dpl-bg); border-radius: 4px; color: var(--dpl-faint); cursor: pointer; opacity: 0; }\n.dpl-vault2-unlinked:hover .dpl-vault2-unlinkbtn { opacity: 1; }\n.dpl-vault2-unlinkbtn:hover { background: var(--dpl-bg-active); color: var(--dpl-accent); }\n.dpl-vault2-hit mark { background: color-mix(in srgb, var(--dpl-accent) 22%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }\n\n/* vault2 P3: trash browser */\n.dpl-vault2-trash { width: min(560px, 92%); }\n.dpl-vault2-trashhead { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 8px; font-size: 13px; }\n.dpl-vault2-trashrow { display: flex; align-items: center; gap: 8px; padding: 5px 10px; border-radius: 7px; }\n.dpl-vault2-trashrow:hover { background: var(--dpl-bg-hover); }\n.dpl-vault2-trashinfo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; font-size: 12.5px; }\n\n/* ---- vault2 alignment (native Droplets parity): seg / dot toolbar / breadcrumb / menus ---- */\n.dpl-vault2-treehead {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  height: 40px;\n  flex: none;\n  padding: 0 10px 0 14px;\n}\n.dpl-vault2-treehead span { font-size: 12.5px; font-weight: 600; color: var(--dpl-fg); }\n\n.dpl-vault2-seg { display: flex; gap: 6px; padding: 0 10px 8px; flex: none; }\n/* \u56FE\u8C31/\u6807\u7B7E\u4E91 buttons are .dpl-pane-btn (\u7EDF\u4E00\u9762\u677F\u63A7\u5236\u6309\u94AE) with is-active. */\n\n.dpl-vault2-tbrow { position: relative; height: 28px; flex: none; margin: 0 10px 6px; }\n.dpl-vault2-tbdots {\n  position: absolute;\n  inset: 0;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  gap: 16px;\n  transition: opacity 0.12s;\n  /* Decorative placeholder: must never capture pointer events (same\n     hit-test lesson as the feed toolbar dots). */\n  pointer-events: none;\n}\n.dpl-vault2-tbdots span { width: 4px; height: 4px; border-radius: 50%; background: var(--dpl-faint); }\n.dpl-vault2-tbactions {\n  position: absolute;\n  inset: 0;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  gap: 2px;\n  opacity: 0;\n  pointer-events: none;\n  background: var(--dpl-bg);\n  transition: opacity 0.12s;\n}\n.dpl-vault2-tbrow:hover .dpl-vault2-tbdots { opacity: 0; }\n.dpl-vault2-tbrow:hover .dpl-vault2-tbactions { opacity: 1; pointer-events: auto; }\n/* Direct children ONLY: a plain descendant selector here once styled the\n   sort-menu buttons nested inside .dpl-relative as 24\xD724 grid cells \u2014 the\n   whole menu collapsed into cramped squares with clipped labels and an\n   orphaned checkmark (reproduced in a real browser against this CSS). */\n.dpl-vault2-tbactions > button,\n.dpl-vault2-tbactions > .dpl-relative > button {\n  display: grid;\n  place-items: center;\n  width: 24px;\n  height: 24px;\n  border: none;\n  background: transparent;\n  border-radius: 6px;\n  color: var(--dpl-faint);\n  cursor: pointer;\n}\n.dpl-vault2-tbactions > button:hover,\n.dpl-vault2-tbactions > .dpl-relative > button:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-vault2-tbactions > button.is-on,\n.dpl-vault2-tbactions > .dpl-relative > button.is-on { color: var(--dpl-accent); background: color-mix(in srgb, var(--dpl-accent) 12%, transparent); }\n.dpl-relative { position: relative; }\n\n.dpl-vault2-popmenu {\n  position: absolute;\n  right: 0;\n  top: 100%;\n  z-index: 60;\n  margin-top: 4px;\n  min-width: 150px;\n  max-height: 60vh;\n  overflow: auto;\n  background: var(--dpl-bg);\n  border: 1px solid var(--dpl-border);\n  border-radius: 8px;\n  padding: 4px;\n  box-shadow: 0 10px 32px rgba(15, 23, 42, 0.18);\n  display: flex;\n  flex-direction: column;\n}\n/* The help popover lives in a 240px tree pane; right-anchored at the toolbar\n   row it must stay narrower than the pane or the window clips its left edge\n   (the old single-line help text measured ~420px). */\n.dpl-vault2-popmenu.is-wide { min-width: 188px; max-width: 224px; }\n\n/* \u53F3\u952E\u83DC\u5355\uFF08fixed\uFF0C\u5149\u6807\u5904\uFF09 */\n.dpl-vault2-ctxmenu {\n  position: fixed;\n  z-index: 300;\n  min-width: 160px;\n  background: var(--dpl-bg);\n  border: 1px solid var(--dpl-border);\n  border-radius: 8px;\n  padding: 4px;\n  box-shadow: 0 12px 36px rgba(15, 23, 42, 0.22);\n  display: flex;\n  flex-direction: column;\n}\n.dpl-vault2-ctxitem {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  width: 100%;\n  border: none;\n  background: transparent;\n  text-align: left;\n  padding: 5px 8px;\n  border-radius: 6px;\n  font-size: 12.5px;\n  color: var(--dpl-fg);\n  cursor: pointer;\n  white-space: nowrap;\n}\n.dpl-vault2-ctxitem:hover { background: var(--dpl-bg-hover); }\n.dpl-vault2-ctxitem.is-danger { color: var(--dpl-danger); }\n.dpl-vault2-ctxitem.is-danger:hover { background: color-mix(in srgb, var(--dpl-danger) 10%, transparent); }\n.dpl-vault2-ctxdivider { height: 1px; background: var(--dpl-border); margin: 4px 6px; }\n\n/* \u9762\u5305\u5C51\u884C */\n.dpl-vault2-crumbbar {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 10px;\n  height: 38px;\n  flex: none;\n  padding: 0 12px;\n  border-bottom: 1px solid var(--dpl-border);\n}\n.dpl-vault2-crumb { display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; font-size: 12.5px; color: var(--dpl-muted); }\n.dpl-vault2-crumb span { white-space: nowrap; }\n.dpl-vault2-crumb .is-last { color: var(--dpl-fg); font-weight: 600; }\n.dpl-vault2-crumbsep { color: var(--dpl-faint); }\n.dpl-vault2-crumbright { display: flex; align-items: center; gap: 4px; flex: none; }\n.dpl-vault2-crumbbtn {\n  display: inline-flex;\n  align-items: center;\n  gap: 3px;\n  height: 26px;\n  padding: 0 6px;\n  border: none;\n  background: transparent;\n  border-radius: 6px;\n  color: var(--dpl-muted);\n  cursor: pointer;\n}\n.dpl-vault2-crumbbtn:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n\n/* \u683C\u5F0F\u5DE5\u5177\u680F */\n.dpl-vault2-fmtbar {\n  display: flex;\n  align-items: center;\n  gap: 1px;\n  flex: none;\n  padding: 3px 12px;\n  border-bottom: 1px solid var(--dpl-border);\n  overflow-x: auto;\n  scrollbar-width: none;\n}\n.dpl-vault2-fmtbtn {\n  display: grid;\n  place-items: center;\n  min-width: 26px;\n  height: 26px;\n  padding: 0 4px;\n  border: none;\n  background: transparent;\n  border-radius: 6px;\n  color: var(--dpl-muted);\n  cursor: pointer;\n}\n.dpl-vault2-fmtbtn:hover { background: var(--dpl-bg-hover); color: var(--dpl-fg); }\n.dpl-vault2-fmtmore { position: relative; display: flex; }\n.dpl-vault2-fmtmoremenu {\n  display: none;\n  position: absolute;\n  right: 0;\n  top: 100%;\n  z-index: 60;\n  min-width: 130px;\n  background: var(--dpl-bg);\n  border: 1px solid var(--dpl-border);\n  border-radius: 8px;\n  padding: 4px;\n  box-shadow: 0 10px 32px rgba(15, 23, 42, 0.18);\n  flex-direction: column;\n}\n.dpl-vault2-fmtmoremenu.is-open { display: flex; }\n\n/* \u53CD\u5411\u94FE\u63A5\u62BD\u5C49 */\n.dpl-vault2-bldrawer {\n  flex: none;\n  max-height: 38%;\n  border-top: 1px solid var(--dpl-border);\n  display: flex;\n  flex-direction: column;\n  min-height: 0;\n}\n.dpl-vault2-bldrawhead {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  padding: 6px 12px 4px;\n  font-size: 12px;\n  font-weight: 600;\n  color: var(--dpl-muted);\n  flex: none;\n}\n.dpl-vault2-bldrawbody { flex: 1; min-height: 60px; overflow: auto; padding: 4px 8px 8px; display: flex; flex-direction: column; gap: 2px; }\n\n/* \u5E95\u90E8\u6574\u5E93\u95EE AI */\n.dpl-vault2-askall {\n  flex: none;\n  min-height: 34px;\n  border: none;\n  border-top: 1px solid var(--dpl-border);\n  background: var(--dpl-bg);\n  color: var(--dpl-fg);\n  font-size: 12.5px;\n  font-weight: 600;\n  cursor: pointer;\n}\n.dpl-vault2-askall:hover { background: var(--dpl-bg-2); }\n.dpl-vault2-helplist { padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; }\n.dpl-vault2-helprow { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--dpl-muted); line-height: 1.5; }\n.dpl-vault2-helprow.is-plain span { color: var(--dpl-faint); }\n.dpl-vault2-helprow kbd {\n  flex: none;\n  min-width: 20px;\n  text-align: center;\n  padding: 1px 5px;\n  border: 1px solid var(--dpl-border);\n  border-bottom-width: 2px;\n  border-radius: 5px;\n  background: var(--dpl-bg-2);\n  font-family: inherit;\n  font-size: 10.5px;\n  color: var(--dpl-fg);\n}\n\n/* ---- \u6536\u4EF6\u7BB1\u4FEE\u590D\u8FFD\u52A0\u533A\uFF08fix-inbox\uFF1A\u53EA\u8FFD\u52A0\u65B0\u89C4\u5219\uFF0C\u4E0D\u6539\u4E0A\u65B9\u65E2\u6709\u89C4\u5219\uFF09 ---- */\n\n/* \u6293\u53D6\u4E2D\uFF1A\u5217\u8868\u884C\u72B6\u6001\u4F4D spinner + \u6807\u9898\u5C3E\u6CE8\uFF08fix A\uFF09 */\n.dpl-ib-rowpend { flex: none; width: 8px; margin-top: 5px; display: grid; place-items: center; color: var(--dpl-accent); }\n.dpl-ib-pending { margin-left: 6px; font-style: normal; font-weight: 400; font-size: 11px; color: var(--dpl-muted); }\n\n/* \u6293\u53D6\u4E2D\uFF1A\u9605\u8BFB\u5668\u5C45\u4E2D\u5360\u4F4D\uFF08fix A\uFF09 */\n.dpl-ib-pendview { display: flex; flex-direction: column; align-items: center; gap: 10px; }\n\n/* \u5217\u8868\u533A\u9876\u90E8\uFF1A\u52A0\u8F7D\u9519\u8BEF\u6761\uFF08fix I\uFF09\u4E0E\u91CD\u8BD5\u7ED3\u679C\u6A2A\u5E45\uFF08fix G\uFF09 */\n.dpl-ib-listerror { display: flex; align-items: center; gap: 8px; margin: 8px 10px 0; }\n.dpl-ib-listerror span { flex: 1; }\n.dpl-ib-listnotice { flex: none; margin: 8px 10px 0; }\n.dpl-ib-listnotice span { flex: 1; }\n.dpl-ib-listnotice button { border: none; background: transparent; color: inherit; cursor: pointer; padding: 2px; display: grid; place-items: center; }\n\n/* \u9605\u8BFB\u5668\uFF1AinboxGet \u5931\u8D25\u5361\u7247\uFF08fix C\uFF09 */\n.dpl-ib-readererror { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; max-width: 480px; }\n.dpl-ib-readererror p { margin: 0; }\n\n/* \u5B58\u4E3A\u7B14\u8BB0\u53CD\u9988\uFF08fix H\uFF09 */\n.dpl-ib-saveerror { flex: none; margin: 0 16px; }\n.dpl-ib-savenote { flex: none; margin: 0 16px 8px; }\n\n/* \u5904\u7406\u5B8C\u6210\u5F39\u5C42\uFF1Amoving \u6307\u793A\u4E0E\u5931\u8D25\u7EA2\u6761\uFF08fix D\uFF09 */\n.dpl-ib-donemoving { margin: 12px 0 0; display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--dpl-muted); }\n.dpl-ib-doneresult.dpl-error { background: color-mix(in srgb, var(--dpl-danger) 9%, transparent); color: var(--dpl-danger); }\n\n/* PDF \u7F29\u653E\u5BFC\u822A\uFF08fix F\uFF09 */\n.dpl-ib-doczoom { min-width: 42px; text-align: center; font-size: 12px; color: var(--dpl-muted); }\n\n/* \u4FE1\u606F\u6D41\u4FEE\u590D\u8FFD\u52A0\u533A\uFF08feed fixes A\u2013P\uFF09 */\n\n/* N: sources-pane filter \u2014 compact borderless input under the actions row. */\n.dpl-source-filter {\n  display: flex;\n  align-items: center;\n  gap: 2px;\n  height: 24px;\n  margin: 0 10px 6px;\n  flex: none;\n}\n.dpl-source-filter input {\n  width: 100%;\n  min-width: 0;\n  height: 24px;\n  border: none;\n  border-radius: 6px;\n  background: var(--dpl-bg-2);\n  color: var(--dpl-fg);\n  font-size: 12.5px;\n  padding: 0 8px;\n  outline: none;\n}\n.dpl-source-filter input::placeholder { color: var(--dpl-faint); }\n.dpl-source-filter input:focus { background: var(--dpl-bg-hover); }\n\n/* D: item-list notice (rollback errors) \u2014 aligns with the pane padding. */\n.dpl-items-notice { margin: 8px 10px 0; flex: none; }\n\n/* B: manage-table batch outcome notice. */\n.dpl-manage-batch-notice { margin: 0 10px 8px; flex: none; }\n\n/* ---- appended: audited vault/companion fixes (B/C/D/E/M/N) ---- */\n\n/* B: \u300CN \u4E2A\u672A\u4FDD\u5B58\u300D badge in the vault statusbar. */\n.dpl-vault2-statusbadge {\n  display: inline-flex;\n  align-items: center;\n  padding: 0 7px;\n  height: 16px;\n  border-radius: 8px;\n  background: color-mix(in srgb, var(--dpl-danger) 12%, transparent);\n  color: var(--dpl-danger);\n  font-size: 11px;\n  font-weight: 600;\n}\n\n/* C: failure notices tint danger; the success green stays the default. */\n.dpl-vault2-statusnotice.is-error { color: var(--dpl-danger); }\n\n/* D: inline validation error inside the create dialog (red, under the input). */\n.dpl-dialog-error { margin: 6px 0 0; font-size: 12px; color: var(--dpl-danger); }\n\n/* E: keyboard-selected row in the quick switcher / command palette\n   (replaces the old always-first is-first pinning). */\n.dpl-vault2-quicklist button.is-active { background: var(--dpl-bg-hover); }\n\n/* M: docked companion width comes from the --dpl-ai-w variable set inline,\n   so the container query below can finally win at narrow widths (an inline\n   width used to beat it and squeeze the vault unreadably). */\n.dpl-companion.is-docked { width: var(--dpl-ai-w, 420px); }\n@container (max-width: 860px) {\n  .dpl-companion.is-docked { width: 100%; min-width: 0; }\n}\n\n/* N: a 3px mode-colored edge on the note pane \u2014 read=accent, live=link,\n   source=faint \u2014 plus the mode name in the crumb button's title. */\n.dpl-vault2-note[data-view='read'] { box-shadow: inset 3px 0 0 var(--dpl-accent); }\n.dpl-vault2-note[data-view='live'] { box-shadow: inset 3px 0 0 var(--dpl-link); }\n.dpl-vault2-note[data-view='source'] { box-shadow: inset 3px 0 0 var(--dpl-faint); }\n";
 
 // src/client/index.jsx
 var PLUGIN_ID = "droplets-dsh";

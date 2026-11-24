@@ -380,14 +380,24 @@ export class WorkspaceInbox {
 
   async retryAllFailed() {
     const failed = (await this.list({ status: 'fetch_failed' })).items;
+    // 限并发 4 的并行重试（串行等完一条再下一条太慢）：runExclusive 已保证
+    // 同一 id 的链互斥，failed 里 id 互不相同，跨 id 并发安全。
+    const CONCURRENCY = 4;
+    let cursor = 0;
     let retried = 0;
     let failedCount = 0;
-    for (const item of failed) {
-      try {
-        await this.retry(item.id);
-        retried += 1;
-      } catch { failedCount += 1; }
-    }
+    const worker = async () => {
+      while (cursor < failed.length) {
+        const target = failed[cursor];
+        cursor += 1;
+        try {
+          await this.retry(target.id);
+          retried += 1;
+        } catch { failedCount += 1; }
+      }
+    };
+    const workers = Array.from({ length: Math.min(CONCURRENCY, failed.length) }, () => worker());
+    await Promise.allSettled(workers);
     return { total: failed.length, retried, failed: failedCount };
   }
 

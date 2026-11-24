@@ -179,7 +179,11 @@ export function Companion({ api, material, form = 'docked', onFormChange, onClos
       {...(form === 'floating' ? {
         style: { top: 'calc(3.5rem + ' + clamped.y + 'px)', right: 'calc(1rem - ' + clamped.x + 'px)' },
       } : {
-        style: { width: dockedWidth + 'px' },
+        // Fix M: width rides a CSS variable instead of an inline width —
+        // inline styles beat the @container (max-width: 860px) stacking rule,
+        // so a narrow window kept the docked pane at full dockedWidth and
+        // squeezed the vault. styles.css consumes --dpl-ai-w on .is-docked.
+        style: { '--dpl-ai-w': dockedWidth + 'px' },
       })}
     >
       {form === 'docked' ? (

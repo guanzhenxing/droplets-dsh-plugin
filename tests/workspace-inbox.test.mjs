@@ -200,6 +200,41 @@ test('retryAllFailed counts outcomes', async () => {
   } finally { ws.cleanup(); }
 });
 
+test('retryAllFailed retries concurrently with a cap of 4 and counts failures', async () => {
+  const ws = tempWorkspace();
+  try {
+    const ids = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6'];
+    for (const id of ids) {
+      await seedObject(ws.dir, {
+        id,
+        status: 'fetch_failed',
+        source: { kind: 'url', url: 'https://example.com/' + id, addedAt: new Date().toISOString() },
+      });
+    }
+    const inbox = new WorkspaceInbox(ws.dir, quietLogger, fetcherOf({}));
+    let active = 0;
+    let maxActive = 0;
+    const attempted = [];
+    // mock fetchInto：量测并发上界（旧实现是逐条 await 的串行循环）
+    inbox.fetchInto = async (id) => {
+      attempted.push(id);
+      active += 1;
+      maxActive = Math.max(maxActive, active);
+      await new Promise((resolve) => setTimeout(resolve, 15));
+      active -= 1;
+      if (id === 'c3') throw new Error('重试被拒');
+      return { status: 'unread' };
+    };
+    const result = await inbox.retryAllFailed();
+    assert.equal(result.total, 6);
+    assert.equal(result.retried, 5, 'five retries reported as retried');
+    assert.equal(result.failed, 1, 'the rejecting id counted as failed');
+    assert.equal(attempted.length, 6, 'every failed id retried exactly once');
+    assert.ok(maxActive > 1, 'retries actually overlapped (max concurrent ' + maxActive + ')');
+    assert.ok(maxActive <= 4, 'concurrency capped at 4 (max concurrent ' + maxActive + ')');
+  } finally { ws.cleanup(); }
+});
+
 test('moveToTrash relocates the directory behind a staging commit', async () => {
   const ws = tempWorkspace();
   try {

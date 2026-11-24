@@ -129,15 +129,25 @@ test('client bundle exports the inbox UI against the new remote methods', () => 
   }
 });
 
-test('feed fixes are frozen in the bundle: hit-test dots, aux rail, translation UI', () => {
+test('feed fixes are frozen in the bundle: toolbar hit-test, aux rail, translation UI', () => {
   const client = readFileSync(new URL('../client.js', import.meta.url), 'utf8');
-  // The dots placeholder is a full-row overlay that stays in the hit-test
-  // tree at opacity:0 — without pointer-events:none the two buttons painted
-  // under it (自动定位 / 全部折叠) can never be clicked.
+  // The dots placeholder overlay is gone for good (feed P): no full-row
+  // overlay stays in the hit-test tree, and the toolbar actions are always
+  // visible instead of a hover reveal.
+  assert.ok(!client.includes('.dpl-toolbar-dots'), 'dots overlay removed entirely');
   assert.ok(
-    /\.dpl-toolbar-dots\s*\{[^}]*pointer-events:\s*none/.test(client),
-    'dots overlay must be pointer-events:none',
+    !/\.dpl-toolbar-actions\s*\{[^}]*pointer-events:\s*none/.test(client),
+    'toolbar actions must never be pointer-events:none',
   );
+  assert.ok(
+    !/\.dpl-toolbar-actions\s*\{[^}]*opacity:\s*0(?!\d|\.\d)/.test(client),
+    'toolbar actions must not start hidden',
+  );
+  // Keyboard navigation rows carry the data-entry anchor the j/k handler
+  // scrolls to; the sources filter must ship with its styles.
+  assert.ok(client.includes('data-entry='), 'entry rows carry the keyboard-nav anchor');
+  assert.ok(/\.dpl-source-filter\s*\{/.test(client), 'sources filter styles shipped');
+  assert.ok(/\.dpl-dot\.is-seen\s*\{[^}]*--dpl-muted/.test(client), 'seen dot uses a visible gray');
   // Aux rail: idle ticks visible against the page (not border-faint) and a
   // compact rhythm (12px pitch, 3px gap).
   assert.ok(/\.dpl-aux-bar\s*\{[^}]*background:\s*var\(--dpl-faint\)/.test(client), 'aux tick idle color');

@@ -94,6 +94,48 @@ test('setFeed renames, regroups and disables (disabled feeds skip refresh)', asy
   } finally { service.shutdown(); await ctx.dispose(); home.cleanup(); }
 });
 
+test('selectSubscriptions scopes the channels array (batch retry) with single/group compat', async () => {
+  const { service, ctx, home } = await seeded();
+  try {
+    // Array branch: exact ids, any order, no fallback to “all”.
+    assert.deepEqual(service.selectSubscriptions(undefined, ['feed:a', 'feed:c']).map((s) => s.id), ['feed:a', 'feed:c']);
+    assert.deepEqual(service.selectSubscriptions(undefined, []).length, 0, 'empty array refreshes nothing');
+    // The client bridge forwards its single argument through `channel`, so
+    // the array (or a { channels } wrapper) can arrive in that slot too.
+    assert.deepEqual(service.selectSubscriptions(['feed:c', 'feed:b']).map((s) => s.id), ['feed:b', 'feed:c']);
+    assert.deepEqual(service.selectSubscriptions({ channels: ['feed:a'] }).map((s) => s.id), ['feed:a']);
+    // Existing single-value shapes stay untouched.
+    assert.deepEqual(service.selectSubscriptions('feed:a').map((s) => s.id), ['feed:a']);
+    assert.deepEqual(service.selectSubscriptions('group:Tech').map((s) => s.id), ['feed:a', 'feed:b']);
+    assert.equal(service.selectSubscriptions('all').length, 3);
+    assert.equal(service.selectSubscriptions(undefined).length, 3);
+    // refresh({ channels }) only attempts those subscriptions (the seeded
+    // URLs fail fast — offline-safe — but each attempt counts in outcome).
+    const scoped = await service.refresh({ channels: ['feed:a', 'feed:b'] });
+    assert.equal(scoped.feeds, 2, 'refresh scoped to the two selected channels');
+    const single = await service.refresh({ channel: 'feed:c' });
+    assert.equal(single.feeds, 1, 'single-channel refresh stays scoped');
+  } finally { service.shutdown(); await ctx.dispose(); home.cleanup(); }
+});
+
+test('saveSettings persists sources sort mode and collapsed groups (feed O)', async () => {
+  const home = tempHome();
+  const ctx = fakeCtx();
+  const service = new DropletsService(ctx, {});
+  await service.ready;
+  try {
+    await service.saveSettings({ sourcesSortMode: 'name-asc', sourcesCollapsedGroups: ['Tech', ''] });
+    const { settings } = await service.getSettings();
+    assert.equal(settings.sourcesSortMode, 'name-asc');
+    assert.deepEqual(settings.sourcesCollapsedGroups, ['Tech', '']);
+    // Invalid modes and non-array group payloads are ignored, not stored.
+    await service.saveSettings({ sourcesSortMode: 'bogus', sourcesCollapsedGroups: 'Tech' });
+    const { settings: after } = await service.getSettings();
+    assert.equal(after.sourcesSortMode, 'name-asc', 'unknown sort mode rejected');
+    assert.deepEqual(after.sourcesCollapsedGroups, ['Tech', ''], 'non-array groups rejected');
+  } finally { service.shutdown(); await ctx.dispose(); home.cleanup(); }
+});
+
 test('legacy read map migrates to seen states', async () => {
   const home = tempHome();
   const { DropletsStore, storageDir } = await import('../src/host/store.js');

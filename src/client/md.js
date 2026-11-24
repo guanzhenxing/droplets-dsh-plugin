@@ -144,6 +144,9 @@ export function purifyHtml(html) {
   return purify.sanitize(html, {
     ADD_ATTR: ['target', 'loading', 'referrerpolicy', 'data-dpl-target'],
     ADD_TAGS: [],
-    ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|dpl-note):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
+    // blob: serves EPUB resource rewrites (epub-view creates per-book object
+    // URLs, revoked on destroy); data: was already covered by the generic
+    // branch but stays explicit-free — see purify DATA_URI_TAGS for img/svg.
+    ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|dpl-note|blob):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
   });
 }

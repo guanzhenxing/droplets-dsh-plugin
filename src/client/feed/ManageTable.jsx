@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCheck, ChevronDown, ClipboardPaste, FileUp, Link, Loader2, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { sortManageFeeds } from './feed-sorting.js';
 import { FeedBadge } from './SourcesPane.jsx';
@@ -24,6 +24,15 @@ export function ManageTable({ api, feeds, onBack, onChanged }) {
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState(false);
   const [opmlBusy, setOpmlBusy] = useState('');
+  // Batch outcome notice (B): partial failures must be visible, never silent.
+  const [batchNotice, setBatchNotice] = useState('');
+  const noticeTimer = useRef(null);
+  useEffect(() => () => { if (noticeTimer.current) clearTimeout(noticeTimer.current); }, []);
+  const showBatchNotice = (text) => {
+    setBatchNotice(text);
+    if (noticeTimer.current) clearTimeout(noticeTimer.current);
+    noticeTimer.current = setTimeout(() => { noticeTimer.current = null; setBatchNotice(''); }, 6000);
+  };
 
   const availableGroups = useMemo(
     () => [...new Set(feeds.map((f) => f.groupName).filter((g) => g !== ''))].sort((a, b) => a.localeCompare(b, 'zh-Hans-CN')),
@@ -49,22 +58,57 @@ export function ManageTable({ api, feeds, onBack, onChanged }) {
 
   async function patch(ids, changes) {
     setBusy(true);
+    const failures = [];
     try {
-      for (const id of ids) await api.setFeed({ id, patch: changes });
+      // Per-item try/catch: one failing feed must not abandon the rest.
+      for (const id of ids) {
+        try { await api.setFeed({ id, patch: changes }); }
+        catch (cause) { failures.push(String(cause?.message ?? cause)); }
+      }
       await onChanged();
+      if (failures.length > 0) {
+        showBatchNotice(`成功 ${ids.length - failures.length} 个，失败 ${failures.length} 个：${failures[0]}`);
+      }
     } finally { setBusy(false); }
   }
 
   async function retry(ids) {
     setBusy(true);
-    try { await api.refresh(); await onChanged(); } finally { setBusy(false); }
+    try {
+      // Retry exactly the selected sources (C): single → channel, several →
+      // the channels array (host selectSubscriptions scopes the refresh);
+      // never a full refresh of every subscription.
+      await api.refresh(ids.length === 1 ? ids[0] : { channels: ids });
+      await onChanged();
+    } catch (cause) {
+      showBatchNotice('重试失败：' + String(cause?.message ?? cause));
+    } finally { setBusy(false); }
   }
 
   async function removeBatch(ids) {
     setBusy(true);
+    const failures = [];
+    const failedIds = new Set();
     try {
-      for (const id of ids) await api.removeSubscription(id);
-      setChecked(new Set());
+      for (const id of ids) {
+        try { await api.removeSubscription(id); }
+        catch (cause) {
+          failedIds.add(id);
+          failures.push(String(cause?.message ?? cause));
+        }
+      }
+      if (failures.length === 0) {
+        setChecked(new Set());
+      } else {
+        // Keep the failed rows checked (retry-ready); drop the ones already
+        // removed so the selection matches what still exists.
+        setChecked((prev) => {
+          const next = new Set(prev);
+          for (const id of ids) if (!failedIds.has(id)) next.delete(id);
+          return next;
+        });
+        showBatchNotice(`成功 ${ids.length - failures.length} 个，失败 ${failures.length} 个：${failures[0]}`);
+      }
       setConfirmBatchDelete(false);
       await onChanged();
     } finally { setBusy(false); }
@@ -112,6 +156,9 @@ export function ManageTable({ api, feeds, onBack, onChanged }) {
           <span>{importNotice}</span>
           <button type="button" className="dpl-icon-btn" aria-label="关闭提示" onClick={() => setImportNotice('')}>✕</button>
         </div>
+      ) : null}
+      {batchNotice ? (
+        <div className="dpl-notice dpl-manage-batch-notice" role="status">{batchNotice}</div>
       ) : null}
       <div className="dpl-manage-filters">
         <input className="dpl-manage-search" placeholder="搜索名称 / URL" value={query} onChange={(e) => setQuery(e.target.value)} />

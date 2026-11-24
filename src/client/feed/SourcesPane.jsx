@@ -1,22 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowUpNarrowWide, ChevronDown, ChevronsDownUp, ListTree, Loader2,
-  RefreshCw, ScanSearch, TriangleAlert,
+  RefreshCw, ScanSearch, TriangleAlert, X,
 } from 'lucide-react';
 import { PanelCollapseButton, PanelRail } from './PanelGroup.jsx';
 import { DEFAULT_FEED_SORT_MODE, groupAndSortFeeds } from './feed-sorting.js';
+
+const EMPTY_SET = new Set();
 
 /**
  * Sources pane, a 1:1 port of droplets' FeedSourcesPane:
  * - head row: 「订阅源」 + collapse button
  * - action row: 刷新 (refresh all, spinner) + 管理 (equal halves)
- * - toolbar row (h-7): three placeholder dots, hover reveals session sort
- *   menu / auto-reveal toggle / collapse-all — exactly the knowledge-base
- *   tree pattern
+ * - filter row: compact source-title filter; a non-empty query force-expands
+ *   the matching groups regardless of the collapsed state
+ * - toolbar row (h-7): sort menu / auto-reveal toggle / collapse-all,
+ *   always visible (no hover reveal)
  * - 全部源 row, groups (row click filters to group, chevron collapses,
  *   group unread count), feed rows (badge, error triangle or unread count,
  *   disabled feeds dimmed)
- * - default sort unread-desc; ungrouped bucket always last.
+ * - default sort unread-desc; ungrouped bucket always last; sort mode and
+ *   collapsed groups are owned by FeedView and persisted via settings.
  */
 function useRefreshProgress(api) {
   const [progress, setProgress] = useState(null);
@@ -42,43 +46,45 @@ function useRefreshProgress(api) {
 export function SourcesPane({
   api, feeds, icons, sourceId, selectedGroup, spinning, onRefresh, onManage,
   onSelectSource, onSelectGroup, collapsed, onExpand, onCollapse,
+  sortMode = DEFAULT_FEED_SORT_MODE, onSortModeChange,
+  collapsedGroups = EMPTY_SET, onCollapsedGroupsChange,
 }) {
   const progress = useRefreshProgress(api);
-  const [collapsedGroups, setCollapsedGroups] = useState(() => new Set());
-  const [sortMode, setSortMode] = useState(DEFAULT_FEED_SORT_MODE);
+  const [filter, setFilter] = useState('');
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [autoReveal, setAutoReveal] = useState(false);
   const host = useRef(null);
 
   const toggleGroup = (group) => {
-    setCollapsedGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(group)) next.delete(group); else next.add(group);
-      return next;
-    });
+    const next = new Set(collapsedGroups);
+    if (next.has(group)) next.delete(group); else next.add(group);
+    onCollapsedGroupsChange?.(next);
   };
 
-  const groups = useMemo(() => groupAndSortFeeds(feeds, sortMode), [feeds, sortMode]);
+  // Title filter (N): narrows the feed list before grouping/sorting; while a
+  // query is active the collapsed state is ignored so hits stay visible.
+  const filterQuery = filter.trim().toLowerCase();
+  const visibleFeeds = useMemo(() => (
+    filterQuery ? feeds.filter((feed) => String(feed.title ?? '').toLowerCase().includes(filterQuery)) : feeds
+  ), [feeds, filterQuery]);
+  const groups = useMemo(() => groupAndSortFeeds(visibleFeeds, sortMode), [visibleFeeds, sortMode]);
+  const isGroupHidden = (group) => (filterQuery ? false : collapsedGroups.has(group));
 
   // Auto-reveal (knowledge-base parity): when the selected feed's group is
   // collapsed, expand it and scroll the feed row into view.
   useEffect(() => {
     if (!autoReveal || !sourceId) return;
     const group = feeds.find((f) => f.id === sourceId)?.groupName ?? '';
-    setCollapsedGroups((prev) => {
-      if (!prev.has(group)) return prev;
-      const next = new Set(prev);
-      next.delete(group);
-      return next;
-    });
+    if (collapsedGroups.has(group)) onCollapsedGroupsChange?.(new Set([...collapsedGroups].filter((name) => name !== group)));
     const frame = requestAnimationFrame(() => {
       host.current?.querySelector('[data-feed-id="' + CSS.escape(sourceId) + '"]')?.scrollIntoView({ block: 'nearest' });
     });
     return () => cancelAnimationFrame(frame);
-  }, [autoReveal, sourceId, feeds, collapsedGroups]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoReveal, sourceId, feeds]);
 
   const groupNames = groups.map(([name]) => name);
-  const anyGroupExpanded = groupNames.some((name) => !collapsedGroups.has(name));
+  const anyGroupExpanded = groupNames.some((name) => !isGroupHidden(name));
   const aggregated = feeds.filter((f) => f.enabled);
   const totalUnread = aggregated.reduce((sum, f) => sum + f.unreadCount, 0);
   const totalCount = aggregated.reduce((sum, f) => sum + f.itemCount, 0);
@@ -102,13 +108,24 @@ export function SourcesPane({
           <ListTree size={14} /> 管理
         </button>
       </div>
+      <div className="dpl-source-filter">
+        <input
+          value={filter}
+          placeholder="过滤订阅源…"
+          aria-label="过滤订阅源"
+          spellCheck={false}
+          onChange={(event) => setFilter(event.target.value)}
+        />
+        {filter ? (
+          <button type="button" className="dpl-icon-btn dpl-tb" data-tip="清除过滤" aria-label="清除过滤" onClick={() => setFilter('')}>
+            <X size={13} />
+          </button>
+        ) : null}
+      </div>
       <div className="dpl-sources-toolbar">
-        <div className="dpl-toolbar-dots" aria-hidden="true">
-          <span /><span /><span />
-        </div>
         <div className="dpl-toolbar-actions">
           <div className="dpl-relative">
-            <button type="button" className="dpl-icon-btn dpl-tb" data-tip="排序（会话内；「未分组」恒排最后）" onClick={() => setSortMenuOpen((v) => !v)}>
+            <button type="button" className="dpl-icon-btn dpl-tb" data-tip="排序（「未分组」恒排最后）" onClick={() => setSortMenuOpen((v) => !v)}>
               <ArrowUpNarrowWide size={14} />
             </button>
             {sortMenuOpen ? (
@@ -119,7 +136,7 @@ export function SourcesPane({
                   ['name-asc', '名称 A→Z'],
                   ['name-desc', '名称 Z→A'],
                 ].map(([mode, label]) => (
-                  <button key={mode} type="button" className="dpl-menu-item" onClick={() => { setSortMode(mode); setSortMenuOpen(false); }}>
+                  <button key={mode} type="button" className="dpl-menu-item" onClick={() => { onSortModeChange?.(mode); setSortMenuOpen(false); }}>
                     {sortMode === mode ? '✓ ' : ''}{label}
                   </button>
                 ))}
@@ -129,7 +146,7 @@ export function SourcesPane({
           <button type="button" className={'dpl-icon-btn dpl-tb' + (autoReveal ? ' is-toggled' : '')} data-tip="自动定位（选中源变化时展开其所在组并滚动到该源）" onClick={() => setAutoReveal(!autoReveal)}>
             <ScanSearch size={14} />
           </button>
-          <button type="button" className="dpl-icon-btn dpl-tb" title={anyGroupExpanded ? '全部折叠' : '全部展开'} onClick={() => setCollapsedGroups(anyGroupExpanded ? new Set(groupNames) : new Set())}>
+          <button type="button" className="dpl-icon-btn dpl-tb" title={anyGroupExpanded ? '全部折叠' : '全部展开'} onClick={() => onCollapsedGroupsChange?.(anyGroupExpanded ? new Set(groupNames) : new Set())}>
             <ChevronsDownUp size={14} />
           </button>
         </div>
@@ -145,7 +162,7 @@ export function SourcesPane({
           {totalUnread > 0 ? <em title={'共 ' + totalCount + ' 条'}>{totalUnread}</em> : null}
         </button>
         {groups.map(([group, groupFeeds]) => {
-          const isCollapsed = collapsedGroups.has(group);
+          const isCollapsed = isGroupHidden(group);
           const label = group === '' ? '未分组' : group;
           const groupUnread = groupFeeds.reduce((s, f) => s + f.unreadCount, 0);
           const groupTotal = groupFeeds.reduce((s, f) => s + f.itemCount, 0);

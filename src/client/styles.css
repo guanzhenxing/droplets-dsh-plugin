@@ -482,25 +482,13 @@
   padding: 0 10px;
   flex: none;
 }
-/* pointer-events:none is load-bearing: the dots are a full-row overlay
-   (inset:0) that stays in the hit-test tree even at opacity:0 — without
-   this, the two non-positioned toolbar buttons under it (自动定位/全部折叠)
-   can never receive a click. Only the sort button survived, because its
-   .dpl-relative wrapper happens to paint above this overlay. */
-.dpl-toolbar-dots { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 16px; transition: opacity 0.12s; pointer-events: none; }
-.dpl-toolbar-dots span { width: 4px; height: 4px; border-radius: 50%; background: var(--dpl-faint); }
-.dpl-sources-toolbar:hover .dpl-toolbar-dots { opacity: 0; }
 .dpl-toolbar-actions {
   display: flex;
   width: 100%;
   align-items: center;
   justify-content: center;
   gap: 2px;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.12s;
 }
-.dpl-sources-toolbar:hover .dpl-toolbar-actions { opacity: 1; pointer-events: auto; }
 .dpl-icon-btn.dpl-tb { width: 24px; height: 24px; }
 .dpl-icon-btn.is-toggled { color: var(--dpl-accent); background: color-mix(in srgb, var(--dpl-accent) 12%, transparent); }
 .dpl-menu {
@@ -605,14 +593,14 @@
   contain-intrinsic-size: auto 76px;
 }
 .dpl-entry-row:hover { background: var(--dpl-bg-hover); }
-.dpl-entry-row.is-active { background: color-mix(in srgb, var(--dpl-accent) 9%, transparent); }
+.dpl-entry-row.is-active { background: color-mix(in srgb, var(--dpl-accent) 14%, transparent); box-shadow: inset 2px 0 0 var(--dpl-accent); }
 .dpl-entry-src { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--dpl-faint); }
 .dpl-entry-main { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
-.dpl-entry-main .dpl-truncate { font-size: 13.5px; color: var(--dpl-muted); }
-.dpl-entry-main .dpl-truncate.is-unread { color: var(--dpl-fg); font-weight: 500; }
+.dpl-entry-main .dpl-truncate { font-size: 13.5px; color: var(--dpl-faint); }
+.dpl-entry-main .dpl-truncate.is-unread { color: var(--dpl-fg); font-weight: 600; }
 .dpl-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
 .dpl-dot.is-unseen { background: var(--dpl-accent); }
-.dpl-dot.is-seen { background: var(--dpl-border); }
+.dpl-dot.is-seen { background: var(--dpl-muted); }
 .dpl-dot.is-skipped { background: var(--dpl-faint); }
 .dpl-entry-sum { margin: 3px 0 0 15px; font-size: 12px; color: var(--dpl-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -1281,16 +1269,16 @@
   contain-intrinsic-size: auto 74px;
 }
 .dpl-entry-row:hover { background: var(--dpl-bg-hover); }
-.dpl-entry-row.is-active { background: color-mix(in srgb, var(--dpl-accent) 9%, transparent); }
+.dpl-entry-row.is-active { background: color-mix(in srgb, var(--dpl-accent) 14%, transparent); box-shadow: inset 2px 0 0 var(--dpl-accent); }
 .dpl-entry-src { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--dpl-faint); }
 .dpl-entry-src .dpl-star { padding: 0; font-size: 13px; opacity: 0; }
 .dpl-entry-row:hover .dpl-entry-src .dpl-star { opacity: 0.5; }
 .dpl-entry-src .dpl-star.is-on { opacity: 1; }
 .dpl-entry-main { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
-.dpl-entry-main span:last-child { font-size: 13.5px; color: var(--dpl-muted); min-width: 0; flex: 1; }
-.dpl-entry-main span.is-unread { color: var(--dpl-fg); font-weight: 550; }
+.dpl-entry-main span:last-child { font-size: 13.5px; color: var(--dpl-faint); min-width: 0; flex: 1; }
+.dpl-entry-main span.is-unread { color: var(--dpl-fg); font-weight: 600; }
 .dpl-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--dpl-accent); flex: none; }
-.dpl-dot.is-read { background: var(--dpl-border); }
+.dpl-dot.is-read, .dpl-dot.is-seen { background: var(--dpl-muted); }
 .dpl-entry-sum { margin: 3px 0 0 15px; font-size: 12px; color: var(--dpl-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .dpl-badge {
@@ -1899,10 +1887,8 @@
 .dpl-vault2-row { position: relative; display: flex; align-items: center; border-radius: 6px; min-height: 26px; }
 .dpl-vault2-row:hover { background: var(--dpl-bg-hover); }
 .dpl-vault2-row.is-active { background: color-mix(in srgb, var(--dpl-accent) 9%, transparent); }
-.dpl-vault2-row .dpl-vault2-rowactions { position: absolute; right: 4px; display: none; align-items: center; gap: 1px; background: var(--dpl-bg); border-radius: 6px; padding: 1px; }
-.dpl-vault2-row:hover .dpl-vault2-rowactions { display: flex; }
-.dpl-vault2-rowactions button { display: grid; place-items: center; width: 20px; height: 20px; border: none; background: transparent; border-radius: 4px; color: var(--dpl-faint); cursor: pointer; }
-.dpl-vault2-rowactions button:hover { background: var(--dpl-bg-active); color: var(--dpl-fg); }
+/* .dpl-vault2-rowactions removed: no JSX consumer anywhere in src/client
+   (dead since the dot-toolbar refactor — verified by grep before deleting). */
 
 .dpl-vault2-dir, .dpl-vault2-file {
   display: flex; align-items: center; gap: 5px; width: 100%;
@@ -2277,3 +2263,105 @@
   font-size: 10.5px;
   color: var(--dpl-fg);
 }
+
+/* ---- 收件箱修复追加区（fix-inbox：只追加新规则，不改上方既有规则） ---- */
+
+/* 抓取中：列表行状态位 spinner + 标题尾注（fix A） */
+.dpl-ib-rowpend { flex: none; width: 8px; margin-top: 5px; display: grid; place-items: center; color: var(--dpl-accent); }
+.dpl-ib-pending { margin-left: 6px; font-style: normal; font-weight: 400; font-size: 11px; color: var(--dpl-muted); }
+
+/* 抓取中：阅读器居中占位（fix A） */
+.dpl-ib-pendview { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+
+/* 列表区顶部：加载错误条（fix I）与重试结果横幅（fix G） */
+.dpl-ib-listerror { display: flex; align-items: center; gap: 8px; margin: 8px 10px 0; }
+.dpl-ib-listerror span { flex: 1; }
+.dpl-ib-listnotice { flex: none; margin: 8px 10px 0; }
+.dpl-ib-listnotice span { flex: 1; }
+.dpl-ib-listnotice button { border: none; background: transparent; color: inherit; cursor: pointer; padding: 2px; display: grid; place-items: center; }
+
+/* 阅读器：inboxGet 失败卡片（fix C） */
+.dpl-ib-readererror { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; max-width: 480px; }
+.dpl-ib-readererror p { margin: 0; }
+
+/* 存为笔记反馈（fix H） */
+.dpl-ib-saveerror { flex: none; margin: 0 16px; }
+.dpl-ib-savenote { flex: none; margin: 0 16px 8px; }
+
+/* 处理完成弹层：moving 指示与失败红条（fix D） */
+.dpl-ib-donemoving { margin: 12px 0 0; display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--dpl-muted); }
+.dpl-ib-doneresult.dpl-error { background: color-mix(in srgb, var(--dpl-danger) 9%, transparent); color: var(--dpl-danger); }
+
+/* PDF 缩放导航（fix F） */
+.dpl-ib-doczoom { min-width: 42px; text-align: center; font-size: 12px; color: var(--dpl-muted); }
+
+/* 信息流修复追加区（feed fixes A–P） */
+
+/* N: sources-pane filter — compact borderless input under the actions row. */
+.dpl-source-filter {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 24px;
+  margin: 0 10px 6px;
+  flex: none;
+}
+.dpl-source-filter input {
+  width: 100%;
+  min-width: 0;
+  height: 24px;
+  border: none;
+  border-radius: 6px;
+  background: var(--dpl-bg-2);
+  color: var(--dpl-fg);
+  font-size: 12.5px;
+  padding: 0 8px;
+  outline: none;
+}
+.dpl-source-filter input::placeholder { color: var(--dpl-faint); }
+.dpl-source-filter input:focus { background: var(--dpl-bg-hover); }
+
+/* D: item-list notice (rollback errors) — aligns with the pane padding. */
+.dpl-items-notice { margin: 8px 10px 0; flex: none; }
+
+/* B: manage-table batch outcome notice. */
+.dpl-manage-batch-notice { margin: 0 10px 8px; flex: none; }
+
+/* ---- appended: audited vault/companion fixes (B/C/D/E/M/N) ---- */
+
+/* B: 「N 个未保存」 badge in the vault statusbar. */
+.dpl-vault2-statusbadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 7px;
+  height: 16px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--dpl-danger) 12%, transparent);
+  color: var(--dpl-danger);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* C: failure notices tint danger; the success green stays the default. */
+.dpl-vault2-statusnotice.is-error { color: var(--dpl-danger); }
+
+/* D: inline validation error inside the create dialog (red, under the input). */
+.dpl-dialog-error { margin: 6px 0 0; font-size: 12px; color: var(--dpl-danger); }
+
+/* E: keyboard-selected row in the quick switcher / command palette
+   (replaces the old always-first is-first pinning). */
+.dpl-vault2-quicklist button.is-active { background: var(--dpl-bg-hover); }
+
+/* M: docked companion width comes from the --dpl-ai-w variable set inline,
+   so the container query below can finally win at narrow widths (an inline
+   width used to beat it and squeeze the vault unreadably). */
+.dpl-companion.is-docked { width: var(--dpl-ai-w, 420px); }
+@container (max-width: 860px) {
+  .dpl-companion.is-docked { width: 100%; min-width: 0; }
+}
+
+/* N: a 3px mode-colored edge on the note pane — read=accent, live=link,
+   source=faint — plus the mode name in the crumb button's title. */
+.dpl-vault2-note[data-view='read'] { box-shadow: inset 3px 0 0 var(--dpl-accent); }
+.dpl-vault2-note[data-view='live'] { box-shadow: inset 3px 0 0 var(--dpl-link); }
+.dpl-vault2-note[data-view='source'] { box-shadow: inset 3px 0 0 var(--dpl-faint); }

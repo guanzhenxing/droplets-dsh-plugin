@@ -7,7 +7,7 @@ import { PanelCollapseButton, PanelGroup, PanelRail } from './feed/PanelGroup.js
 import { SourcesPane, FeedBadge } from './feed/SourcesPane.jsx';
 import { ManageTable } from './feed/ManageTable.jsx';
 import { AuxRail, htmlHeadings } from './feed/AuxRail.jsx';
-import { partitionFeedItems, snapshotReadItems } from './feed/feed-sorting.js';
+import { DEFAULT_FEED_SORT_MODE, partitionFeedItems, snapshotReadItems } from './feed/feed-sorting.js';
 import { formatWhen, formatWhenFull } from './feed/format.js';
 import { SafeHtml } from './components.jsx';
 import { markdownToHtml } from './md.js';
@@ -33,6 +33,9 @@ export function FeedView({ api, onMaterial, onJumpSpace, onOpenVaultNote }) {
   const [selected, setSelected] = useState(null);
   const [spinning, setSpinning] = useState(false);
   const refreshTick = useRef(0);
+  // Bumped after a successful refresh so ItemList reloads its items and the
+  // 「新增 N 条」 pill can count entries that arrived with the refresh.
+  const [itemsVersion, setItemsVersion] = useState(0);
 
   // Optimistic unread adjustment: the source badge and the 全部源 total must
   // drop the moment an item is read, not after the host round-trip. loadFeeds
@@ -76,6 +79,32 @@ export function FeedView({ api, onMaterial, onJumpSpace, onOpenVaultNote }) {
     return () => { alive = false; };
   }, [api]);
 
+  // Sources-pane sort mode & collapsed groups, held here so both views
+  // (reading / managing) share them, persisted through the settings channel
+  // the same way hoverPreview is read (sourcesSortMode / sourcesCollapsedGroups).
+  const [sourcesSortMode, setSourcesSortMode] = useState(DEFAULT_FEED_SORT_MODE);
+  const [sourcesCollapsedGroups, setSourcesCollapsedGroups] = useState(() => new Set());
+  useEffect(() => {
+    let alive = true;
+    void api.getSettings?.().then((result) => {
+      if (!alive) return;
+      const settings = result?.settings ?? {};
+      if (typeof settings.sourcesSortMode === 'string') setSourcesSortMode(settings.sourcesSortMode);
+      if (Array.isArray(settings.sourcesCollapsedGroups)) {
+        setSourcesCollapsedGroups(new Set(settings.sourcesCollapsedGroups.filter((group) => typeof group === 'string')));
+      }
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, [api]);
+  const changeSourcesSortMode = useCallback((mode) => {
+    setSourcesSortMode(mode);
+    void api.saveSettings?.({ sourcesSortMode: mode }).catch(() => {});
+  }, [api]);
+  const changeSourcesCollapsedGroups = useCallback((groups) => {
+    setSourcesCollapsedGroups(groups);
+    void api.saveSettings?.({ sourcesCollapsedGroups: [...groups] }).catch(() => {});
+  }, [api]);
+
   useEffect(() => { void loadFeeds(); }, [loadFeeds]);
 
   const selectSource = (id) => { setSelectedGroup(null); setSourceId(id); setSelected(null); };
@@ -88,6 +117,10 @@ export function FeedView({ api, onMaterial, onJumpSpace, onOpenVaultNote }) {
       await api.refresh();
       if (tick !== refreshTick.current) return;
       await loadFeeds();
+      if (tick !== refreshTick.current) return;
+      // Reload the item list for the current scope so new entries show up
+      // (the list effect keys on this version). Selection is untouched.
+      setItemsVersion((value) => value + 1);
       // Icons are fetched best-effort in the background during refresh;
       // give them a moment, then pick up whatever landed.
       setTimeout(() => { if (tick === refreshTick.current) void loadIcons(); }, 12_000);
@@ -109,6 +142,8 @@ export function FeedView({ api, onMaterial, onJumpSpace, onOpenVaultNote }) {
               spinning={spinning} onRefresh={() => void refresh()}
               onManage={() => setManaging(false)}
               onSelectSource={selectSource} onSelectGroup={selectGroup}
+              sortMode={sourcesSortMode} onSortModeChange={changeSourcesSortMode}
+              collapsedGroups={sourcesCollapsedGroups} onCollapsedGroupsChange={changeSourcesCollapsedGroups}
               collapsed={collapsed} onExpand={expand} onCollapse={collapse}
             />
           ) },
@@ -130,12 +165,15 @@ export function FeedView({ api, onMaterial, onJumpSpace, onOpenVaultNote }) {
             spinning={spinning} onRefresh={() => void refresh()}
             onManage={() => setManaging(true)}
             onSelectSource={selectSource} onSelectGroup={selectGroup}
+            sortMode={sourcesSortMode} onSortModeChange={changeSourcesSortMode}
+            collapsedGroups={sourcesCollapsedGroups} onCollapsedGroupsChange={changeSourcesCollapsedGroups}
             collapsed={collapsed} onExpand={expand} onCollapse={collapse}
           />
         ) },
         { id: 'items', initialWidth: 320, minWidth: 240, collapsible: true, render: ({ collapsed, expand, collapse }) => (
           <ItemList
             api={api} feeds={feeds} icons={icons} sourceId={sourceId} selectedGroup={selectedGroup}
+            itemsVersion={itemsVersion}
             selected={selected} onSelect={setSelected} onMaterial={onMaterial}
             onUnreadChange={bumpUnread}
             spinning={spinning} onRefresh={() => void refresh()} onFeedsChanged={loadFeeds}
@@ -153,12 +191,13 @@ export function FeedView({ api, onMaterial, onJumpSpace, onOpenVaultNote }) {
 
 /** Items pane: title + pill + refresh + three-state filter + mark-all + «. */
 function ItemList(props) {
-  const { api, feeds, icons, sourceId, selectedGroup, selected, onSelect, onMaterial, onUnreadChange, spinning, onRefresh, onFeedsChanged, onManage, collapsed, onExpand, onCollapse } = props;
+  const { api, feeds, icons, sourceId, selectedGroup, itemsVersion, selected, onSelect, onMaterial, onUnreadChange, spinning, onRefresh, onFeedsChanged, onManage, collapsed, onExpand, onCollapse } = props;
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewFilter, setViewFilter] = useState('all');
   const [confirmMarkAllRead, setConfirmMarkAllRead] = useState(false);
   const [pill, setPill] = useState(0);
+  const [notice, setNotice] = useState('');
   const listScroll = useRef(null);
   const hoverTimer = useRef(null);
   const visibleItems = useRef([]);
@@ -188,7 +227,9 @@ function ItemList(props) {
       finally { if (!cancelled) setLoading(false); }
     })();
     return () => { cancelled = true; };
-  }, [api, sourceId, selectedGroup]);
+    // itemsVersion: a refresh bumps it so the list reloads; selected stays
+    // as-is (auto-select only fills an empty selection).
+  }, [api, sourceId, selectedGroup, itemsVersion]);
 
   const partitioned = useMemo(() => {
     if (!loading && readSnapshot.current.session !== sessionKey) {
@@ -241,22 +282,53 @@ function ItemList(props) {
     return feeds.reduce((sum, feed) => sum + (feed.unreadCount ?? 0), 0);
   })();
 
+  // Optimistic-write rollback (D): when the host rejects a state change,
+  // restore the row to its previous state — but only if the row still holds
+  // the value this call wrote (idempotent: a newer action wins), and undo
+  // the unread-count adjustment that went with it. The rollback request is
+  // applied in an effect so the check runs against the post-optimistic
+  // render; mirroring Preview's notice channel for the message.
+  const [rollback, setRollback] = useState(null);
+  useEffect(() => {
+    if (!rollback) return;
+    const { item, previous, state, cause } = rollback;
+    setRollback(null);
+    const row = items.find((entry) => entry.key === item.key && entry.sourceId === item.sourceId);
+    if (!row || row.state !== state) return; // superseded by a newer action
+    setItems((current) => current.map((entry) => (entry.key === item.key && entry.sourceId === item.sourceId ? { ...entry, state: previous } : entry)));
+    if (previous === 'unseen' && state !== 'unseen') onUnreadChange?.(item.sourceId, 1);
+    else if (previous !== 'unseen' && state === 'unseen') onUnreadChange?.(item.sourceId, -1);
+    setNotice('标记失败：' + String(cause?.message ?? cause));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rollback]);
+  const rollbackItemState = (item, previous, state, cause) => {
+    setRollback({ item, previous, state, cause });
+  };
+
   const markState = async (item, state) => {
+    const previous = item.state;
     setItems((current) => current.map((entry) => (entry.key === item.key && entry.sourceId === item.sourceId ? { ...entry, state } : entry)));
     // unseen -> read removes one from the unread count, and vice versa.
-    if (item.state === 'unseen' && state !== 'unseen') onUnreadChange?.(item.sourceId, -1);
-    else if (item.state !== 'unseen' && state === 'unseen') onUnreadChange?.(item.sourceId, 1);
-    await api.setItemState({ keys: [item.key], state }).catch(() => {});
-    void onFeedsChanged();
+    if (previous === 'unseen' && state !== 'unseen') onUnreadChange?.(item.sourceId, -1);
+    else if (previous !== 'unseen' && state === 'unseen') onUnreadChange?.(item.sourceId, 1);
+    try {
+      await api.setItemState({ keys: [item.key], state });
+      void onFeedsChanged();
+    } catch (cause) {
+      rollbackItemState(item, previous, state, cause);
+    }
   };
 
   const openItem = (item) => {
     onSelect(item);
     onMaterial({ space: 'feed', key: item.key, title: item.title, url: item.link, content: '' });
     if (item.state === 'unseen') {
+      const previous = item.state;
       setItems((current) => current.map((entry) => (entry.key === item.key && entry.sourceId === item.sourceId ? { ...entry, state: 'seen' } : entry)));
       onUnreadChange?.(item.sourceId, -1);
-      void api.setItemState({ keys: [item.key], state: 'seen' }).then(() => onFeedsChanged()).catch(() => {});
+      void api.setItemState({ keys: [item.key], state: 'seen' })
+        .then(() => onFeedsChanged())
+        .catch((cause) => { rollbackItemState(item, previous, 'seen', cause); });
       onSelect({ ...item, state: 'seen' });
     }
   };
@@ -265,6 +337,69 @@ function ItemList(props) {
     if (hoverTimer.current !== null) { clearTimeout(hoverTimer.current); hoverTimer.current = null; }
   };
   useEffect(() => clearHoverTimer, []);
+
+  // Keyboard navigation (M): j/k move the selection (cyclic), o/空格 open,
+  // s 略过, m 标回未读, r 刷新. Plain keys only — modified keys stay with
+  // the system; typing in an input never triggers list shortcuts.
+  const currentEntry = () => {
+    const list = visibleItems.current;
+    if (list.length === 0) return null;
+    if (selected !== null) {
+      const match = list.find((entry) => entry.key === selected.key && entry.sourceId === selected.sourceId);
+      if (match) return match;
+    }
+    return list[0];
+  };
+
+  const entryRow = (entry) => listScroll.current?.querySelector(
+    '[data-entry="' + String(entry.sourceId + ':' + entry.key).replace(/"/g, '\\"') + '"]',
+  );
+
+  const handleListKeyDown = (event) => {
+    if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+    const target = event.target;
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+    const key = event.key;
+    if (key === 'j' || key === 'k') {
+      event.preventDefault();
+      const list = visibleItems.current;
+      if (list.length === 0) return;
+      const delta = key === 'j' ? 1 : -1;
+      const currentIndex = selected !== null
+        ? list.findIndex((entry) => entry.key === selected.key && entry.sourceId === selected.sourceId)
+        : -1;
+      const nextIndex = currentIndex === -1
+        ? (delta > 0 ? 0 : list.length - 1)
+        : (currentIndex + delta + list.length) % list.length;
+      const next = list[nextIndex];
+      if (!next) return;
+      onSelect({ ...next });
+      entryRow(next)?.scrollIntoView({ block: 'nearest' });
+      return;
+    }
+    if (key === 'o' || key === ' ') {
+      event.preventDefault();
+      const current = currentEntry();
+      if (current) openItem(current);
+      return;
+    }
+    if (key === 's') {
+      event.preventDefault();
+      const current = currentEntry();
+      if (current) void markState(current, 'skipped');
+      return;
+    }
+    if (key === 'm') {
+      event.preventDefault();
+      const current = currentEntry();
+      if (current) void markState(current, 'unseen');
+      return;
+    }
+    if (key === 'r') {
+      event.preventDefault();
+      onRefresh();
+    }
+  };
 
   const markAllRead = async () => {
     setConfirmMarkAllRead(false);
@@ -293,7 +428,7 @@ function ItemList(props) {
           {spinning ? <Loader2 size={15} className="dpl-spin" /> : <RefreshCw size={15} />}
         </button>
         <button type="button" className={'dpl-icon-btn' + (viewFilter === 'unseen' ? ' is-toggled' : '')} data-tip="只显示未读" aria-label="只显示未读" aria-pressed={viewFilter === 'unseen'} onClick={() => setViewFilter(viewFilter === 'unseen' ? 'all' : 'unseen')}>
-          <Circle size={14} className={viewFilter === 'unseen' ? 'dpl-fill' : undefined} />
+          <Circle size={15} className={viewFilter === 'unseen' ? 'dpl-fill' : undefined} />
         </button>
         <button type="button" className={'dpl-icon-btn' + (viewFilter === 'seen' ? ' is-toggled' : '')} data-tip="只显示已读" aria-label="只显示已读" aria-pressed={viewFilter === 'seen'} onClick={() => setViewFilter(viewFilter === 'seen' ? 'all' : 'seen')}>
           <CircleCheck size={15} />
@@ -307,7 +442,8 @@ function ItemList(props) {
         <span className="dpl-flex-fill" />
         <PanelCollapseButton onClick={onCollapse} />
       </div>
-      <div className="dpl-entry-scroll" ref={listScroll}>
+      {notice ? <div className="dpl-notice dpl-items-notice" role="status">{notice}</div> : null}
+      <div className="dpl-entry-scroll" ref={listScroll} tabIndex={0} onKeyDown={handleListKeyDown}>
         {loading ? <div className="dpl-list-loading"><Loader2 size={17} className="dpl-spin" /></div> : null}
         {!loading && partitioned.length === 0 ? (
           <div className="dpl-list-empty">
@@ -322,6 +458,7 @@ function ItemList(props) {
           return (
             <div
               key={item.sourceId + ':' + item.key}
+              data-entry={item.sourceId + ':' + item.key}
               className={'dpl-entry-row' + (selected?.key === item.key && selected?.sourceId === item.sourceId ? ' is-active' : '')}
               onMouseEnter={() => {
                 if (!hoverPreviewEnabled) return;
@@ -339,6 +476,7 @@ function ItemList(props) {
               onKeyDown={(event) => {
                 if (event.key === 'Enter' || event.key === ' ') {
                   event.preventDefault();
+                  event.stopPropagation();
                   clearHoverTimer();
                   openItem(item);
                 }

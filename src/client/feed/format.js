@@ -6,7 +6,11 @@ export function formatWhen(ts) {
   if (date.toDateString() === now.toDateString()) {
     return date.toLocaleTimeString('zh-Hans-CN', { hour: '2-digit', minute: '2-digit' });
   }
-  return date.toLocaleDateString('zh-Hans-CN', { month: 'numeric', day: 'numeric' });
+  // 跨年条目带年份,同年维持 M/D(与 droplets formatWhen 口径一致)。
+  const sameYear = date.getFullYear() === now.getFullYear();
+  return date.toLocaleDateString('zh-Hans-CN', sameYear
+    ? { month: 'numeric', day: 'numeric' }
+    : { year: 'numeric', month: 'numeric', day: 'numeric' });
 }
 
 export function formatWhenFull(ts) {
@@ -15,5 +19,9 @@ export function formatWhenFull(ts) {
   const now = new Date();
   const time = date.toLocaleTimeString('zh-Hans-CN', { hour: '2-digit', minute: '2-digit' });
   if (date.toDateString() === now.toDateString()) return '今天 ' + time;
-  return date.toLocaleDateString('zh-Hans-CN', { year: 'numeric', month: 'numeric', day: 'numeric' }) + ' ' + time;
+  // 同上:仅跨年才带年份,同年维持 M/D。
+  const sameYear = date.getFullYear() === now.getFullYear();
+  return date.toLocaleDateString('zh-Hans-CN', sameYear
+    ? { month: 'numeric', day: 'numeric' }
+    : { year: 'numeric', month: 'numeric', day: 'numeric' }) + ' ' + time;
 }

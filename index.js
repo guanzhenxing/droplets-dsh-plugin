@@ -139413,16 +139413,24 @@ var WorkspaceInbox = class {
   }
   async retryAllFailed() {
     const failed = (await this.list({ status: "fetch_failed" })).items;
+    const CONCURRENCY = 4;
+    let cursor = 0;
     let retried = 0;
     let failedCount = 0;
-    for (const item of failed) {
-      try {
-        await this.retry(item.id);
-        retried += 1;
-      } catch {
-        failedCount += 1;
+    const worker = async () => {
+      while (cursor < failed.length) {
+        const target = failed[cursor];
+        cursor += 1;
+        try {
+          await this.retry(target.id);
+          retried += 1;
+        } catch {
+          failedCount += 1;
+        }
       }
-    }
+    };
+    const workers = Array.from({ length: Math.min(CONCURRENCY, failed.length) }, () => worker());
+    await Promise.allSettled(workers);
     return { total: failed.length, retried, failed: failedCount };
   }
   async fetchInto(id, url) {
@@ -141883,10 +141891,10 @@ var DropletsService = class extends TypertRemoteService {
     };
   }
   async refresh(request) {
-    const { channel } = request ?? {};
+    const { channel, channels } = request ?? {};
     await this.ready;
     const outcome = { feeds: 0, entries: 0, errors: 0 };
-    const subs = this.selectSubscriptions(channel);
+    const subs = this.selectSubscriptions(channel, channels);
     this.refreshProgress = { running: true, total: subs.length, done: 0, ok: 0, failed: 0, startedAt: Date.now(), errors: [] };
     const workers = Math.min(8, Math.max(1, Number(this.store.data.settings.refreshWorkers) || REFRESH_WORKERS));
     await this.forEachWithPool(subs, workers, async (sub) => {
@@ -141907,8 +141915,13 @@ var DropletsService = class extends TypertRemoteService {
     this.pruneBodies();
     return outcome;
   }
-  selectSubscriptions(channel) {
+  selectSubscriptions(channel, channels) {
     const subs = this.store.data.subscriptions.filter((sub) => sub.enabled !== false);
+    const list = Array.isArray(channels) ? channels : Array.isArray(channel) ? channel : channel && typeof channel === "object" && Array.isArray(channel.channels) ? channel.channels : null;
+    if (list) {
+      const wanted = new Set(list.filter((id) => typeof id === "string"));
+      return subs.filter((sub) => wanted.has(sub.id));
+    }
     if (typeof channel === "string" && channel !== "all" && !channel.startsWith("group:")) {
       const sub = subs.find((candidate) => candidate.id === channel);
       return sub ? [sub] : [];
@@ -142437,6 +142450,17 @@ var DropletsService = class extends TypertRemoteService {
     if (patch.fetchTimeoutSec !== void 0) {
       const seconds = Number(patch.fetchTimeoutSec);
       if (Number.isFinite(seconds) && seconds >= 5 && seconds <= 300) settings.fetchTimeoutSec = Math.floor(seconds);
+    }
+    if (patch.sourcesSortMode !== void 0) {
+      const mode = String(patch.sourcesSortMode);
+      if (mode === "unread-desc" || mode === "default" || mode === "name-asc" || mode === "name-desc") {
+        settings.sourcesSortMode = mode;
+      }
+    }
+    if (patch.sourcesCollapsedGroups !== void 0) {
+      if (Array.isArray(patch.sourcesCollapsedGroups)) {
+        settings.sourcesCollapsedGroups = patch.sourcesCollapsedGroups.filter((group) => typeof group === "string");
+      }
     }
     this.store.touch();
     await this.store.flush();
