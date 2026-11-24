@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { markdownToHtml, purifyHtml } from './md.js';
 
 /**
@@ -6,7 +6,7 @@ import { markdownToHtml, purifyHtml } from './md.js';
  * fragment goes through DOMParser (a real document context, scripts never
  * execute there) and the parsed nodes are adopted into the live tree.
  */
-export function SafeHtml({ html, className, onLinkClick }) {
+export function SafeHtml({ html, className, onLinkClick, onMount }) {
   const ref = useRef(null);
   useEffect(() => {
     const node = ref.current;
@@ -15,6 +15,7 @@ export function SafeHtml({ html, className, onLinkClick }) {
     const clean = purifyHtml(String(html ?? ''));
     const parsed = new DOMParser().parseFromString('<!doctype html><body>' + clean, 'text/html');
     node.append(...[...parsed.body.childNodes]);
+    onMount?.(node);
     if (onLinkClick) {
       const handler = (event) => {
         const anchor = event.target?.closest?.('a');
@@ -24,12 +25,12 @@ export function SafeHtml({ html, className, onLinkClick }) {
       return () => node.removeEventListener('click', handler);
     }
     return undefined;
-  }, [html, onLinkClick]);
+  }, [html, onLinkClick, onMount]);
   return <div className={className} ref={ref} />;
 }
 
 /** Markdown reading view (vault notes, companion text). */
-export function MarkdownView({ markdown, className, onWikilink }) {
+export function MarkdownView({ markdown, className, onWikilink, resolveImage }) {
   const handleLink = onWikilink
     ? (anchor, event) => {
         const href = anchor.getAttribute('href') ?? '';
@@ -40,7 +41,26 @@ export function MarkdownView({ markdown, className, onWikilink }) {
         }
       }
     : undefined;
-  return <SafeHtml className={className} html={markdownToHtml(markdown)} onLinkClick={handleLink} />;
+
+  // Local image references (vault attachments / Obsidian embeds) render as
+  // data URLs: after the sanitized tree lands, rewrite every non-remote
+  // <img> through the caller's resolver. Remote URLs pass straight through.
+  const onMount = resolveImage
+    ? useCallback((node) => {
+        const images = [...node.querySelectorAll('img')];
+        for (const img of images) {
+          const raw = img.getAttribute('src') ?? '';
+          if (!raw || /^(https?:|data:|blob:)/i.test(raw)) continue;
+          img.removeAttribute('src');
+          img.dataset.pendingSrc = raw;
+          Promise.resolve(resolveImage(raw))
+            .then((url) => { if (url) { img.src = url; delete img.dataset.pendingSrc; } })
+            .catch(() => { /* unresolvable: keep the empty img */ });
+        }
+      }, [resolveImage])
+    : undefined;
+
+  return <SafeHtml className={className} html={markdownToHtml(markdown)} onLinkClick={handleLink} onMount={onMount} />;
 }
 
 export function DropletIcon({ size = 20 }) {

@@ -132777,8 +132777,9 @@ var init_vault_index = __esm({
 
 // src/host/index.js
 import path4 from "node:path";
+import { randomUUID as randomUUID3 } from "node:crypto";
 import { mkdir as mkdir9, readdir as readdir5, readFile as readFile9, rename as rename8, stat as stat6, writeFile as writeFile9 } from "node:fs/promises";
-import { existsSync, statSync } from "node:fs";
+import { existsSync as existsSync2, statSync } from "node:fs";
 import { join as join6, resolve, sep as sep2 } from "node:path";
 import { TypertRemoteService, Remote } from "@deepseek-ai/dsh-typert-protocol";
 import { defineTool as defineTool2 } from "@deepseek-ai/dsh-tools";
@@ -139758,10 +139759,182 @@ async function extractEpub(body) {
 
 // src/host/vault.js
 import { createHash as createHash4, randomUUID as randomUUID2 } from "node:crypto";
-import { lstat, mkdir as mkdir6, readFile as readFile6, readdir as readdir3, realpath, rename as rename5, rm as rm7, stat as stat5, writeFile as writeFile6 } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { lstat, mkdir as mkdir7, readFile as readFile7, readdir as readdir4, realpath, rename as rename6, rm as rm8, stat as stat5, writeFile as writeFile7 } from "node:fs/promises";
 import path2 from "node:path";
+
+// src/host/icons.js
+import { mkdir as mkdir6, readFile as readFile6, readdir as readdir3, rename as rename5, rm as rm7, writeFile as writeFile6 } from "node:fs/promises";
+import { join as join4 } from "node:path";
+var MAX_ICON_BYTES = 64 * 1024;
+var MAX_HTML_BYTES = 256 * 1024;
+var ICON_TIMEOUT_MS = 8e3;
+var RETRY_AFTER_MS = 7 * 24 * 60 * 60 * 1e3;
+function sniffImageType(bytes) {
+  if (bytes.length >= 8 && bytes[0] === 137 && bytes[1] === 80 && bytes[2] === 78 && bytes[3] === 71) return "image/png";
+  if (bytes.length >= 6 && bytes[0] === 71 && bytes[1] === 73 && bytes[2] === 70) return "image/gif";
+  if (bytes.length >= 3 && bytes[0] === 255 && bytes[1] === 216) return "image/jpeg";
+  if (bytes.length >= 4 && bytes[0] === 0 && bytes[1] === 0 && bytes[2] === 1) return "image/x-icon";
+  if (bytes.length >= 12 && bytes.toString("latin1", 0, 4) === "RIFF" && bytes.toString("latin1", 8, 12) === "WEBP") return "image/webp";
+  const head = bytes.toString("latin1", 0, Math.min(bytes.length, 512)).trimStart();
+  if (head.startsWith("<svg") || head.startsWith("<?xml")) return "image/svg+xml";
+  return void 0;
+}
+function absoluteOf(href, base) {
+  try {
+    const url = new URL(String(href), base);
+    return (url.protocol === "http:" || url.protocol === "https:") && !url.username && !url.password ? url.href : void 0;
+  } catch {
+    return void 0;
+  }
+}
+function siteOriginOf(sub, parsed) {
+  const candidates = [
+    typeof parsed?.link === "string" ? parsed.link : void 0,
+    typeof sub?.url === "string" ? sub.url : void 0
+  ];
+  for (const candidate of candidates) {
+    try {
+      const url = new URL(candidate);
+      if ((url.protocol === "http:" || url.protocol === "https:") && !url.username && !url.password) return url.origin;
+    } catch {
+    }
+  }
+  return void 0;
+}
+function iconLinkOfHtml(html, baseUrl) {
+  const pattern = /<link\b[^>]*>/gi;
+  let match;
+  while ((match = pattern.exec(String(html ?? ""))) !== null) {
+    const tag = match[0];
+    if (!/\brel\s*=\s*["'][^"']*icon[^"']*["']/i.test(tag)) continue;
+    const href = /\bhref\s*=\s*["']([^"']+)["']/i.exec(tag)?.[1];
+    if (href) {
+      const absolute = absoluteOf(href, baseUrl);
+      if (absolute) return absolute;
+    }
+  }
+  return void 0;
+}
+async function fetchIconDataUrl(fetcher, url) {
+  try {
+    const response = await fetcher.fetch(url, {
+      connectTimeoutMs: ICON_TIMEOUT_MS,
+      totalTimeoutMs: ICON_TIMEOUT_MS,
+      maxBodyBytes: MAX_ICON_BYTES
+    });
+    if (response.status >= 400) return void 0;
+    const body = response.body;
+    if (!body || body.length === 0 || body.length > MAX_ICON_BYTES) return void 0;
+    const declared = String(response.headers["content-type"] ?? "").split(";")[0].trim().toLowerCase();
+    const mime = declared.startsWith("image/") ? declared : sniffImageType(body);
+    if (!mime) return void 0;
+    return `data:${mime};base64,${Buffer.from(body).toString("base64")}`;
+  } catch {
+    return void 0;
+  }
+}
+var FeedIconStore = class {
+  constructor(dir, logger) {
+    this.dir = dir;
+    this.logger = logger;
+    this.cache = null;
+    this.writing = Promise.resolve();
+  }
+  /** All known icons as { feedId: dataUrl } (cached after the first read). */
+  async all() {
+    if (this.cache !== null) return this.cache;
+    const map = {};
+    try {
+      for (const name2 of await readdir3(this.dir)) {
+        if (name2.startsWith(".")) continue;
+        const dataUrl = (await readFile6(join4(this.dir, name2), "utf8")).trim();
+        if (dataUrl.startsWith("data:image/")) map[decodeURIComponent(name2)] = dataUrl;
+      }
+    } catch {
+    }
+    this.cache = map;
+    return map;
+  }
+  save(feedId, dataUrl) {
+    if (this.cache === null) this.cache = {};
+    this.cache[feedId] = dataUrl;
+    const target = join4(this.dir, encodeURIComponent(feedId));
+    this.writing = this.writing.catch(() => {
+    }).then(async () => {
+      const temp = `${target}.${process.pid}.tmp`;
+      try {
+        await mkdir6(this.dir, { recursive: true });
+        await writeFile6(temp, dataUrl, { encoding: "utf8", mode: 384 });
+        await rename5(temp, target);
+      } catch (error) {
+        await rm7(temp, { force: true }).catch(() => {
+        });
+        this.logger?.warn?.(`droplets: cannot store icon for ${feedId}: ${String(error)}`);
+      }
+    });
+    return this.writing;
+  }
+  remove(feedId) {
+    if (this.cache !== null) delete this.cache[feedId];
+    return rm7(join4(this.dir, encodeURIComponent(feedId)), { force: true }).catch(() => {
+    });
+  }
+  /** Backward compatibility: callers may check existence before saving. */
+  async has(feedId) {
+    return (await this.all())[feedId] !== void 0;
+  }
+};
+async function ensureFeedIcon(sub, parsed, fetcher, store) {
+  if (!sub?.id) return void 0;
+  if (await store.has(sub.id)) return void 0;
+  if (typeof sub.iconErrorAt === "number" && Date.now() - sub.iconErrorAt < RETRY_AFTER_MS) return void 0;
+  const origin = siteOriginOf(sub, parsed);
+  const candidates = [];
+  if (origin) candidates.push(origin + "/favicon.ico");
+  if (origin) {
+    try {
+      const response = await fetcher.fetch(origin + "/", {
+        connectTimeoutMs: ICON_TIMEOUT_MS,
+        totalTimeoutMs: ICON_TIMEOUT_MS,
+        maxBodyBytes: MAX_HTML_BYTES
+      });
+      if (response.status < 400 && typeof response.body?.toString === "function") {
+        const html = response.body.toString("utf8");
+        const link = iconLinkOfHtml(html, origin + "/");
+        if (link) candidates.push(link);
+      }
+    } catch {
+    }
+  }
+  for (const declared of parsed?.iconCandidates ?? []) {
+    const absolute = absoluteOf(declared, typeof sub.url === "string" ? sub.url : void 0);
+    if (absolute) candidates.push(absolute);
+  }
+  for (const candidate of candidates) {
+    const dataUrl = await fetchIconDataUrl(fetcher, candidate);
+    if (dataUrl) {
+      await store.save(sub.id, dataUrl);
+      sub.iconErrorAt = void 0;
+      return "stored";
+    }
+  }
+  sub.iconErrorAt = Date.now();
+  return "failed";
+}
+
+// src/host/vault.js
 var EXCLUDED_DIRS = /* @__PURE__ */ new Set([".obsidian", ".trash", ".stfolder", ".git"]);
 var PARA_FOLDERS = ["0-Inbox", "1-Projects", "2-Areas", "3-Resources", "4-Archives"];
+var ATTACHMENT_MAX_BYTES = 20 * 1024 * 1024;
+var ATTACHMENT_READ_MAX_BYTES = 10 * 1024 * 1024;
+var ATTACHMENT_EXT = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/gif": "gif",
+  "image/webp": "webp",
+  "image/svg+xml": "svg"
+};
 var VaultError = class extends Error {
   constructor(code, message, details) {
     super(message);
@@ -139791,6 +139964,23 @@ function normalizeVaultPath(input) {
   if (!rel.toLowerCase().endsWith(".md")) throw new VaultError("not_markdown", "\u53EA\u652F\u6301 Markdown (.md) \u6587\u4EF6");
   return rel;
 }
+function normalizeAttachmentPath(input) {
+  if (typeof input !== "string") throw new VaultError("invalid_path", "\u8DEF\u5F84\u5FC5\u987B\u662F\u5B57\u7B26\u4E32");
+  let cleaned = input.replace(/\\/g, "/").trim();
+  if (cleaned.startsWith("/")) cleaned = cleaned.slice(1);
+  const segments = [];
+  for (const segment of cleaned.split("/")) {
+    if (segment === "" || segment === ".") continue;
+    if (segment === "..") throw new VaultError("path_escape", "\u4E0D\u5141\u8BB8 .. \u8DEF\u5F84\u6BB5");
+    segments.push(segment);
+  }
+  if (segments.length === 0) throw new VaultError("invalid_path", "\u8DEF\u5F84\u4E0D\u80FD\u4E3A\u7A7A");
+  const rel = segments.join("/");
+  if (rel.split("/").some((s) => s.startsWith(".") && s !== ".")) {
+    throw new VaultError("excluded_path", "\u9690\u85CF\u8DEF\u5F84\u4E0D\u652F\u6301");
+  }
+  return rel;
+}
 async function safeResolve(root, rel) {
   const realRoot = await realpath(path2.resolve(root)).catch(() => path2.resolve(root));
   const target = path2.resolve(realRoot, rel);
@@ -139811,7 +140001,7 @@ async function safeResolve(root, rel) {
   return target;
 }
 async function walkVault(root, dir = "", out = []) {
-  const entries = await readdir3(path2.join(root, dir), { withFileTypes: true }).catch(() => []);
+  const entries = await readdir4(path2.join(root, dir), { withFileTypes: true }).catch(() => []);
   for (const entry of entries) {
     if (entry.name.startsWith(".") || EXCLUDED_DIRS.has(entry.name)) continue;
     const rel = dir === "" ? entry.name : `${dir}/${entry.name}`;
@@ -139889,7 +140079,7 @@ async function indexFile(root, rel, previous) {
   const absolute = path2.join(root, rel);
   const info3 = await lstat(absolute);
   if (previous && previous.mtimeMs === info3.mtimeMs && previous.size === info3.size) return null;
-  const text2 = await readFile6(absolute, "utf8");
+  const text2 = await readFile7(absolute, "utf8");
   return recordOf(rel, text2, info3.mtimeMs, info3.size);
 }
 function recordOf(rel, text2, mtimeMs, size) {
@@ -140027,9 +140217,75 @@ var Vault = class {
     }
     return results;
   }
+  // ------------------------------------------------------------------
+  // Attachments (plan §3.3: magic-byte-checked images under attachments/)
+  // ------------------------------------------------------------------
+  /**
+   * Store one image attachment. The bytes are validated by magic number
+   * (never by the claimed name), the name is sanitized and de-duplicated
+   * inside the target dir, and the write is atomic. Returns the vault path
+   * that a note should reference.
+   */
+  async writeAttachment(bytes, { name: name2, dir } = {}) {
+    const buffer = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes);
+    const mime = sniffImageType(buffer);
+    if (!mime) throw new VaultError("invalid_attachment", "\u4EC5\u652F\u6301 png/jpg/gif/webp/svg \u56FE\u7247\u9644\u4EF6");
+    if (buffer.length > ATTACHMENT_MAX_BYTES) throw new VaultError("too_large", "\u9644\u4EF6\u8D85\u8FC7 20 MB \u4E0A\u9650");
+    const ext = ATTACHMENT_EXT[mime];
+    let stem = path2.basename(String(name2 ?? "Pasted image")).replace(/[/\\]/g, " ").replace(/\.{2,}/g, " ").replace(/^\.+/, "").replace(/[^\w\u4e00-\u9fff .()-]+/g, " ").trim().slice(0, 80) || "image";
+    stem = stem.replace(new RegExp(`\\.${ext}$`, "i"), "");
+    const targetDir = String(dir ?? "attachments").replace(/^\/+/, "").replace(/\/+$/, "");
+    const base = await safeResolveDir(this.root, targetDir);
+    await mkdir7(base, { recursive: true });
+    let target = path2.join(base, `${stem}.${ext}`);
+    for (let attempt = 1; existsSync(target); attempt += 1) {
+      target = path2.join(base, `${stem}-${attempt}.${ext}`);
+    }
+    const temp = `${target}.tmp-${process.pid}`;
+    try {
+      await writeFile7(temp, buffer);
+      await rename6(temp, target);
+    } catch (error) {
+      await rm8(temp, { force: true }).catch(() => {
+      });
+      throw new VaultError("write_failed", `\u9644\u4EF6\u5199\u5165\u5931\u8D25\uFF1A${error.message}`);
+    }
+    const rel = targetDir === "" ? path2.basename(target) : `${targetDir}/${path2.basename(target)}`;
+    return { path: rel, mime, bytes: buffer.length };
+  }
+  /**
+   * Read one attachment as an <img>-ready data URL. Path-safety applies
+   * (symlinks/escapes rejected) and only actual images are served; the read
+   * cap keeps a stray huge file from flooding the renderer.
+   */
+  async readAttachment(rel) {
+    const normalized = normalizeAttachmentPath(rel);
+    const absolute = await safeResolve(this.root, normalized);
+    const info3 = await lstat(absolute).catch(() => null);
+    if (!info3?.isFile()) throw new VaultError("not_found", `\u9644\u4EF6\u4E0D\u5B58\u5728\uFF1A${normalized}`);
+    if (info3.size > ATTACHMENT_READ_MAX_BYTES) throw new VaultError("too_large", `\u9644\u4EF6\u8FC7\u5927\uFF08${(info3.size / 1024 / 1024).toFixed(1)} MB\uFF09\uFF0C\u4E0D\u652F\u6301\u5185\u8054\u663E\u793A`);
+    const bytes = await readFile7(absolute).catch(() => null);
+    if (bytes === null) throw new VaultError("not_found", `\u9644\u4EF6\u4E0D\u5B58\u5728\uFF1A${normalized}`);
+    const mime = sniffImageType(bytes);
+    if (!mime) throw new VaultError("invalid_attachment", `\u4E0D\u662F\u53EF\u663E\u793A\u7684\u56FE\u7247\uFF1A${normalized}`);
+    return { path: normalized, mime, dataUrl: `data:${mime};base64,${bytes.toString("base64")}` };
+  }
   async readRaw(rel) {
     const absolute = await safeResolve(this.root, rel);
-    return readFile6(absolute, "utf8");
+    return readFile7(absolute, "utf8");
+  }
+  /**
+   * On-disk stamps for one note without shipping its content: the external
+   * change watcher polls this and compares the sha against the open tab's.
+   */
+  async statOf(rel) {
+    const normalized = normalizeVaultPath(rel);
+    const absolute = await safeResolve(this.root, normalized);
+    const info3 = await lstat(absolute).catch(() => null);
+    if (!info3?.isFile()) return null;
+    const text2 = await readFile7(absolute, "utf8").catch(() => null);
+    if (text2 === null) return null;
+    return { sha: shaOf(text2), mtimeMs: info3.mtimeMs, size: info3.size };
   }
   async read(rel) {
     const normalized = normalizeVaultPath(rel);
@@ -140058,7 +140314,7 @@ var Vault = class {
     if (typeof content !== "string") throw new VaultError("invalid_content", "\u5185\u5BB9\u5FC5\u987B\u662F\u5B57\u7B26\u4E32");
     if (content.length > 2e6) throw new VaultError("too_large", "\u7B14\u8BB0\u5185\u5BB9\u8D85\u8FC7 2 MB \u4E0A\u9650");
     const absolute = await safeResolve(this.root, normalized);
-    const existing = await readFile6(absolute, "utf8").catch(() => null);
+    const existing = await readFile7(absolute, "utf8").catch(() => null);
     if (existing !== null) {
       const currentSha = shaOf(existing);
       if (expectedSha !== void 0 && expectedSha !== currentSha) {
@@ -140068,10 +140324,10 @@ var Vault = class {
     } else if (expectedSha !== void 0) {
       return { conflict: true, path: normalized, currentSha: null, currentExcerpt: "" };
     }
-    await mkdir6(path2.dirname(absolute), { recursive: true });
+    await mkdir7(path2.dirname(absolute), { recursive: true });
     const temp = `${absolute}.tmp-${process.pid}-${Date.now().toString(36)}`;
-    await writeFile6(temp, content, "utf8");
-    await rename5(temp, absolute);
+    await writeFile7(temp, content, "utf8");
+    await rename6(temp, absolute);
     const info3 = await lstat(absolute);
     const record = recordOf(normalized, content, info3.mtimeMs, info3.size);
     const cache = this.cache();
@@ -140185,7 +140441,7 @@ var Vault = class {
     const rel = normalizeVaultDir(dir);
     await safeResolveDir(this.root, rel);
     const full = path2.join(this.root, rel);
-    const entries = await readdir3(full, { withFileTypes: true }).catch((error) => {
+    const entries = await readdir4(full, { withFileTypes: true }).catch((error) => {
       if (error?.code === "ENOENT") throw new VaultError("not_found", `\u76EE\u5F55\u4E0D\u5B58\u5728\uFF1A${rel || "/"}`);
       throw new VaultError("list_failed", `\u5217\u76EE\u5F55\u5931\u8D25\uFF1A${error.message}`);
     });
@@ -140234,7 +140490,7 @@ created: ${created}
     const rel = normalizeVaultDir(dir);
     if (rel === "") throw new VaultError("invalid_path", "\u76EE\u5F55\u540D\u4E0D\u80FD\u4E3A\u7A7A");
     await safeResolveDir(this.root, rel);
-    await mkdir6(path2.join(this.root, rel), { recursive: false }).catch((error) => {
+    await mkdir7(path2.join(this.root, rel), { recursive: false }).catch((error) => {
       if (error?.code === "EEXIST") throw new VaultError("exists", `\u76EE\u5F55\u5DF2\u5B58\u5728\uFF1A${rel}`);
       if (error?.code === "ENOENT") throw new VaultError("not_found", `\u7236\u76EE\u5F55\u4E0D\u5B58\u5728\uFF1A${rel}`);
       throw error;
@@ -140260,15 +140516,15 @@ created: ${created}
       if (error instanceof VaultError) throw error;
       if (error?.code !== "ENOENT") throw error;
     });
-    await mkdir6(path2.dirname(toAbs), { recursive: true });
-    await rename5(fromAbs, toAbs);
+    await mkdir7(path2.dirname(toAbs), { recursive: true });
+    await rename6(fromAbs, toAbs);
     const cache = this.cache();
     let updatedLinks = 0;
     if (cache) {
       const record = cache.files[fromRel];
       if (record) {
         delete cache.files[fromRel];
-        const text2 = await readFile6(toAbs, "utf8");
+        const text2 = await readFile7(toAbs, "utf8");
         cache.files[toRel] = recordOf(toRel, text2, record.mtimeMs, record.size);
       }
     }
@@ -140299,7 +140555,7 @@ created: ${created}
         } catch (error) {
           await this.restoreBackup(backupDir, sources).catch(() => {
           });
-          await rename5(toAbs, fromAbs).catch(() => {
+          await rename6(toAbs, fromAbs).catch(() => {
           });
           throw error;
         }
@@ -140374,8 +140630,8 @@ created: ${created}
       if (error instanceof VaultError) throw error;
       if (error?.code !== "ENOENT") throw error;
     });
-    await mkdir6(path2.dirname(toAbs), { recursive: true });
-    await rename5(fromAbs, toAbs);
+    await mkdir7(path2.dirname(toAbs), { recursive: true });
+    await rename6(fromAbs, toAbs);
     const cache = this.cache();
     if (cache) {
       const prefix = `${fromRel}/`;
@@ -140402,9 +140658,9 @@ created: ${created}
     const sourceAbs = isNote ? await safeResolve(this.root, rel) : await safeResolveDir(this.root, rel);
     const sourcePath = path2.join(this.root, rel);
     const trashRoot = path2.join(this.root, ".trash");
-    await mkdir6(trashRoot, { recursive: true });
+    await mkdir7(trashRoot, { recursive: true });
     const staging = path2.join(trashRoot, `.staging-${Date.now().toString(36)}-${randomUUID2()}`);
-    await mkdir6(staging, { recursive: true });
+    await mkdir7(staging, { recursive: true });
     const { sizeBytes, fileCount } = isNote ? await statsOf(sourceAbs) : await statsOfDir(sourcePath);
     const title = isNote ? this.cache()?.files?.[rel]?.title ?? path2.basename(rel, ".md") : path2.basename(rel);
     const meta = {
@@ -140420,15 +140676,15 @@ created: ${created}
     const payloadPath = path2.join(staging, "payload");
     let moved = false;
     try {
-      await rename5(sourcePath, payloadPath);
+      await rename6(sourcePath, payloadPath);
       moved = true;
-      await writeFile6(path2.join(staging, "trash-meta.json"), JSON.stringify(meta, null, 2), "utf8");
+      await writeFile7(path2.join(staging, "trash-meta.json"), JSON.stringify(meta, null, 2), "utf8");
       const commitPath = path2.join(trashRoot, meta.id);
-      await rename5(staging, commitPath);
+      await rename6(staging, commitPath);
     } catch (error) {
-      if (moved) await rename5(payloadPath, sourcePath).catch(() => {
+      if (moved) await rename6(payloadPath, sourcePath).catch(() => {
       });
-      await rm7(staging, { recursive: true, force: true }).catch(() => {
+      await rm8(staging, { recursive: true, force: true }).catch(() => {
       });
       throw error;
     }
@@ -140446,23 +140702,23 @@ created: ${created}
   /** Best-effort pre-rewrite backup of the files a rename will touch. */
   async trashBackup(rels, tag) {
     const backupDir = path2.join(this.root, ".trash", `.rewrite-backup-${tag}`);
-    await mkdir6(backupDir, { recursive: true });
+    await mkdir7(backupDir, { recursive: true });
     for (const rel of rels) {
       const text2 = await this.readRaw(rel).catch(() => null);
       if (text2 === null) continue;
       const target = path2.join(backupDir, rel.replaceAll("/", "__"));
-      await writeFile6(target, text2, "utf8");
+      await writeFile7(target, text2, "utf8");
     }
     return { dir: backupDir, rels };
   }
   async restoreBackup(backup, rels) {
     for (const rel of rels) {
       const file = path2.join(backup.dir, rel.replaceAll("/", "__"));
-      const text2 = await readFile6(file, "utf8").catch(() => null);
+      const text2 = await readFile7(file, "utf8").catch(() => null);
       if (text2 === null) continue;
       await this.write(rel, text2, { expectedSha: void 0 });
     }
-    await rm7(backup.dir, { recursive: true, force: true }).catch(() => {
+    await rm8(backup.dir, { recursive: true, force: true }).catch(() => {
     });
   }
 };
@@ -140512,7 +140768,7 @@ async function statsOfDir(absolute) {
   let sizeBytes = 0;
   let fileCount = 0;
   const walk = async (dir) => {
-    for (const entry of await readdir3(dir, { withFileTypes: true })) {
+    for (const entry of await readdir4(dir, { withFileTypes: true })) {
       const full = path2.join(dir, entry.name);
       if (entry.isDirectory()) await walk(full);
       else if (entry.isFile()) {
@@ -140540,9 +140796,9 @@ function excerptOf2(text2, limit = 160) {
   return flat.length > limit ? `${flat.slice(0, limit)}\u2026` : flat;
 }
 async function ensureDefaultVault(root) {
-  await mkdir6(root, { recursive: true });
+  await mkdir7(root, { recursive: true });
   for (const folder of PARA_FOLDERS) {
-    await mkdir6(path2.join(root, folder), { recursive: true });
+    await mkdir7(path2.join(root, folder), { recursive: true });
   }
 }
 
@@ -140813,166 +141069,6 @@ ${results.map(formatEntryLine).join("\n")}`;
 
 // src/host/index.js
 init_sanitize();
-
-// src/host/icons.js
-import { mkdir as mkdir7, readFile as readFile7, readdir as readdir4, rename as rename6, rm as rm8, writeFile as writeFile7 } from "node:fs/promises";
-import { join as join4 } from "node:path";
-var MAX_ICON_BYTES = 64 * 1024;
-var MAX_HTML_BYTES = 256 * 1024;
-var ICON_TIMEOUT_MS = 8e3;
-var RETRY_AFTER_MS = 7 * 24 * 60 * 60 * 1e3;
-function sniffImageType(bytes) {
-  if (bytes.length >= 8 && bytes[0] === 137 && bytes[1] === 80 && bytes[2] === 78 && bytes[3] === 71) return "image/png";
-  if (bytes.length >= 6 && bytes[0] === 71 && bytes[1] === 73 && bytes[2] === 70) return "image/gif";
-  if (bytes.length >= 3 && bytes[0] === 255 && bytes[1] === 216) return "image/jpeg";
-  if (bytes.length >= 4 && bytes[0] === 0 && bytes[1] === 0 && bytes[2] === 1) return "image/x-icon";
-  if (bytes.length >= 12 && bytes.toString("latin1", 0, 4) === "RIFF" && bytes.toString("latin1", 8, 12) === "WEBP") return "image/webp";
-  const head = bytes.toString("latin1", 0, Math.min(bytes.length, 512)).trimStart();
-  if (head.startsWith("<svg") || head.startsWith("<?xml")) return "image/svg+xml";
-  return void 0;
-}
-function absoluteOf(href, base) {
-  try {
-    const url = new URL(String(href), base);
-    return (url.protocol === "http:" || url.protocol === "https:") && !url.username && !url.password ? url.href : void 0;
-  } catch {
-    return void 0;
-  }
-}
-function siteOriginOf(sub, parsed) {
-  const candidates = [
-    typeof parsed?.link === "string" ? parsed.link : void 0,
-    typeof sub?.url === "string" ? sub.url : void 0
-  ];
-  for (const candidate of candidates) {
-    try {
-      const url = new URL(candidate);
-      if ((url.protocol === "http:" || url.protocol === "https:") && !url.username && !url.password) return url.origin;
-    } catch {
-    }
-  }
-  return void 0;
-}
-function iconLinkOfHtml(html, baseUrl) {
-  const pattern = /<link\b[^>]*>/gi;
-  let match;
-  while ((match = pattern.exec(String(html ?? ""))) !== null) {
-    const tag = match[0];
-    if (!/\brel\s*=\s*["'][^"']*icon[^"']*["']/i.test(tag)) continue;
-    const href = /\bhref\s*=\s*["']([^"']+)["']/i.exec(tag)?.[1];
-    if (href) {
-      const absolute = absoluteOf(href, baseUrl);
-      if (absolute) return absolute;
-    }
-  }
-  return void 0;
-}
-async function fetchIconDataUrl(fetcher, url) {
-  try {
-    const response = await fetcher.fetch(url, {
-      connectTimeoutMs: ICON_TIMEOUT_MS,
-      totalTimeoutMs: ICON_TIMEOUT_MS,
-      maxBodyBytes: MAX_ICON_BYTES
-    });
-    if (response.status >= 400) return void 0;
-    const body = response.body;
-    if (!body || body.length === 0 || body.length > MAX_ICON_BYTES) return void 0;
-    const declared = String(response.headers["content-type"] ?? "").split(";")[0].trim().toLowerCase();
-    const mime = declared.startsWith("image/") ? declared : sniffImageType(body);
-    if (!mime) return void 0;
-    return `data:${mime};base64,${Buffer.from(body).toString("base64")}`;
-  } catch {
-    return void 0;
-  }
-}
-var FeedIconStore = class {
-  constructor(dir, logger) {
-    this.dir = dir;
-    this.logger = logger;
-    this.cache = null;
-    this.writing = Promise.resolve();
-  }
-  /** All known icons as { feedId: dataUrl } (cached after the first read). */
-  async all() {
-    if (this.cache !== null) return this.cache;
-    const map = {};
-    try {
-      for (const name2 of await readdir4(this.dir)) {
-        if (name2.startsWith(".")) continue;
-        const dataUrl = (await readFile7(join4(this.dir, name2), "utf8")).trim();
-        if (dataUrl.startsWith("data:image/")) map[decodeURIComponent(name2)] = dataUrl;
-      }
-    } catch {
-    }
-    this.cache = map;
-    return map;
-  }
-  save(feedId, dataUrl) {
-    if (this.cache === null) this.cache = {};
-    this.cache[feedId] = dataUrl;
-    const target = join4(this.dir, encodeURIComponent(feedId));
-    this.writing = this.writing.catch(() => {
-    }).then(async () => {
-      const temp = `${target}.${process.pid}.tmp`;
-      try {
-        await mkdir7(this.dir, { recursive: true });
-        await writeFile7(temp, dataUrl, { encoding: "utf8", mode: 384 });
-        await rename6(temp, target);
-      } catch (error) {
-        await rm8(temp, { force: true }).catch(() => {
-        });
-        this.logger?.warn?.(`droplets: cannot store icon for ${feedId}: ${String(error)}`);
-      }
-    });
-    return this.writing;
-  }
-  remove(feedId) {
-    if (this.cache !== null) delete this.cache[feedId];
-    return rm8(join4(this.dir, encodeURIComponent(feedId)), { force: true }).catch(() => {
-    });
-  }
-  /** Backward compatibility: callers may check existence before saving. */
-  async has(feedId) {
-    return (await this.all())[feedId] !== void 0;
-  }
-};
-async function ensureFeedIcon(sub, parsed, fetcher, store) {
-  if (!sub?.id) return void 0;
-  if (await store.has(sub.id)) return void 0;
-  if (typeof sub.iconErrorAt === "number" && Date.now() - sub.iconErrorAt < RETRY_AFTER_MS) return void 0;
-  const origin = siteOriginOf(sub, parsed);
-  const candidates = [];
-  if (origin) candidates.push(origin + "/favicon.ico");
-  if (origin) {
-    try {
-      const response = await fetcher.fetch(origin + "/", {
-        connectTimeoutMs: ICON_TIMEOUT_MS,
-        totalTimeoutMs: ICON_TIMEOUT_MS,
-        maxBodyBytes: MAX_HTML_BYTES
-      });
-      if (response.status < 400 && typeof response.body?.toString === "function") {
-        const html = response.body.toString("utf8");
-        const link = iconLinkOfHtml(html, origin + "/");
-        if (link) candidates.push(link);
-      }
-    } catch {
-    }
-  }
-  for (const declared of parsed?.iconCandidates ?? []) {
-    const absolute = absoluteOf(declared, typeof sub.url === "string" ? sub.url : void 0);
-    if (absolute) candidates.push(absolute);
-  }
-  for (const candidate of candidates) {
-    const dataUrl = await fetchIconDataUrl(fetcher, candidate);
-    if (dataUrl) {
-      await store.save(sub.id, dataUrl);
-      sub.iconErrorAt = void 0;
-      return "stored";
-    }
-  }
-  sub.iconErrorAt = Date.now();
-  return "failed";
-}
 
 // src/host/translate.js
 import { mkdir as mkdir8, readFile as readFile8, rename as rename7, rm as rm9, writeFile as writeFile8 } from "node:fs/promises";
@@ -142036,6 +142132,14 @@ var DropletsService = class extends TypertRemoteService {
     const p = typeof request === "string" ? request : request?.path;
     return this.vaultService().read(p);
   }
+  /** On-disk stamps for one note (external change watcher). */
+  async vaultStat(request) {
+    await this.ready;
+    const p = typeof request === "string" ? request : request?.path;
+    if (typeof p !== "string" || p === "") throw new Error("\u65E0\u6548\u8DEF\u5F84");
+    const stat7 = await this.vaultService().statOf(p);
+    return { stat: stat7 };
+  }
   /** Lazy directory listing for the tree panel (plan §7 vaultList). */
   async vaultList(request) {
     await this.ready;
@@ -142130,7 +142234,7 @@ var DropletsService = class extends TypertRemoteService {
         id: name2,
         title: meta?.title ?? name2,
         deletedAt: meta?.deletedAt,
-        entryKind: meta?.entryKind ?? (existsSync(join6(dir, "payload")) && statSync(join6(dir, "payload")).isDirectory() ? "directory" : "file"),
+        entryKind: meta?.entryKind ?? (existsSync2(join6(dir, "payload")) && statSync(join6(dir, "payload")).isDirectory() ? "directory" : "file"),
         sizeBytes: meta?.sizeBytes,
         fileCount: meta?.fileCount
       });
@@ -142155,7 +142259,7 @@ var DropletsService = class extends TypertRemoteService {
     const rel = original.startsWith("vault/") ? original.slice("vault/".length).replace(/\/+$/, "") : "";
     if (rel === "") throw new Error("\u8BE5\u6761\u76EE\u7F3A\u5C11\u539F\u59CB\u8DEF\u5F84\u4FE1\u606F\uFF0C\u65E0\u6CD5\u81EA\u52A8\u6062\u590D");
     const target = join6(this.vaultRoot(), rel);
-    if (existsSync(target)) throw new Error(`\u76EE\u6807\u5DF2\u5B58\u5728\uFF0C\u65E0\u6CD5\u6062\u590D\uFF1A${rel}`);
+    if (existsSync2(target)) throw new Error(`\u76EE\u6807\u5DF2\u5B58\u5728\uFF0C\u65E0\u6CD5\u6062\u590D\uFF1A${rel}`);
     await mkdir9(path4.dirname(target), { recursive: true });
     await rename8(join6(trashDir, "payload"), target);
     await rm(trashDir, { recursive: true, force: true });
@@ -142220,6 +142324,80 @@ var DropletsService = class extends TypertRemoteService {
     await this.ready;
     const { path: rel, content, expectedSha, createOnly } = request ?? {};
     return this.vaultService().write(rel, content, { expectedSha, createOnly });
+  }
+  /** Store one image attachment (magic-byte validated, ≤20 MB). */
+  async vaultWriteAttachment(request) {
+    await this.ready;
+    await this.ensureVault();
+    const bytes = Buffer.from(String(request?.bytes ?? ""), "base64");
+    if (bytes.length === 0) throw new Error("\u9644\u4EF6\u5185\u5BB9\u4E3A\u7A7A");
+    return stripUndefined(await this.vaultService().writeAttachment(bytes, {
+      name: typeof request?.name === "string" ? request.name : void 0,
+      dir: typeof request?.dir === "string" ? request.dir : void 0
+    }));
+  }
+  /** Read one attachment as an <img>-ready data URL (path-safety applies). */
+  async vaultReadAttachment(request) {
+    await this.ready;
+    const rel = typeof request === "string" ? request : request?.path;
+    if (typeof rel !== "string" || rel === "") throw new Error("\u65E0\u6548\u9644\u4EF6\u8DEF\u5F84");
+    return stripUndefined(await this.vaultService().readAttachment(rel));
+  }
+  /**
+   * 信息流/收件箱 → 知识库（plan 差异化 #3）: store one article as a new
+   * note. Feed entries convert their cached HTML to Markdown; inbox items
+   * already carry Markdown. The note keeps native frontmatter plus a
+   * `source` line pointing back at the origin URL, and lands in 0-Inbox
+   * (PARA) unless a dir is given. Name collisions get -2, -3 … suffixes.
+   */
+  async saveAsNote(request) {
+    await this.ready;
+    await this.ensureVault();
+    const source = request?.source === "inbox" ? "inbox" : "feed";
+    const dir = typeof request?.dir === "string" && request.dir.trim() !== "" ? request.dir.trim() : "0-Inbox";
+    let title = String(request?.title ?? "").trim();
+    let markdown = "";
+    let sourceUrl;
+    if (source === "feed") {
+      const entry = this.findEntry(request?.key);
+      if (!entry) throw new Error(`droplets: unknown entry ${request?.key}`);
+      title = title || entry.title || "\u672A\u547D\u540D\u6587\u7AE0";
+      markdown = htmlToMarkdown(String(entry.html ?? ""));
+      if (markdown.trim() === "") markdown = String(entry.summary ?? "").trim() || "\uFF08\u6B63\u6587\u7F3A\u5931\uFF0C\u5B8C\u6574\u5185\u5BB9\u8BF7\u67E5\u770B\u539F\u6587\u3002\uFF09";
+      sourceUrl = entry.url;
+    } else {
+      const existing = await this.inbox.get(String(request?.id ?? ""));
+      if (!existing) throw new Error("\u6536\u4EF6\u7BB1\u91CC\u6CA1\u6709\u8FD9\u4E00\u6761");
+      title = title || existing.meta?.title || "\u672A\u547D\u540D\u6761\u76EE";
+      markdown = String(existing.content ?? "").replace(/^---\n[\s\S]*?\n---\n?/, "").trim();
+      if (markdown === "") markdown = "\uFF08\u6682\u65E0\u6B63\u6587\u3002\uFF09";
+      sourceUrl = existing.meta?.source?.url ?? void 0;
+    }
+    const body = markdown.trim();
+    const vault = this.vaultService();
+    for (let attempt = 0; ; attempt += 1) {
+      const candidate = attempt === 0 ? title : `${title}-${attempt + 1}`;
+      const template = [
+        "---",
+        `id: ${randomUUID3()}`,
+        `title: ${title}`,
+        `created: ${(/* @__PURE__ */ new Date()).toISOString()}`,
+        ...sourceUrl ? [`source: ${sourceUrl}`] : [],
+        "---",
+        "",
+        `# ${title}`,
+        "",
+        body,
+        ""
+      ].join("\n");
+      try {
+        const result = await vault.createNote(dir, candidate, { template });
+        return { path: result.path, title: result.title };
+      } catch (error) {
+        if (error?.code === "exists" && attempt < 30) continue;
+        throw error;
+      }
+    }
   }
   // ------------------------------------------------------------------
   // Settings & storage
@@ -142556,6 +142734,9 @@ var DropletsService = class extends TypertRemoteService {
     "vaultCopyDirTo",
     "vaultReveal",
     "vaultCopyPath",
+    "vaultWriteAttachment",
+    "vaultReadAttachment",
+    "vaultStat",
     // settings / companion
     "getSettings",
     "saveSettings",
@@ -142565,7 +142746,8 @@ var DropletsService = class extends TypertRemoteService {
     "openPath",
     "clearData",
     "setReadingContext",
-    "prepareChat"
+    "prepareChat",
+    "saveAsNote"
   ];
   const prototype = DropletsService.prototype;
   for (const method of names) {

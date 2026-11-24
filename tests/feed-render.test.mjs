@@ -91,6 +91,7 @@ test('feed renders favicon badges and the translation toggle end-to-end', { skip
 
   // --- fake api: one feed with a favicon, one entry, one translation ---
   const calls = { translateEntry: 0, feedIcons: 0 };
+  const saveAsNoteCalls = [];
   const ICON = 'data:image/png;base64,iVBORw0KGgo=';
   const TRANSLATION = {
     title: '中文标题',
@@ -113,6 +114,7 @@ test('feed renders favicon badges and the translation toggle end-to-end', { skip
       hasTranslation: false,
     });
     if (name === 'translateEntry') return async () => { calls.translateEntry += 1; return { translation: TRANSLATION, cached: false }; };
+    if (name === 'saveAsNote') return async (params) => { saveAsNoteCalls.push(params); return { path: '0-Inbox/English post.md', title: 'English post' }; };
     if (name === 'getSettings') return async () => ({ settings: {} });
     if (name === 'refreshStatus') return async () => ({ running: false, total: 0 });
     if (name === 'listChannels') return async () => ({ channels: [] });
@@ -162,6 +164,17 @@ test('feed renders favicon badges and the translation toggle end-to-end', { skip
   assert.equal(calls.translateEntry, 1, 'toggle back hits the cache, no new request');
   assert.ok(container.innerHTML.includes('Hello original body'), 'original body restored');
   assert.ok(!container.querySelector('.dpl-translation-notice'), 'translation notice gone');
+
+  // 存为笔记 (cross-space hand-off): the preview exposes the action and
+  // invokes saveAsNote; the panel routes the result to the vault space.
+  const saveAsNoteButton = [...container.querySelectorAll('.dpl-round-btn')].find((b) => (b.dataset.tip ?? b.title) === '存为笔记');
+  assert.ok(saveAsNoteButton, '存为笔记 button present in the feed preview');
+  saveAsNoteButton.click();
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  const saveCall = saveAsNoteCalls[0];
+  assert.ok(saveCall, 'saveAsNote RPC issued');
+  assert.equal(saveCall.source, 'feed');
+  assert.ok(saveCall.key);
 
   root.unmount();
   container.remove();

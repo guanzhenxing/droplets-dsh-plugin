@@ -22,6 +22,9 @@ function inline(text) {
   });
   out = out
     .replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g, (_, alt, src) => '<img src="' + escapeAttr(src) + '" alt="' + escapeAttr(alt) + '" loading="lazy" referrerpolicy="no-referrer">')
+    // Obsidian-style image embeds ![[name.png]] — rendered as images whose
+    // src stays the raw reference; vault views resolve them asynchronously.
+    .replace(/!\[\[([^\]\n|]+)(?:\|[^\]\n]*)?\]\]/g, (_, name) => '<img src="' + escapeAttr(String(name).trim()) + '" alt="' + escapeAttr(String(name).trim()) + '" loading="lazy" referrerpolicy="no-referrer">')
     .replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g, (_, label, href) => {
       const safe = /^(?:https?:|mailto:|\/|#|dpl-note:)/i.test(href) ? href : '#';
       return '<a href="' + escapeAttr(safe) + '" target="_blank" rel="noreferrer">' + label + '</a>';

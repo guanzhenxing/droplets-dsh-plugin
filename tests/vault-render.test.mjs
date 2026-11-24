@@ -120,9 +120,11 @@ test('vault renders tree/tabs/read + native menus + graph', { skip: !existsSync(
     if (name === 'vaultStatus') return async () => ({ files: 2, builtAt: Date.now(), root: '/tmp/vault' });
     if (name === 'vaultRead') return async (req) => ({
       path: typeof req === 'string' ? req : req?.path,
-      content: '# 你好\n\n正文一段。\n\n## 第二节\n\n- 列表\n',
-      sha: 'a'.repeat(64), title: '你好', tags: [], wordCount: 10,
+      content: noteContent,
+      sha: noteSha, title: '你好', tags: [], wordCount: 10,
     });
+    // External-change watcher: report the current disk sha.
+    if (name === 'vaultStat') return async () => ({ stat: { sha: noteSha, mtimeMs: Date.now(), size: 100 } });
     if (name === 'vaultBacklinks') return async () => ({ backend: 'local', backlinks: [{ path: 'other.md', title: 'Other' }], unlinked: [] });
     if (name === 'vaultTags') return async () => ({ backend: 'local', tags: [{ tag: 'ai', count: 3 }] });
     if (name === 'vaultSearch') return async () => ({ backend: 'local', results: [], total: 0 });
@@ -134,9 +136,23 @@ test('vault renders tree/tabs/read + native menus + graph', { skip: !existsSync(
     if (name === 'listFeeds') return async () => ({ feeds: [] });
     if (name === 'inboxList') return async () => ({ items: [], counts: { byStatus: {}, byTag: {}, total: 0 }, pendingIds: [] });
     if (name === 'getSettings') return async () => ({ settings: {} });
+    if (name === 'vaultReadAttachment') return async (req) => {
+      const p = typeof req === 'string' ? req : req?.path;
+      if (p === 'attachments/pic.png') return { path: p, mime: 'image/png', dataUrl: 'data:image/png;base64,iVBORw0KGgo=' };
+      throw new Error('附件不存在：' + p);
+    };
+    if (name === 'vaultWrite') return async (req) => {
+      noteContent = req?.content ?? noteContent;
+      noteSha = 'c'.repeat(64);
+      return { conflict: false, path: req?.path, sha: noteSha, title: '你好', created: false };
+    };
     return async () => ({});
   } });
 
+  // Mutable on-disk state the vault stubs share: the external-change test
+  // flips these to simulate a foreign write landing between polls.
+  let noteSha = 'a'.repeat(64);
+  let noteContent = '# 你好\n\n正文一段。\n\n## 第二节\n\n- 列表\n';
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = reactDomClient.createRoot(container);
@@ -176,8 +192,30 @@ test('vault renders tree/tabs/read + native menus + graph', { skip: !existsSync(
   assert.ok(after.includes('正文一段'), 'note body rendered');
   assert.ok(after.includes('dpl-aux-rail'), 'aux rail rendered over the reader');
 
+  // ---- 附件图片渲染: local ![](...) resolves through vaultReadAttachment ----
+  noteContent = '# 你好\n\n本地图片：\n\n![](attachments/pic.png)\n';
+  noteSha = 'd'.repeat(64);
+  window.dispatchEvent(new window.Event('focus'));
+  await new Promise((resolve) => setTimeout(resolve, 400));
+  const localImg = [...container.querySelectorAll('.dpl-vault2-body img')].find((img) => img.src.startsWith('data:image/png;base64,'));
+  assert.ok(localImg, 'local attachment rendered as a data-URL image in the read view');
+  noteContent = '# 你好\n\n正文一段。\n\n## 第二节\n\n- 列表\n';
+  noteSha = 'a'.repeat(64);
+
   // Breadcrumb renders the path segments.
   assert.ok(container.querySelector('.dpl-vault2-crumb'), 'breadcrumb bar renders');
+
+  // ---- 外部变更感知: a foreign write with no local draft reloads silently ----
+  // (The watcher polls on focus + every 5 s; dispatching focus pokes it now.)
+  noteSha = 'b'.repeat(64);
+  noteContent = '# 你好\n\n外部改写后的正文。\n\n## 新小节\n';
+  window.dispatchEvent(new window.Event('focus'));
+  await new Promise((resolve) => setTimeout(resolve, 400));
+  assert.ok(container.innerHTML.includes('外部改写后的正文'), 'foreign write with no draft reloads the tab');
+
+  // ---- ⌘S smoke: the insurance keydown must not throw (flush path) ----
+  window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 's', metaKey: true, bubbles: true }));
+  await new Promise((resolve) => setTimeout(resolve, 120));
 
   // ---- 自动定位 button: clicking must produce visible feedback ----
   // (It used to only flip an internal flag; the statusbar notice + reveal

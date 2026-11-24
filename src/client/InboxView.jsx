@@ -66,7 +66,7 @@ function classifyShortBody(item, plainChars) {
   return 'short';
 }
 
-export function InboxView({ api, onMaterial }) {
+export function InboxView({ api, onMaterial, onOpenVaultNote }) {
   const [filter, setFilter] = useState({});
   const [selectedId, setSelectedId] = useState(null);
   const [data, setData] = useState({ items: [], counts: { byStatus: {}, byTag: {}, total: 0 }, pendingIds: [] });
@@ -164,7 +164,7 @@ export function InboxView({ api, onMaterial }) {
           render: () => (
             <Reader
               api={api} selectedId={selectedId} items={data.items}
-              onMaterial={onMaterial} onChanged={load}
+              onMaterial={onMaterial} onChanged={load} onOpenVaultNote={onOpenVaultNote}
             />
           ),
         },
@@ -541,7 +541,7 @@ function EpubPane({ doc, setDoc }) {
 }
 
 /** 阅读器：Markdown 渲染 + 头部动作 + fetch_failed 占位 + 右缘辅助轨道 + 处理完成弹层。 */
-function Reader({ api, selectedId, onMaterial, onChanged }) {
+function Reader({ api, selectedId, onMaterial, onChanged, onOpenVaultNote }) {
   const [detail, setDetail] = useState(null); // { item, content }
   const [detailLoading, setDetailLoading] = useState(false);
   const [doc, setDoc] = useState(null); // pdf/epub viewer state
@@ -676,6 +676,19 @@ function Reader({ api, selectedId, onMaterial, onChanged }) {
     }, { reveal: true });
   };
 
+  // 存为笔记 (plan 差异化 #3): the inbox body is already Markdown — drop it
+  // into the vault as a new note and open it there.
+  const [savingNote, setSavingNote] = useState(false);
+  const saveAsNote = async () => {
+    if (!item || savingNote) return;
+    setSavingNote(true);
+    try {
+      const result = await api.saveAsNote({ source: 'inbox', id: item.id, title: item.title });
+      onOpenVaultNote?.(result?.path);
+    } catch { /* surfaced through saveAsNote result-less failure: silent */ }
+    finally { setSavingNote(false); }
+  };
+
   let body;
   if (selectedId === null) {
     body = <div className="dpl-ib-readercenter" data-testid="reader-empty">在中间列表选择一条内容开始阅读</div>;
@@ -715,6 +728,12 @@ function Reader({ api, selectedId, onMaterial, onChanged }) {
               <ExternalLink size={15} />
             </button>
           ) : null}
+          <button
+            type="button" className="dpl-icon-btn dpl-ib-headbtn" title="存为笔记（知识库）" aria-label="存为笔记"
+            disabled={savingNote} onClick={() => void saveAsNote()} data-testid="save-as-note"
+          >
+            {savingNote ? <Loader2 size={15} className="dpl-spin" /> : <FilePlus2 size={15} />}
+          </button>
           <button
             type="button" className="dpl-btn dpl-primary-solid dpl-ib-donebtn" onClick={() => setShowDone(true)}
             data-tip="归档这条内容：保留到资料库或移入回收站" data-testid="done-button"

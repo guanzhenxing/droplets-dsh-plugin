@@ -44,22 +44,45 @@ class CheckboxWidget extends WidgetType {
 }
 
 class ImageWidget extends WidgetType {
-  constructor(src, alt) { super(); this.src = src; this.alt = alt; }
+  constructor(src, alt, loader) {
+    super();
+    this.src = src;
+    this.alt = alt;
+    this.loader = loader;
+  }
   eq(other) { return other.src === this.src && other.alt === this.alt; }
   toDOM() {
     const wrap = document.createElement('span');
     const img = document.createElement('img');
-    img.src = this.src;
     img.alt = this.alt ?? '';
     img.loading = 'lazy';
     img.referrerPolicy = 'no-referrer';
     img.style.maxWidth = '100%';
     img.style.borderRadius = '6px';
-    img.addEventListener('error', () => {
+    const fallback = () => {
       // Broken image: fall back to the raw text so nothing silently vanishes.
       wrap.textContent = `![${this.alt ?? ''}](${this.src})`;
-    });
-    wrap.appendChild(img);
+    };
+    img.addEventListener('error', fallback);
+    const show = (url) => {
+      if (!url) { fallback(); return; }
+      wrap.textContent = '';
+      img.src = url;
+      wrap.appendChild(img);
+    };
+    // The loader may answer synchronously (remote URL) or with a Promise
+    // (vault attachment fetched as a data URL); until it lands the raw
+    // markdown stays visible, so nothing flashes broken.
+    let resolved;
+    try { resolved = this.loader?.(this.src); } catch { resolved = null; }
+    if (typeof resolved === 'string') {
+      show(resolved);
+    } else if (resolved && typeof resolved.then === 'function') {
+      wrap.textContent = `![${this.alt ?? ''}](${this.src})`;
+      resolved.then(show).catch(fallback);
+    } else {
+      fallback();
+    }
     return wrap;
   }
 }
@@ -143,27 +166,28 @@ function checkboxDecorations(view) {
   return builder.finish();
 }
 
-/** [[wikilink]] and ![](image) line decorations (line-level regex pass). */
+/** [[wikilink]] and ![](image) line decorations (line-level regex pass).
+ *  Both markdown images `![](path)` and Obsidian embeds `![[name]]` render
+ *  through the ImageWidget; resolveImage may return a string (remote URL) or
+ *  a Promise (attachment fetched as a data URL). */
 function linkDecorations(view, resolveImage) {
   const builder = new RangeSetBuilder();
   const caretLine = view.state.doc.lineAt(view.state.selection.main.from).number;
   const text = view.state.doc;
   const patterns = [
-    { re: /!\[([^\]]*)\]\(([^)\s]+)\)/g, kind: 'image' },
+    { re: /!\[([^\]]*)\]\(([^)\s]+)\)/g, kind: 'image', src: (match) => match[2], alt: (match) => match[1] },
+    { re: /!\[\[([^\]\n|]+)(?:\|([^\]\n]*))?\]\]/g, kind: 'image', src: (match) => match[1], alt: (match) => match[2] },
     { re: /\[\[([^\]\n|]+)(?:\|([^\]\n]*))?\]\]/g, kind: 'wikilink' },
   ];
   for (let n = 1; n <= text.lines; n += 1) {
     if (n === caretLine) continue;
     const line = text.line(n);
-    for (const { re, kind } of patterns) {
+    for (const { re, kind, src, alt } of patterns) {
       re.lastIndex = 0;
       let match;
       while ((match = re.exec(line.text)) !== null) {
         if (kind === 'image') {
-          const resolved = resolveImage(match[2]);
-          if (resolved) {
-            builder.add(line.from + match.index, line.from + match.index + match[0].length, Decoration.replace({ widget: new ImageWidget(resolved, match[1]) }));
-          }
+          builder.add(line.from + match.index, line.from + match.index + match[0].length, Decoration.replace({ widget: new ImageWidget(src(match), alt?.(match) ?? '', resolveImage) }));
         } else {
           builder.add(
             line.from + match.index,
@@ -312,11 +336,13 @@ export function wikilinkCompletion(noteFiles) {
  * @param {'source'|'live'} options.mode
  * @param {boolean} options.lineNumbers
  * @param {boolean} options.wrap
- * @param {(relativePath: string) => string|null} options.resolveImage
+ * @param {(relativePath: string) => string|null|Promise<string|null>} options.resolveImage
+ * @param {(base64: string, name: string) => Promise<string|null>} options.pasteImage
+ *        pasting an image uploads it and returns the vault path to reference
  * @param {Array} options.extraExtensions
  * @returns {{ view: EditorView, setDoc(text): void, setMode(mode): void, setLineNumbers(on): void, setWrap(on): void, destroy(): void }}
  */
-export function createVaultEditor(parent, { doc = '', onChange, mode = 'live', lineNumbers: showLines = true, wrap = true, resolveImage, noteFiles = [], onWikilink, extraExtensions = [] } = {}) {
+export function createVaultEditor(parent, { doc = '', onChange, mode = 'live', lineNumbers: showLines = true, wrap = true, resolveImage, pasteImage, noteFiles = [], onWikilink, extraExtensions = [] } = {}) {
   const liveCompartment = new Compartment();
   const linesCompartment = new Compartment();
   const wrapCompartment = new Compartment();
@@ -330,6 +356,37 @@ export function createVaultEditor(parent, { doc = '', onChange, mode = 'live', l
     update(update) { update.view.__onWikilink = onWikilink; }
   });
 
+  // Image paste (plan P1): read the clipboard image as base64, hand it to
+  // the caller's uploader, then insert `![](vault-relative-path)` at the
+  // paste position once the upload lands.
+  const pasteHandler = typeof pasteImage === 'function'
+    ? EditorView.domEventHandlers({
+        paste(event, view) {
+          const items = [...(event.clipboardData?.items ?? [])];
+          const item = items.find((candidate) => candidate.type.startsWith('image/'));
+          const file = item?.getAsFile?.();
+          if (!item || !file) return false;
+          event.preventDefault();
+          const pos = view.state.selection.main.to;
+          const reader = new FileReader();
+          reader.onload = () => {
+            const base64 = String(reader.result ?? '').split(',')[1] ?? '';
+            void Promise.resolve(pasteImage(base64, file.name || 'Pasted image'))
+              .then((relPath) => {
+                if (!relPath) return;
+                const at = Math.min(pos, view.state.doc.length);
+                const lineText = view.state.doc.lineAt(at).text;
+                const lead = lineText.trim() === '' ? '' : '\n\n';
+                view.dispatch({ changes: { from: at, insert: `${lead}![](${relPath})\n` } });
+              })
+              .catch(() => { /* upload failed: nothing inserted */ });
+          };
+          reader.readAsDataURL(file);
+          return true;
+        },
+      })
+    : [];
+
   const extensions = [
     linesCompartment.of(showLines ? lineNumbers() : []),
     wrapCompartment.of(wrap ? EditorView.lineWrapping : []),
@@ -342,6 +399,7 @@ export function createVaultEditor(parent, { doc = '', onChange, mode = 'live', l
     keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
     wikilinkCompletion(noteFiles),
     wikilinkHandler,
+    pasteHandler,
     updateListener,
     liveCompartment.of(currentMode === 'live' ? livePreview({ resolveImage }) : []),
     ...extraExtensions,

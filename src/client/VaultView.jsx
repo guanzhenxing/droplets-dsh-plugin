@@ -133,7 +133,7 @@ function sliceGraph(graph, keep, limit) {
 
 // ---------------------------------------------------------------------------
 
-export function VaultView({ api, onMaterial }) {
+export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }) {
   const [tabs, setTabs] = useState(() => loadJson(TABS_KEY, []));
   const [activeTabId, setActiveTabId] = useState(() => loadJson(TABS_KEY + '.active', null));
   const [expanded, setExpanded] = useState(() => new Set(loadJson(EXPANDED_KEY, [])));
@@ -164,6 +164,8 @@ export function VaultView({ api, onMaterial }) {
   const [stats, setStats] = useState({ files: 0 });
   const [fileIndex, setFileIndex] = useState([]);
   const [editOutline, setEditOutline] = useState(null);
+  /** Active outline index reported by the CM6 anchor provider (edit modes). */
+  const [editActive, setEditActive] = useState(-1);
   const [, setEditorScrollTick] = useState(0);
   const readerRef = useRef(null);
   const notePaneRef = useRef(null);
@@ -172,6 +174,49 @@ export function VaultView({ api, onMaterial }) {
   useEffect(() => { saveJson(TABS_KEY, tabs); }, [tabs]);
   useEffect(() => { saveJson(TABS_KEY + '.active', activeTabId); }, [activeTabId]);
   useEffect(() => { saveJson(EXPANDED_KEY, [...expanded]); }, [expanded]);
+
+  // External change watch (plan §3.4): poll the open tabs' on-disk stamps.
+  // A foreign write (Obsidian, the Droplets desktop app, the agent tool)
+  // with no local draft reloads the tab silently; a draft present raises
+  // the standard conflict dialog instead of overwriting anything.
+  const tabSignature = tabs.map((tab) => `${tab.id}:${tab.sha}:${tab.dirty != null ? 'd' : 'c'}`).join('|');
+  useEffect(() => {
+    if (tabs.length === 0) return undefined;
+    let stopped = false;
+    const check = async () => {
+      for (const tab of tabsRef.current) {
+        if (stopped) return;
+        try {
+          const { stat } = await api.vaultStat(tab.path);
+          if (stopped || !stat || stat.sha === tab.sha) continue;
+          const note = await api.vaultRead(tab.path);
+          if (stopped) return;
+          if (tab.dirty != null) {
+            setConflict((current) => (current?.path === tab.path ? current : {
+              path: tab.path,
+              tabId: tab.id,
+              currentSha: note.sha,
+              currentExcerpt: String(note.content ?? '').slice(0, 300),
+            }));
+          } else {
+            setTabs((current) => current.map((item) => (item.id === tab.id
+              ? { ...item, content: note.content, sha: note.sha, title: note.title, tags: note.tags ?? [], wordCount: note.wordCount ?? 0, savedAt: null }
+              : item)));
+          }
+        } catch { /* stat hiccups are non-fatal */ }
+      }
+    };
+    const timer = setInterval(() => { void check(); }, 5_000);
+    const onFocus = () => { void check(); };
+    window.addEventListener('focus', onFocus);
+    void check();
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+      window.removeEventListener('focus', onFocus);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabSignature, api]);
 
   const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? null;
 
@@ -255,6 +300,14 @@ export function VaultView({ api, onMaterial }) {
       onMaterial({ space: 'vault', path: note.path, title: note.title, content: note.content.slice(0, 60000) });
     } catch (cause) { setError(String(cause?.message ?? cause)); }
   }, [api, tabs, onMaterial]);
+
+  // Cross-space hand-off: another space saved an article as a note and asks
+  // the vault to open it (信息流/收件箱 → 知识库, plan 差异化 #3).
+  useEffect(() => {
+    if (!noteRequest?.path) return;
+    void openPath(noteRequest.path).finally(() => { onNoteRequestHandled?.(); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [noteRequest?.path, noteRequest?.nonce]);
 
   // First visit: restore the persisted active tab.
   const restoredOnce = useRef(false);
@@ -615,10 +668,46 @@ export function VaultView({ api, onMaterial }) {
     }
   }, [fileIndex, openPath, activeTab?.path]);
 
+  /**
+   * Image source resolver for the editor widget and the reading view.
+   * Remote URLs pass through synchronously; local references (attachments,
+   * note-relative paths, Obsidian ![[embed]] names) resolve against the
+   * note's directory, the vault root and attachments/ in turn, loading the
+   * bytes as a data URL. Unresolvable references fall back to raw text.
+   */
   const resolveVaultImage = useCallback((src) => {
-    if (/^https?:/i.test(src ?? '')) return src;
-    return null; // attachments 走 P4 原件通道
-  }, []);
+    const raw = String(src ?? '').trim();
+    if (/^(https?:|data:|blob:)/i.test(raw)) return raw;
+    if (!activeTab?.path) return null;
+    const noteDir = activeTab.path.split('/').slice(0, -1).join('/');
+    const base = raw.replace(/^\.?\//, '');
+    const name = base.split('/').pop();
+    const candidates = [...new Set([
+      (noteDir ? noteDir + '/' : '') + base,
+      base,
+      'attachments/' + name,
+    ])];
+    return (async () => {
+      for (const candidate of candidates) {
+        try {
+          const result = await api.vaultReadAttachment?.(candidate);
+          if (result?.dataUrl) return result.dataUrl;
+        } catch { /* try the next candidate */ }
+      }
+      return null;
+    })();
+  }, [api, activeTab?.path]);
+
+  /** Paste-image uploader: bytes → attachments/ → vault-relative reference. */
+  const pasteVaultImage = useCallback(async (base64, name) => {
+    try {
+      const result = await api.vaultWriteAttachment?.({ bytes: base64, name });
+      return result?.path ?? null;
+    } catch (cause) {
+      setNotice(String(cause?.message ?? cause));
+      return null;
+    }
+  }, [api]);
 
   const openTrash = useCallback(async () => {
     try {
@@ -810,8 +899,12 @@ export function VaultView({ api, onMaterial }) {
               onWikilink={onVaultLink}
               onMaterial={onMaterial}
               onOutlineChange={setEditOutline}
-              onEditorScroll={() => setEditorScrollTick((tick) => tick + 1)}
+              onEditorScroll={(index) => {
+                setEditorScrollTick((tick) => tick + 1);
+                setEditActive(typeof index === 'number' ? index : -1);
+              }}
               resolveImage={resolveVaultImage}
+              pasteImage={pasteVaultImage}
               noteFiles={fileIndex}
               readerRef={readerRef}
               backlinksOpen={backlinksOpen}
@@ -871,6 +964,7 @@ export function VaultView({ api, onMaterial }) {
           headings={headings}
           containerRef={readerRef}
           onJumpToHeading={(index) => { notePaneRef.current?.jumpToHeading?.(index); }}
+          activeIndex={editOutline !== null ? editActive : undefined}
           onAskAi={() => {
             if (!activeTab) return;
             onMaterial({ space: 'vault', path: activeTab.path, title: activeTab.title, content: (activeTab.draft ?? activeTab.content).slice(0, 60000) }, { reveal: true });
@@ -954,7 +1048,7 @@ export function VaultView({ api, onMaterial }) {
           {conflict.currentExcerpt ? <blockquote className="dpl-conflict-excerpt">{conflict.currentExcerpt}</blockquote> : null}
           <div className="dpl-form-row">
             <button type="button" className="dpl-btn" onClick={() => { const path = conflict.path; setConflict(null); void openPath(path); }}>重载</button>
-            <button type="button" className="dpl-btn is-danger" onClick={() => { setConflict(null); void flushSave(activeTabId, { force: true }); }}>覆盖保存</button>
+            <button type="button" className="dpl-btn is-danger" onClick={() => { const tabId = conflict.tabId ?? activeTabId; setConflict(null); void flushSave(tabId, { force: true }); }}>覆盖保存</button>
           </div>
         </Modal>
       ) : null}
@@ -1318,7 +1412,7 @@ const MODE_ITEMS = [
 /** One tab: breadcrumb bar (mode dropdown + … menu) + CM6/read + AuxRail hooks. */
 const NoteReadPane = forwardRef(function NoteReadPane({
   tab, onDraft, onSave, onDiscard, onWikilink, onMaterial, onOutlineChange, onEditorScroll,
-  resolveImage, noteFiles, readerRef, backlinksOpen, onToggleBacklinks, onExport,
+  resolveImage, pasteImage, noteFiles, readerRef, backlinksOpen, onToggleBacklinks, onExport,
 }, forwardedRef) {
   const [view, setView] = useState('read');
   const [lineNumbers, setLineNumbers] = useState(true);
@@ -1347,19 +1441,37 @@ const NoteReadPane = forwardRef(function NoteReadPane({
       lineNumbers,
       wrap,
       resolveImage,
+      pasteImage,
       noteFiles,
       onWikilink,
       onChange: (next) => {
         outlineRef.current = outlineOf(editorRef.current?.view.state ?? editor.view.state);
         onOutlineChange(outlineRef.current);
-        onEditorScroll();
+        reportActive();
         onDraft(next);
       },
     });
     editorRef.current = editor;
     outlineRef.current = outlineOf(editor.view.state);
     onOutlineChange(outlineRef.current);
+
+    // Active-outline tracking for editor modes (plan §5.2): positions come
+    // from the CM6 document model, never from DOM h-tags (CM6 renders none).
+    // Debounced 120ms so fast scrolling stays cheap.
+    const reportActive = () => {
+      onEditorScroll(activeOutlineIndex(editor.view, outlineRef.current ?? []));
+    };
+    let scrollTimer = null;
+    const onEditorScrollDom = () => {
+      if (scrollTimer !== null) return;
+      scrollTimer = setTimeout(() => { scrollTimer = null; reportActive(); }, 120);
+    };
+    editor.view.scrollDOM.addEventListener('scroll', onEditorScrollDom, { passive: true });
+    reportActive();
+
     return () => {
+      clearTimeout(scrollTimer);
+      editor.view.scrollDOM.removeEventListener('scroll', onEditorScrollDom);
       editor.destroy();
       editorRef.current = null;
       onOutlineChange(null);
@@ -1381,16 +1493,22 @@ const NoteReadPane = forwardRef(function NoteReadPane({
   };
 
   // ⌘E cycles read → live → source → read.
+  // ⌘S forces an immediate flush of the active tab (plan D4: an insurance
+  // path, not the regular save route — autosave already runs at 800 ms).
   useEffect(() => {
     const onKey = (event) => {
       if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'e') {
         event.preventDefault();
         setMode(view === 'read' ? 'live' : view === 'live' ? 'source' : 'read');
       }
+      if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        onSave?.();
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [view]);
+  }, [view, onSave]);
 
   const jumpTo = (index) => {
     if (view === 'read') {
@@ -1404,7 +1522,7 @@ const NoteReadPane = forwardRef(function NoteReadPane({
       const entry = outlineRef.current[index];
       if (entry) {
         scrollToHeading(editorRef.current.view, entry.from);
-        onEditorScroll();
+        onEditorScroll(activeOutlineIndex(editorRef.current.view, outlineRef.current ?? []));
       }
     }
   };
@@ -1547,7 +1665,7 @@ const NoteReadPane = forwardRef(function NoteReadPane({
 
       {view === 'read' ? (
         <div ref={readerRef} className="dpl-vault2-readerscroll">
-          <MarkdownView className="dpl-note-body dpl-vault2-body" markdown={text} onWikilink={onWikilink} />
+          <MarkdownView className="dpl-note-body dpl-vault2-body" markdown={text} onWikilink={onWikilink} resolveImage={resolveImage} />
           <div className="dpl-vault2-bodyend" />
         </div>
       ) : (

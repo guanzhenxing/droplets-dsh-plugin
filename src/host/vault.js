@@ -16,11 +16,25 @@
  * structured conflict instead of a silent overwrite.
  */
 import { createHash, randomUUID } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { lstat, mkdir, readFile, readdir, realpath, rename, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { sniffImageType } from './icons.js';
 
 export const EXCLUDED_DIRS = new Set(['.obsidian', '.trash', '.stfolder', '.git']);
 export const PARA_FOLDERS = ['0-Inbox', '1-Projects', '2-Areas', '3-Resources', '4-Archives'];
+
+/** Plan §3.3 attachment limits: magic-byte-checked images, ≤20 MB writes. */
+const ATTACHMENT_MAX_BYTES = 20 * 1024 * 1024;
+/** Inline reads serve <img> data URLs; cap well below the write limit. */
+const ATTACHMENT_READ_MAX_BYTES = 10 * 1024 * 1024;
+const ATTACHMENT_EXT = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/gif': 'gif',
+  'image/webp': 'webp',
+  'image/svg+xml': 'svg',
+};
 
 export class VaultError extends Error {
   constructor(code, message, details) {
@@ -52,6 +66,29 @@ export function normalizeVaultPath(input) {
     throw new VaultError('excluded_path', '该目录不在索引范围内');
   }
   if (!rel.toLowerCase().endsWith('.md')) throw new VaultError('not_markdown', '只支持 Markdown (.md) 文件');
+  return rel;
+}
+
+/**
+ * Normalize an attachment path: the same traversal/hidden-segment rules as
+ * notes, but any file extension is accepted (png/jpg/gif/webp/svg; the
+ * actual bytes are magic-checked on read).
+ */
+export function normalizeAttachmentPath(input) {
+  if (typeof input !== 'string') throw new VaultError('invalid_path', '路径必须是字符串');
+  let cleaned = input.replace(/\\/g, '/').trim();
+  if (cleaned.startsWith('/')) cleaned = cleaned.slice(1);
+  const segments = [];
+  for (const segment of cleaned.split('/')) {
+    if (segment === '' || segment === '.') continue;
+    if (segment === '..') throw new VaultError('path_escape', '不允许 .. 路径段');
+    segments.push(segment);
+  }
+  if (segments.length === 0) throw new VaultError('invalid_path', '路径不能为空');
+  const rel = segments.join('/');
+  if (rel.split('/').some((s) => s.startsWith('.') && s !== '.')) {
+    throw new VaultError('excluded_path', '隐藏路径不支持');
+  }
   return rel;
 }
 
@@ -323,9 +360,88 @@ export class Vault {
     return results;
   }
 
+  // ------------------------------------------------------------------
+  // Attachments (plan §3.3: magic-byte-checked images under attachments/)
+  // ------------------------------------------------------------------
+
+  /**
+   * Store one image attachment. The bytes are validated by magic number
+   * (never by the claimed name), the name is sanitized and de-duplicated
+   * inside the target dir, and the write is atomic. Returns the vault path
+   * that a note should reference.
+   */
+  async writeAttachment(bytes, { name, dir } = {}) {
+    const buffer = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes);
+    const mime = sniffImageType(buffer);
+    if (!mime) throw new VaultError('invalid_attachment', '仅支持 png/jpg/gif/webp/svg 图片附件');
+    if (buffer.length > ATTACHMENT_MAX_BYTES) throw new VaultError('too_large', '附件超过 20 MB 上限');
+    const ext = ATTACHMENT_EXT[mime];
+    // Take the basename first: a pasted name may carry paths or traversal
+    // segments that must never influence where the file lands.
+    let stem = path.basename(String(name ?? 'Pasted image'))
+      .replace(/[/\\]/g, ' ')
+      .replace(/\.{2,}/g, ' ')
+      .replace(/^\.+/, '')
+      .replace(/[^\w\u4e00-\u9fff .()-]+/g, ' ')
+      .trim()
+      .slice(0, 80)
+      || 'image';
+    stem = stem.replace(new RegExp(`\\.${ext}$`, 'i'), '');
+    const targetDir = String(dir ?? 'attachments').replace(/^\/+/, '').replace(/\/+$/, '');
+    const base = await safeResolveDir(this.root, targetDir);
+    await mkdir(base, { recursive: true });
+    // Dedupe: name, name-1, name-2 … (never overwrite an existing file).
+    let target = path.join(base, `${stem}.${ext}`);
+    for (let attempt = 1; existsSync(target); attempt += 1) {
+      target = path.join(base, `${stem}-${attempt}.${ext}`);
+    }
+    const temp = `${target}.tmp-${process.pid}`;
+    try {
+      await writeFile(temp, buffer);
+      await rename(temp, target);
+    } catch (error) {
+      await rm(temp, { force: true }).catch(() => {});
+      throw new VaultError('write_failed', `附件写入失败：${error.message}`);
+    }
+    const rel = targetDir === '' ? path.basename(target) : `${targetDir}/${path.basename(target)}`;
+    return { path: rel, mime, bytes: buffer.length };
+  }
+
+  /**
+   * Read one attachment as an <img>-ready data URL. Path-safety applies
+   * (symlinks/escapes rejected) and only actual images are served; the read
+   * cap keeps a stray huge file from flooding the renderer.
+   */
+  async readAttachment(rel) {
+    const normalized = normalizeAttachmentPath(rel);
+    const absolute = await safeResolve(this.root, normalized);
+    const info = await lstat(absolute).catch(() => null);
+    if (!info?.isFile()) throw new VaultError('not_found', `附件不存在：${normalized}`);
+    if (info.size > ATTACHMENT_READ_MAX_BYTES) throw new VaultError('too_large', `附件过大（${(info.size / 1024 / 1024).toFixed(1)} MB），不支持内联显示`);
+    const bytes = await readFile(absolute).catch(() => null);
+    if (bytes === null) throw new VaultError('not_found', `附件不存在：${normalized}`);
+    const mime = sniffImageType(bytes);
+    if (!mime) throw new VaultError('invalid_attachment', `不是可显示的图片：${normalized}`);
+    return { path: normalized, mime, dataUrl: `data:${mime};base64,${bytes.toString('base64')}` };
+  }
+
   async readRaw(rel) {
     const absolute = await safeResolve(this.root, rel);
     return readFile(absolute, 'utf8');
+  }
+
+  /**
+   * On-disk stamps for one note without shipping its content: the external
+   * change watcher polls this and compares the sha against the open tab's.
+   */
+  async statOf(rel) {
+    const normalized = normalizeVaultPath(rel);
+    const absolute = await safeResolve(this.root, normalized);
+    const info = await lstat(absolute).catch(() => null);
+    if (!info?.isFile()) return null;
+    const text = await readFile(absolute, 'utf8').catch(() => null);
+    if (text === null) return null;
+    return { sha: shaOf(text), mtimeMs: info.mtimeMs, size: info.size };
   }
 
   async read(rel) {

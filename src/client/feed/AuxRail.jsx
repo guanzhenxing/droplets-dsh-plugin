@@ -17,14 +17,19 @@ const TICK_LEVEL = [4, 2.5, 2, 1.5, 1];
  * stays one hover away in the popover) and compresses the rhythm rather
  * than overflowing past the viewport. `onJumpToHeading`, when provided
  * (the vault), replaces the DOM scroll so ticks also work in edit mode.
+ * `activeIndex`, when provided (the vault's CM6 anchor provider, plan §5.2),
+ * drives the active highlight from the document model — DOM scraping cannot
+ * see headings in editor modes, where CM6 renders no h-tags.
  */
-export function AuxRail({ headings, containerRef, onAskAi, onJumpToHeading }) {
-  const [activeIdx, setActiveIdx] = useState(-1);
+export function AuxRail({ headings, containerRef, onAskAi, onJumpToHeading, activeIndex }) {
+  const [internalActive, setInternalActive] = useState(-1);
   const [hoverIdx, setHoverIdx] = useState(-1);
   const [popover, setPopover] = useState(false);
   const [railBudget, setRailBudget] = useState(0);
   const scrollRef = useRef(null);
   const popoverRef = useRef(null);
+  const externalActive = typeof activeIndex === 'number';
+  const activeIdx = externalActive ? activeIndex : internalActive;
 
   const headingSelector = useMemo(
     () => [...new Set(headings.map((h) => 'h' + h.level))].join(','),
@@ -50,19 +55,19 @@ export function AuxRail({ headings, containerRef, onAskAi, onJumpToHeading }) {
 
   useEffect(() => {
     const container = containerRef?.current;
-    if (!container || !headingSelector) return undefined;
+    if (!container || !headingSelector || externalActive) return undefined;
     const onScroll = () => {
       const nodes = container.querySelectorAll(headingSelector);
       let current = -1;
       nodes.forEach((node, index) => {
         if (node.getBoundingClientRect().top <= 48) current = index;
       });
-      setActiveIdx(current);
+      setInternalActive(current);
     };
     onScroll();
     container.addEventListener('scroll', onScroll, { passive: true });
     return () => container.removeEventListener('scroll', onScroll);
-  }, [containerRef, headingSelector, scrollRef.current]);
+  }, [containerRef, headingSelector, externalActive, scrollRef.current]);
 
   const scrollToHeading = (index) => {
     const container = containerRef?.current;

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Archive, CheckCheck, Circle, CircleCheck, ExternalLink, Inbox, Loader2,
+  Archive, CheckCheck, Circle, CircleCheck, ExternalLink, FileText, Inbox, Loader2,
   RefreshCw,
 } from 'lucide-react';
 import { PanelCollapseButton, PanelGroup, PanelRail } from './feed/PanelGroup.jsx';
@@ -25,7 +25,7 @@ const STATE_LABEL = { unseen: '未读', seen: '已读', skipped: '略过' };
  * (sourceId/group mutually exclusive, three-state items, frozen partition,
  * new-entries pill, auto-select, sticky round actions, AuxRail).
  */
-export function FeedView({ api, onMaterial, onJumpSpace }) {
+export function FeedView({ api, onMaterial, onJumpSpace, onOpenVaultNote }) {
   const [feeds, setFeeds] = useState([]);
   const [managing, setManaging] = useState(false);
   const [sourceId, setSourceId] = useState(null);
@@ -144,7 +144,7 @@ export function FeedView({ api, onMaterial, onJumpSpace }) {
           />
         ) },
         { id: 'preview', initialWidth: 700, minWidth: 420, collapsible: false, render: () => (
-          <Preview api={api} feeds={feeds} icons={icons} item={selected} onMaterial={onMaterial} onJumpSpace={onJumpSpace} onMarked={loadFeeds} onUnreadChange={bumpUnread} />
+          <Preview api={api} feeds={feeds} icons={icons} item={selected} onMaterial={onMaterial} onJumpSpace={onJumpSpace} onOpenVaultNote={onOpenVaultNote} onMarked={loadFeeds} onUnreadChange={bumpUnread} />
         ) },
       ]}
     />
@@ -376,7 +376,7 @@ function ItemList(props) {
 }
 
 /** Preview pane: sticky round actions + header meta + body + AuxRail. */
-function Preview({ api, feeds, icons, item, onMaterial, onJumpSpace, onMarked, onUnreadChange }) {
+function Preview({ api, feeds, icons, item, onMaterial, onJumpSpace, onOpenVaultNote, onMarked, onUnreadChange }) {
   const [html, setHtml] = useState('');
   const [notice, setNotice] = useState('');
   const [busyAction, setBusyAction] = useState('');
@@ -444,6 +444,18 @@ function Preview({ api, feeds, icons, item, onMaterial, onJumpSpace, onMarked, o
     finally { setBusyAction(''); }
   };
 
+  // 存为笔记 (plan 差异化 #3): convert this entry's HTML to Markdown and
+  // land it as a new vault note, then jump to the vault with it open.
+  const saveAsNote = async () => {
+    if (!item) return;
+    setBusyAction('note');
+    try {
+      const result = await api.saveAsNote({ source: 'feed', key: item.key, title: item.title });
+      onOpenVaultNote?.(result?.path);
+    } catch (cause) { setNotice(String(cause?.message ?? cause)); }
+    finally { setBusyAction(''); }
+  };
+
   const skip = async () => {
     if (!item) return;
     setBusyAction('skip');
@@ -495,6 +507,9 @@ function Preview({ api, feeds, icons, item, onMaterial, onJumpSpace, onMarked, o
           ) : null}
           <button type="button" className="dpl-round-btn" data-tip="加入精读" aria-label="加入精读" disabled={busyAction === 'inbox'} onClick={() => void addToInbox()}>
             {busyAction === 'inbox' ? <Loader2 size={15} className="dpl-spin" /> : <Inbox size={15} />}
+          </button>
+          <button type="button" className="dpl-round-btn" data-tip="存为笔记" aria-label="存为笔记" disabled={busyAction === 'note'} onClick={() => void saveAsNote()}>
+            {busyAction === 'note' ? <Loader2 size={15} className="dpl-spin" /> : <FileText size={15} />}
           </button>
           <button type="button" className="dpl-round-btn" data-tip="略过" aria-label="略过" disabled={busyAction === 'skip'} onClick={() => void skip()}>
             {busyAction === 'skip' ? <Loader2 size={15} className="dpl-spin" /> : <Archive size={15} />}

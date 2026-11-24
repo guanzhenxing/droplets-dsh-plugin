@@ -24,8 +24,9 @@ const MAX_HTML_BYTES = 256 * 1024;
 const ICON_TIMEOUT_MS = 8_000;
 const RETRY_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
 
-/** Sniff the media type from magic bytes so non-typed responses still work. */
-function sniffImageType(bytes) {
+/** Sniff the media type from magic bytes so non-typed responses still work.
+ *  Also used by the vault attachment channel (png/jpg/gif/webp/svg). */
+export function sniffImageType(bytes) {
   if (bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return 'image/png';
   if (bytes.length >= 6 && bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) return 'image/gif';
   if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8) return 'image/jpeg';

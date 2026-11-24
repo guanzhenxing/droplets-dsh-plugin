@@ -10,6 +10,7 @@
  * refreshes feeds with bounded concurrency, per-feed timeouts and caps.
  */
 import path from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { mkdir, readdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
 import { existsSync, statSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
@@ -24,6 +25,7 @@ import { createVaultIndex } from './vault-index.js';
 import { buildAskPrompt, buildReadingContext, storeContext } from './context.js';
 import { createToolDefinitions } from './tools.js';
 import { extractArticle } from './extract.js';
+import { htmlToMarkdown } from './html-to-md.js';
 import { excerptOf, FEED_LIMITS, mergeEntries, parseFeed, parseOpml, buildOpml, sortByDate, subscriptionIdOf } from './feeds.js';
 import { htmlToText } from './sanitize.js';
 import { guardedFetch } from './guarded-fetch.js';
@@ -1086,6 +1088,15 @@ export class DropletsService extends TypertRemoteService {
     return this.vaultService().read(p);
   }
 
+  /** On-disk stamps for one note (external change watcher). */
+  async vaultStat(request) {
+    await this.ready;
+    const p = typeof request === 'string' ? request : request?.path;
+    if (typeof p !== 'string' || p === '') throw new Error('无效路径');
+    const stat = await this.vaultService().statOf(p);
+    return { stat };
+  }
+
   /** Lazy directory listing for the tree panel (plan §7 vaultList). */
   async vaultList(request) {
     await this.ready;
@@ -1292,6 +1303,85 @@ export class DropletsService extends TypertRemoteService {
     await this.ready;
     const { path: rel, content, expectedSha, createOnly } = request ?? {};
     return this.vaultService().write(rel, content, { expectedSha, createOnly });
+  }
+
+  /** Store one image attachment (magic-byte validated, ≤20 MB). */
+  async vaultWriteAttachment(request) {
+    await this.ready;
+    await this.ensureVault();
+    const bytes = Buffer.from(String(request?.bytes ?? ''), 'base64');
+    if (bytes.length === 0) throw new Error('附件内容为空');
+    return stripUndefined(await this.vaultService().writeAttachment(bytes, {
+      name: typeof request?.name === 'string' ? request.name : undefined,
+      dir: typeof request?.dir === 'string' ? request.dir : undefined,
+    }));
+  }
+
+  /** Read one attachment as an <img>-ready data URL (path-safety applies). */
+  async vaultReadAttachment(request) {
+    await this.ready;
+    const rel = typeof request === 'string' ? request : request?.path;
+    if (typeof rel !== 'string' || rel === '') throw new Error('无效附件路径');
+    return stripUndefined(await this.vaultService().readAttachment(rel));
+  }
+
+  /**
+   * 信息流/收件箱 → 知识库（plan 差异化 #3）: store one article as a new
+   * note. Feed entries convert their cached HTML to Markdown; inbox items
+   * already carry Markdown. The note keeps native frontmatter plus a
+   * `source` line pointing back at the origin URL, and lands in 0-Inbox
+   * (PARA) unless a dir is given. Name collisions get -2, -3 … suffixes.
+   */
+  async saveAsNote(request) {
+    await this.ready;
+    await this.ensureVault();
+    const source = request?.source === 'inbox' ? 'inbox' : 'feed';
+    const dir = typeof request?.dir === 'string' && request.dir.trim() !== '' ? request.dir.trim() : '0-Inbox';
+    let title = String(request?.title ?? '').trim();
+    let markdown = '';
+    let sourceUrl;
+    if (source === 'feed') {
+      const entry = this.findEntry(request?.key);
+      if (!entry) throw new Error(`droplets: unknown entry ${request?.key}`);
+      title = title || entry.title || '未命名文章';
+      markdown = htmlToMarkdown(String(entry.html ?? ''));
+      if (markdown.trim() === '') markdown = String(entry.summary ?? '').trim() || '（正文缺失，完整内容请查看原文。）';
+      sourceUrl = entry.url;
+    } else {
+      const existing = await this.inbox.get(String(request?.id ?? ''));
+      if (!existing) throw new Error('收件箱里没有这一条');
+      title = title || existing.meta?.title || '未命名条目';
+      // Strip any leading frontmatter the inbox content carries: this note
+      // writes its own.
+      markdown = String(existing.content ?? '').replace(/^---\n[\s\S]*?\n---\n?/, '').trim();
+      if (markdown === '') markdown = '（暂无正文。）';
+      sourceUrl = existing.meta?.source?.url ?? undefined;
+    }
+    const body = markdown.trim();
+    const vault = this.vaultService();
+    for (let attempt = 0; ; attempt += 1) {
+      const candidate = attempt === 0 ? title : `${title}-${attempt + 1}`;
+      const template = [
+        '---',
+        `id: ${randomUUID()}`,
+        `title: ${title}`,
+        `created: ${new Date().toISOString()}`,
+        ...(sourceUrl ? [`source: ${sourceUrl}`] : []),
+        '---',
+        '',
+        `# ${title}`,
+        '',
+        body,
+        '',
+      ].join('\n');
+      try {
+        const result = await vault.createNote(dir, candidate, { template });
+        return { path: result.path, title: result.title };
+      } catch (error) {
+        if (error?.code === 'exists' && attempt < 30) continue; // dedupe: -2, -3 …
+        throw error;
+      }
+    }
   }
 
   // ------------------------------------------------------------------
@@ -1601,9 +1691,9 @@ export class DropletsService extends TypertRemoteService {
     'inboxMoveToLibrary', 'inboxMoveToTrash', 'inboxMarkDone',
     // vault
     'vaultStatus', 'vaultReindex', 'vaultTree', 'vaultRead', 'vaultSearch', 'vaultGraph', 'vaultBacklinks', 'vaultWrite',
-    'vaultList', 'vaultIndexFiles', 'vaultCreate', 'vaultCreateDir', 'vaultRename', 'vaultDuplicate', 'vaultDelete', 'vaultTags', 'vaultTrashList', 'vaultTrashRestore', 'vaultCopyTo', 'vaultCopyDirTo', 'vaultReveal', 'vaultCopyPath',
+    'vaultList', 'vaultIndexFiles', 'vaultCreate', 'vaultCreateDir', 'vaultRename', 'vaultDuplicate', 'vaultDelete', 'vaultTags', 'vaultTrashList', 'vaultTrashRestore', 'vaultCopyTo', 'vaultCopyDirTo', 'vaultReveal', 'vaultCopyPath', 'vaultWriteAttachment', 'vaultReadAttachment', 'vaultStat',
     // settings / companion
-    'getSettings', 'saveSettings', 'getStorageInfo', 'getWorkspace', 'setWorkspace', 'openPath', 'clearData', 'setReadingContext', 'prepareChat',
+    'getSettings', 'saveSettings', 'getStorageInfo', 'getWorkspace', 'setWorkspace', 'openPath', 'clearData', 'setReadingContext', 'prepareChat', 'saveAsNote',
   ];
   const prototype = DropletsService.prototype;
   for (const method of names) {

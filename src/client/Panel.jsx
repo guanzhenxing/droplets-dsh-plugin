@@ -32,6 +32,14 @@ export function DropletsPanel({ api, SessionProvider, renderSlot }) {
     try { localStorage.setItem('droplets.ai.form', next); } catch { /* ignore */ }
   }, []);
   const [material, setMaterial] = useState({ space: 'feed', title: '' });
+  /** Cross-space hand-off: 文章存为笔记 asks the vault to open the new note. */
+  const [vaultNoteRequest, setVaultNoteRequest] = useState(null);
+  const openVaultNote = useCallback((notePath) => {
+    if (typeof notePath === 'string' && notePath !== '') {
+      setVaultNoteRequest({ path: notePath, nonce: Date.now() });
+      setSpace('vault');
+    }
+  }, []);
 
   // Window focus triggers a light vault rescan (index staleness guard).
   const onFocus = useCallback(() => { void api.vaultReindex?.().catch(() => {}); }, [api]);
@@ -133,9 +141,15 @@ export function DropletsPanel({ api, SessionProvider, renderSlot }) {
             <SettingsView api={api} onClose={() => setSettingsOpen(false)} />
           ) : (
             <>
-              {space === 'feed' && <FeedView api={api} onMaterial={onMaterial} onJumpSpace={setSpace} />}
-              {space === 'inbox' && <InboxView api={api} onMaterial={onMaterial} />}
-              {space === 'vault' && <VaultView api={api} onMaterial={onMaterial} />}
+              {space === 'feed' && <FeedView api={api} onMaterial={onMaterial} onJumpSpace={setSpace} onOpenVaultNote={openVaultNote} />}
+              {space === 'inbox' && <InboxView api={api} onMaterial={onMaterial} onOpenVaultNote={openVaultNote} />}
+              {space === 'vault' && (
+                <VaultView
+                  api={api} onMaterial={onMaterial}
+                  noteRequest={vaultNoteRequest}
+                  onNoteRequestHandled={() => setVaultNoteRequest(null)}
+                />
+              )}
             </>
           )}
         </div>

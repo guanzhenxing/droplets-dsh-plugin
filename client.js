@@ -2459,7 +2459,7 @@ function inline(text2) {
     codes.push("<code>" + code2 + "</code>");
     return "\0" + (codes.length - 1) + "\0";
   });
-  out = out.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g, (_, alt, src) => '<img src="' + escapeAttr(src) + '" alt="' + escapeAttr(alt) + '" loading="lazy" referrerpolicy="no-referrer">').replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g, (_, label, href) => {
+  out = out.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g, (_, alt, src) => '<img src="' + escapeAttr(src) + '" alt="' + escapeAttr(alt) + '" loading="lazy" referrerpolicy="no-referrer">').replace(/!\[\[([^\]\n|]+)(?:\|[^\]\n]*)?\]\]/g, (_, name2) => '<img src="' + escapeAttr(String(name2).trim()) + '" alt="' + escapeAttr(String(name2).trim()) + '" loading="lazy" referrerpolicy="no-referrer">').replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g, (_, label, href) => {
     const safe = /^(?:https?:|mailto:|\/|#|dpl-note:)/i.test(href) ? href : "#";
     return '<a href="' + escapeAttr(safe) + '" target="_blank" rel="noreferrer">' + label + "</a>";
   }).replace(/\[\[([^\]\n|]+)(?:\|([^\]\n]*))?\]\]/g, (_, target, display) => {
@@ -2592,7 +2592,7 @@ function purifyHtml(html3) {
 
 // src/client/components.jsx
 var import_jsx_runtime = require("react/jsx-runtime");
-function SafeHtml({ html: html3, className, onLinkClick }) {
+function SafeHtml({ html: html3, className, onLinkClick, onMount }) {
   const ref = (0, import_react.useRef)(null);
   (0, import_react.useEffect)(() => {
     const node = ref.current;
@@ -2601,6 +2601,7 @@ function SafeHtml({ html: html3, className, onLinkClick }) {
     const clean = purifyHtml(String(html3 ?? ""));
     const parsed = new DOMParser().parseFromString("<!doctype html><body>" + clean, "text/html");
     node.append(...[...parsed.body.childNodes]);
+    onMount?.(node);
     if (onLinkClick) {
       const handler = (event) => {
         const anchor = event.target?.closest?.("a");
@@ -2610,10 +2611,10 @@ function SafeHtml({ html: html3, className, onLinkClick }) {
       return () => node.removeEventListener("click", handler);
     }
     return void 0;
-  }, [html3, onLinkClick]);
+  }, [html3, onLinkClick, onMount]);
   return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className, ref });
 }
-function MarkdownView({ markdown: markdown2, className, onWikilink }) {
+function MarkdownView({ markdown: markdown2, className, onWikilink, resolveImage }) {
   const handleLink = onWikilink ? (anchor, event) => {
     const href = anchor.getAttribute("href") ?? "";
     const target = anchor.getAttribute("data-dpl-target");
@@ -2622,7 +2623,23 @@ function MarkdownView({ markdown: markdown2, className, onWikilink }) {
       onWikilink(target ?? decodeURIComponent(href.slice("dpl-note:".length)), anchor);
     }
   } : void 0;
-  return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SafeHtml, { className, html: markdownToHtml(markdown2), onLinkClick: handleLink });
+  const onMount = resolveImage ? (0, import_react.useCallback)((node) => {
+    const images = [...node.querySelectorAll("img")];
+    for (const img of images) {
+      const raw = img.getAttribute("src") ?? "";
+      if (!raw || /^(https?:|data:|blob:)/i.test(raw)) continue;
+      img.removeAttribute("src");
+      img.dataset.pendingSrc = raw;
+      Promise.resolve(resolveImage(raw)).then((url) => {
+        if (url) {
+          img.src = url;
+          delete img.dataset.pendingSrc;
+        }
+      }).catch(() => {
+      });
+    }
+  }, [resolveImage]) : void 0;
+  return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SafeHtml, { className, html: markdownToHtml(markdown2), onLinkClick: handleLink, onMount });
 }
 function DropletIcon({ size = 20 }) {
   return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: "none", "aria-hidden": "true", children: [
@@ -4908,13 +4925,15 @@ function visibleActiveIndex(items, activeIdx) {
 // src/client/feed/AuxRail.jsx
 var import_jsx_runtime5 = require("react/jsx-runtime");
 var TICK_LEVEL = [4, 2.5, 2, 1.5, 1];
-function AuxRail({ headings, containerRef, onAskAi, onJumpToHeading }) {
-  const [activeIdx, setActiveIdx] = (0, import_react8.useState)(-1);
+function AuxRail({ headings, containerRef, onAskAi, onJumpToHeading, activeIndex }) {
+  const [internalActive, setInternalActive] = (0, import_react8.useState)(-1);
   const [hoverIdx, setHoverIdx] = (0, import_react8.useState)(-1);
   const [popover, setPopover] = (0, import_react8.useState)(false);
   const [railBudget, setRailBudget] = (0, import_react8.useState)(0);
   const scrollRef = (0, import_react8.useRef)(null);
   const popoverRef = (0, import_react8.useRef)(null);
+  const externalActive = typeof activeIndex === "number";
+  const activeIdx = externalActive ? activeIndex : internalActive;
   const headingSelector = (0, import_react8.useMemo)(
     () => [...new Set(headings.map((h) => "h" + h.level))].join(","),
     [headings]
@@ -4934,19 +4953,19 @@ function AuxRail({ headings, containerRef, onAskAi, onJumpToHeading }) {
   }, [containerRef]);
   (0, import_react8.useEffect)(() => {
     const container = containerRef?.current;
-    if (!container || !headingSelector) return void 0;
+    if (!container || !headingSelector || externalActive) return void 0;
     const onScroll = () => {
       const nodes = container.querySelectorAll(headingSelector);
       let current = -1;
       nodes.forEach((node, index2) => {
         if (node.getBoundingClientRect().top <= 48) current = index2;
       });
-      setActiveIdx(current);
+      setInternalActive(current);
     };
     onScroll();
     container.addEventListener("scroll", onScroll, { passive: true });
     return () => container.removeEventListener("scroll", onScroll);
-  }, [containerRef, headingSelector, scrollRef.current]);
+  }, [containerRef, headingSelector, externalActive, scrollRef.current]);
   const scrollToHeading2 = (index2) => {
     const container = containerRef?.current;
     if (!container) return;
@@ -5041,7 +5060,7 @@ function htmlHeadings(html3) {
 // src/client/FeedView.jsx
 var import_jsx_runtime6 = require("react/jsx-runtime");
 var STATE_LABEL = { unseen: "\u672A\u8BFB", seen: "\u5DF2\u8BFB", skipped: "\u7565\u8FC7" };
-function FeedView({ api, onMaterial, onJumpSpace }) {
+function FeedView({ api, onMaterial, onJumpSpace, onOpenVaultNote }) {
   const [feeds, setFeeds] = (0, import_react9.useState)([]);
   const [managing, setManaging] = (0, import_react9.useState)(false);
   const [sourceId, setSourceId] = (0, import_react9.useState)(null);
@@ -5188,7 +5207,7 @@ function FeedView({ api, onMaterial, onJumpSpace }) {
             onCollapse: collapse
           }
         ) },
-        { id: "preview", initialWidth: 700, minWidth: 420, collapsible: false, render: () => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Preview, { api, feeds, icons, item: selected, onMaterial, onJumpSpace, onMarked: loadFeeds, onUnreadChange: bumpUnread }) }
+        { id: "preview", initialWidth: 700, minWidth: 420, collapsible: false, render: () => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Preview, { api, feeds, icons, item: selected, onMaterial, onJumpSpace, onOpenVaultNote, onMarked: loadFeeds, onUnreadChange: bumpUnread }) }
       ]
     }
   );
@@ -5392,7 +5411,7 @@ function ItemList(props) {
     ] }) }) : null
   ] });
 }
-function Preview({ api, feeds, icons, item, onMaterial, onJumpSpace, onMarked, onUnreadChange }) {
+function Preview({ api, feeds, icons, item, onMaterial, onJumpSpace, onOpenVaultNote, onMarked, onUnreadChange }) {
   const [html3, setHtml] = (0, import_react9.useState)("");
   const [notice, setNotice] = (0, import_react9.useState)("");
   const [busyAction, setBusyAction] = (0, import_react9.useState)("");
@@ -5459,6 +5478,18 @@ function Preview({ api, feeds, icons, item, onMaterial, onJumpSpace, onMarked, o
       setBusyAction("");
     }
   };
+  const saveAsNote = async () => {
+    if (!item) return;
+    setBusyAction("note");
+    try {
+      const result = await api.saveAsNote({ source: "feed", key: item.key, title: item.title });
+      onOpenVaultNote?.(result?.path);
+    } catch (cause) {
+      setNotice(String(cause?.message ?? cause));
+    } finally {
+      setBusyAction("");
+    }
+  };
   const skip = async () => {
     if (!item) return;
     setBusyAction("skip");
@@ -5500,6 +5531,7 @@ function Preview({ api, feeds, icons, item, onMaterial, onJumpSpace, onMarked, o
         ),
         item.link ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("a", { className: "dpl-round-btn", href: item.link, target: "_blank", rel: "noreferrer", title: "\u6253\u5F00\u539F\u6587", "aria-label": "\u6253\u5F00\u539F\u6587", children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(ExternalLink, { size: 15 }) }) : null,
         /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("button", { type: "button", className: "dpl-round-btn", "data-tip": "\u52A0\u5165\u7CBE\u8BFB", "aria-label": "\u52A0\u5165\u7CBE\u8BFB", disabled: busyAction === "inbox", onClick: () => void addToInbox(), children: busyAction === "inbox" ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(LoaderCircle, { size: 15, className: "dpl-spin" }) : /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Inbox, { size: 15 }) }),
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("button", { type: "button", className: "dpl-round-btn", "data-tip": "\u5B58\u4E3A\u7B14\u8BB0", "aria-label": "\u5B58\u4E3A\u7B14\u8BB0", disabled: busyAction === "note", onClick: () => void saveAsNote(), children: busyAction === "note" ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(LoaderCircle, { size: 15, className: "dpl-spin" }) : /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(FileText, { size: 15 }) }),
         /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("button", { type: "button", className: "dpl-round-btn", "data-tip": "\u7565\u8FC7", "aria-label": "\u7565\u8FC7", disabled: busyAction === "skip", onClick: () => void skip(), children: busyAction === "skip" ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(LoaderCircle, { size: 15, className: "dpl-spin" }) : /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Archive, { size: 15 }) })
       ] }),
       notice ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "dpl-notice dpl-reader-notice", role: "status", children: notice }) : null,
@@ -106978,7 +107010,7 @@ function classifyShortBody(item, plainChars) {
   if (item.source?.kind === "rss") return "rss";
   return "short";
 }
-function InboxView({ api, onMaterial }) {
+function InboxView({ api, onMaterial, onOpenVaultNote }) {
   const [filter, setFilter] = (0, import_react10.useState)({});
   const [selectedId, setSelectedId] = (0, import_react10.useState)(null);
   const [data2, setData] = (0, import_react10.useState)({ items: [], counts: { byStatus: {}, byTag: {}, total: 0 }, pendingIds: [] });
@@ -107082,7 +107114,8 @@ function InboxView({ api, onMaterial }) {
               selectedId,
               items: data2.items,
               onMaterial,
-              onChanged: load
+              onChanged: load,
+              onOpenVaultNote
             }
           )
         }
@@ -107469,7 +107502,7 @@ function EpubPane({ doc: doc2, setDoc }) {
     /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "dpl-ib-docscroll dpl-ib-epubscroll", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(SafeHtml, { className: "dpl-ib-epubbody", html: chapter?.html ?? "" }) })
   ] });
 }
-function Reader({ api, selectedId, onMaterial, onChanged }) {
+function Reader({ api, selectedId, onMaterial, onChanged, onOpenVaultNote }) {
   const [detail, setDetail] = (0, import_react10.useState)(null);
   const [detailLoading, setDetailLoading] = (0, import_react10.useState)(false);
   const [doc2, setDoc] = (0, import_react10.useState)(null);
@@ -107597,6 +107630,18 @@ function Reader({ api, selectedId, onMaterial, onChanged }) {
       content: content2.slice(0, 6e4)
     }, { reveal: true });
   };
+  const [savingNote, setSavingNote] = (0, import_react10.useState)(false);
+  const saveAsNote = async () => {
+    if (!item || savingNote) return;
+    setSavingNote(true);
+    try {
+      const result = await api.saveAsNote({ source: "inbox", id: item.id, title: item.title });
+      onOpenVaultNote?.(result?.path);
+    } catch {
+    } finally {
+      setSavingNote(false);
+    }
+  };
   let body;
   if (selectedId === null) {
     body = /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "dpl-ib-readercenter", "data-testid": "reader-empty", children: "\u5728\u4E2D\u95F4\u5217\u8868\u9009\u62E9\u4E00\u6761\u5185\u5BB9\u5F00\u59CB\u9605\u8BFB" });
@@ -107644,6 +107689,19 @@ function Reader({ api, selectedId, onMaterial, onChanged }) {
             children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(ExternalLink, { size: 15 })
           }
         ) : null,
+        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+          "button",
+          {
+            type: "button",
+            className: "dpl-icon-btn dpl-ib-headbtn",
+            title: "\u5B58\u4E3A\u7B14\u8BB0\uFF08\u77E5\u8BC6\u5E93\uFF09",
+            "aria-label": "\u5B58\u4E3A\u7B14\u8BB0",
+            disabled: savingNote,
+            onClick: () => void saveAsNote(),
+            "data-testid": "save-as-note",
+            children: savingNote ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(LoaderCircle, { size: 15, className: "dpl-spin" }) : /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(FilePlusCorner, { size: 15 })
+          }
+        ),
         /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
           "button",
           {
@@ -137160,10 +137218,11 @@ var CheckboxWidget = class extends WidgetType {
   }
 };
 var ImageWidget = class extends WidgetType {
-  constructor(src, alt) {
+  constructor(src, alt, loader) {
     super();
     this.src = src;
     this.alt = alt;
+    this.loader = loader;
   }
   eq(other) {
     return other.src === this.src && other.alt === this.alt;
@@ -137171,16 +137230,38 @@ var ImageWidget = class extends WidgetType {
   toDOM() {
     const wrap = document.createElement("span");
     const img = document.createElement("img");
-    img.src = this.src;
     img.alt = this.alt ?? "";
     img.loading = "lazy";
     img.referrerPolicy = "no-referrer";
     img.style.maxWidth = "100%";
     img.style.borderRadius = "6px";
-    img.addEventListener("error", () => {
+    const fallback = () => {
       wrap.textContent = `![${this.alt ?? ""}](${this.src})`;
-    });
-    wrap.appendChild(img);
+    };
+    img.addEventListener("error", fallback);
+    const show = (url) => {
+      if (!url) {
+        fallback();
+        return;
+      }
+      wrap.textContent = "";
+      img.src = url;
+      wrap.appendChild(img);
+    };
+    let resolved;
+    try {
+      resolved = this.loader?.(this.src);
+    } catch {
+      resolved = null;
+    }
+    if (typeof resolved === "string") {
+      show(resolved);
+    } else if (resolved && typeof resolved.then === "function") {
+      wrap.textContent = `![${this.alt ?? ""}](${this.src})`;
+      resolved.then(show).catch(fallback);
+    } else {
+      fallback();
+    }
     return wrap;
   }
 };
@@ -137262,21 +137343,19 @@ function linkDecorations(view, resolveImage) {
   const caretLine = view.state.doc.lineAt(view.state.selection.main.from).number;
   const text2 = view.state.doc;
   const patterns = [
-    { re: /!\[([^\]]*)\]\(([^)\s]+)\)/g, kind: "image" },
+    { re: /!\[([^\]]*)\]\(([^)\s]+)\)/g, kind: "image", src: (match) => match[2], alt: (match) => match[1] },
+    { re: /!\[\[([^\]\n|]+)(?:\|([^\]\n]*))?\]\]/g, kind: "image", src: (match) => match[1], alt: (match) => match[2] },
     { re: /\[\[([^\]\n|]+)(?:\|([^\]\n]*))?\]\]/g, kind: "wikilink" }
   ];
   for (let n = 1; n <= text2.lines; n += 1) {
     if (n === caretLine) continue;
     const line = text2.line(n);
-    for (const { re, kind } of patterns) {
+    for (const { re, kind, src, alt } of patterns) {
       re.lastIndex = 0;
       let match;
       while ((match = re.exec(line.text)) !== null) {
         if (kind === "image") {
-          const resolved = resolveImage(match[2]);
-          if (resolved) {
-            builder.add(line.from + match.index, line.from + match.index + match[0].length, Decoration.replace({ widget: new ImageWidget(resolved, match[1]) }));
-          }
+          builder.add(line.from + match.index, line.from + match.index + match[0].length, Decoration.replace({ widget: new ImageWidget(src(match), alt?.(match) ?? "", resolveImage) }));
         } else {
           builder.add(
             line.from + match.index,
@@ -137351,6 +137430,16 @@ function scrollToHeading(view, from) {
   const block = view.lineBlockAt(from);
   view.scrollDOM.scrollTo({ top: Math.max(0, block.top - view.scrollDOM.clientHeight / 8), behavior: "smooth" });
 }
+function activeOutlineIndex(view, outline) {
+  if (outline.length === 0) return -1;
+  const line = view.scrollDOM.getBoundingClientRect().top + 48;
+  let active = -1;
+  for (let i3 = 0; i3 < outline.length; i3 += 1) {
+    const block = view.lineBlockAt(outline[i3].from);
+    if (block.top <= line) active = i3;
+  }
+  return active;
+}
 function wikilinkCompletion(noteFiles) {
   const sources = [];
   return autocompletion({
@@ -137382,7 +137471,7 @@ function wikilinkCompletion(noteFiles) {
     }]
   });
 }
-function createVaultEditor(parent, { doc: doc2 = "", onChange, mode = "live", lineNumbers: showLines = true, wrap = true, resolveImage, noteFiles = [], onWikilink, extraExtensions = [] } = {}) {
+function createVaultEditor(parent, { doc: doc2 = "", onChange, mode = "live", lineNumbers: showLines = true, wrap = true, resolveImage, pasteImage, noteFiles = [], onWikilink, extraExtensions = [] } = {}) {
   const liveCompartment = new Compartment();
   const linesCompartment = new Compartment();
   const wrapCompartment = new Compartment();
@@ -137398,6 +137487,31 @@ function createVaultEditor(parent, { doc: doc2 = "", onChange, mode = "live", li
       update.view.__onWikilink = onWikilink;
     }
   });
+  const pasteHandler = typeof pasteImage === "function" ? EditorView.domEventHandlers({
+    paste(event, view2) {
+      const items = [...event.clipboardData?.items ?? []];
+      const item = items.find((candidate) => candidate.type.startsWith("image/"));
+      const file = item?.getAsFile?.();
+      if (!item || !file) return false;
+      event.preventDefault();
+      const pos = view2.state.selection.main.to;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = String(reader.result ?? "").split(",")[1] ?? "";
+        void Promise.resolve(pasteImage(base64, file.name || "Pasted image")).then((relPath) => {
+          if (!relPath) return;
+          const at = Math.min(pos, view2.state.doc.length);
+          const lineText = view2.state.doc.lineAt(at).text;
+          const lead = lineText.trim() === "" ? "" : "\n\n";
+          view2.dispatch({ changes: { from: at, insert: `${lead}![](${relPath})
+` } });
+        }).catch(() => {
+        });
+      };
+      reader.readAsDataURL(file);
+      return true;
+    }
+  }) : [];
   const extensions = [
     linesCompartment.of(showLines ? lineNumbers() : []),
     wrapCompartment.of(wrap ? EditorView.lineWrapping : []),
@@ -137410,6 +137524,7 @@ function createVaultEditor(parent, { doc: doc2 = "", onChange, mode = "live", li
     keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
     wikilinkCompletion(noteFiles),
     wikilinkHandler,
+    pasteHandler,
     updateListener2,
     liveCompartment.of(currentMode === "live" ? livePreview({ resolveImage }) : []),
     ...extraExtensions
@@ -137602,7 +137717,7 @@ function sliceGraph(graph, keep, limit) {
   const edges = graph.edges.filter((edge) => kept.has(edge.source) && kept.has(edge.target));
   return { nodes, edges };
 }
-function VaultView({ api, onMaterial }) {
+function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }) {
   const [tabs, setTabs] = (0, import_react11.useState)(() => loadJson(TABS_KEY, []));
   const [activeTabId, setActiveTabId] = (0, import_react11.useState)(() => loadJson(TABS_KEY + ".active", null));
   const [expanded, setExpanded] = (0, import_react11.useState)(() => new Set(loadJson(EXPANDED_KEY, [])));
@@ -137633,6 +137748,7 @@ function VaultView({ api, onMaterial }) {
   const [stats, setStats] = (0, import_react11.useState)({ files: 0 });
   const [fileIndex, setFileIndex] = (0, import_react11.useState)([]);
   const [editOutline, setEditOutline] = (0, import_react11.useState)(null);
+  const [editActive, setEditActive] = (0, import_react11.useState)(-1);
   const [, setEditorScrollTick] = (0, import_react11.useState)(0);
   const readerRef = (0, import_react11.useRef)(null);
   const notePaneRef = (0, import_react11.useRef)(null);
@@ -137646,6 +137762,46 @@ function VaultView({ api, onMaterial }) {
   (0, import_react11.useEffect)(() => {
     saveJson(EXPANDED_KEY, [...expanded]);
   }, [expanded]);
+  const tabSignature = tabs.map((tab) => `${tab.id}:${tab.sha}:${tab.dirty != null ? "d" : "c"}`).join("|");
+  (0, import_react11.useEffect)(() => {
+    if (tabs.length === 0) return void 0;
+    let stopped = false;
+    const check = async () => {
+      for (const tab of tabsRef.current) {
+        if (stopped) return;
+        try {
+          const { stat } = await api.vaultStat(tab.path);
+          if (stopped || !stat || stat.sha === tab.sha) continue;
+          const note = await api.vaultRead(tab.path);
+          if (stopped) return;
+          if (tab.dirty != null) {
+            setConflict((current) => current?.path === tab.path ? current : {
+              path: tab.path,
+              tabId: tab.id,
+              currentSha: note.sha,
+              currentExcerpt: String(note.content ?? "").slice(0, 300)
+            });
+          } else {
+            setTabs((current) => current.map((item) => item.id === tab.id ? { ...item, content: note.content, sha: note.sha, title: note.title, tags: note.tags ?? [], wordCount: note.wordCount ?? 0, savedAt: null } : item));
+          }
+        } catch {
+        }
+      }
+    };
+    const timer2 = setInterval(() => {
+      void check();
+    }, 5e3);
+    const onFocus = () => {
+      void check();
+    };
+    window.addEventListener("focus", onFocus);
+    void check();
+    return () => {
+      stopped = true;
+      clearInterval(timer2);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [tabSignature, api]);
   const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? null;
   const refreshIndex = (0, import_react11.useCallback)(async () => {
     try {
@@ -137730,6 +137886,12 @@ function VaultView({ api, onMaterial }) {
       setError(String(cause?.message ?? cause));
     }
   }, [api, tabs, onMaterial]);
+  (0, import_react11.useEffect)(() => {
+    if (!noteRequest?.path) return;
+    void openPath(noteRequest.path).finally(() => {
+      onNoteRequestHandled?.();
+    });
+  }, [noteRequest?.path, noteRequest?.nonce]);
   const restoredOnce = (0, import_react11.useRef)(false);
   (0, import_react11.useEffect)(() => {
     if (restoredOnce.current || tabs.length === 0) return;
@@ -138120,9 +138282,37 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
     }
   }, [fileIndex, openPath, activeTab?.path]);
   const resolveVaultImage = (0, import_react11.useCallback)((src) => {
-    if (/^https?:/i.test(src ?? "")) return src;
-    return null;
-  }, []);
+    const raw = String(src ?? "").trim();
+    if (/^(https?:|data:|blob:)/i.test(raw)) return raw;
+    if (!activeTab?.path) return null;
+    const noteDir = activeTab.path.split("/").slice(0, -1).join("/");
+    const base2 = raw.replace(/^\.?\//, "");
+    const name2 = base2.split("/").pop();
+    const candidates = [.../* @__PURE__ */ new Set([
+      (noteDir ? noteDir + "/" : "") + base2,
+      base2,
+      "attachments/" + name2
+    ])];
+    return (async () => {
+      for (const candidate of candidates) {
+        try {
+          const result = await api.vaultReadAttachment?.(candidate);
+          if (result?.dataUrl) return result.dataUrl;
+        } catch {
+        }
+      }
+      return null;
+    })();
+  }, [api, activeTab?.path]);
+  const pasteVaultImage = (0, import_react11.useCallback)(async (base64, name2) => {
+    try {
+      const result = await api.vaultWriteAttachment?.({ bytes: base64, name: name2 });
+      return result?.path ?? null;
+    } catch (cause) {
+      setNotice(String(cause?.message ?? cause));
+      return null;
+    }
+  }, [api]);
   const openTrash = (0, import_react11.useCallback)(async () => {
     try {
       const outcome = await api.vaultTrashList();
@@ -138332,8 +138522,12 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
             onWikilink: onVaultLink,
             onMaterial,
             onOutlineChange: setEditOutline,
-            onEditorScroll: () => setEditorScrollTick((tick) => tick + 1),
+            onEditorScroll: (index2) => {
+              setEditorScrollTick((tick) => tick + 1);
+              setEditActive(typeof index2 === "number" ? index2 : -1);
+            },
             resolveImage: resolveVaultImage,
+            pasteImage: pasteVaultImage,
             noteFiles: fileIndex,
             readerRef,
             backlinksOpen,
@@ -138396,6 +138590,7 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
         onJumpToHeading: (index2) => {
           notePaneRef.current?.jumpToHeading?.(index2);
         },
+        activeIndex: editOutline !== null ? editActive : void 0,
         onAskAi: () => {
           if (!activeTab) return;
           onMaterial({ space: "vault", path: activeTab.path, title: activeTab.title, content: (activeTab.draft ?? activeTab.content).slice(0, 6e4) }, { reveal: true });
@@ -138490,8 +138685,9 @@ created: ${(/* @__PURE__ */ new Date()).toISOString()}
           void openPath(path);
         }, children: "\u91CD\u8F7D" }),
         /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "dpl-btn is-danger", onClick: () => {
+          const tabId = conflict.tabId ?? activeTabId;
           setConflict(null);
-          void flushSave(activeTabId, { force: true });
+          void flushSave(tabId, { force: true });
         }, children: "\u8986\u76D6\u4FDD\u5B58" })
       ] })
     ] }) : null,
@@ -138859,6 +139055,7 @@ var NoteReadPane = (0, import_react11.forwardRef)(function NoteReadPane2({
   onOutlineChange,
   onEditorScroll,
   resolveImage,
+  pasteImage,
   noteFiles,
   readerRef,
   backlinksOpen,
@@ -138893,19 +139090,35 @@ var NoteReadPane = (0, import_react11.forwardRef)(function NoteReadPane2({
       lineNumbers: lineNumbers2,
       wrap,
       resolveImage,
+      pasteImage,
       noteFiles,
       onWikilink,
       onChange: (next) => {
         outlineRef.current = outlineOf(editorRef.current?.view.state ?? editor.view.state);
         onOutlineChange(outlineRef.current);
-        onEditorScroll();
+        reportActive();
         onDraft(next);
       }
     });
     editorRef.current = editor;
     outlineRef.current = outlineOf(editor.view.state);
     onOutlineChange(outlineRef.current);
+    const reportActive = () => {
+      onEditorScroll(activeOutlineIndex(editor.view, outlineRef.current ?? []));
+    };
+    let scrollTimer = null;
+    const onEditorScrollDom = () => {
+      if (scrollTimer !== null) return;
+      scrollTimer = setTimeout(() => {
+        scrollTimer = null;
+        reportActive();
+      }, 120);
+    };
+    editor.view.scrollDOM.addEventListener("scroll", onEditorScrollDom, { passive: true });
+    reportActive();
     return () => {
+      clearTimeout(scrollTimer);
+      editor.view.scrollDOM.removeEventListener("scroll", onEditorScrollDom);
       editor.destroy();
       editorRef.current = null;
       onOutlineChange(null);
@@ -138927,10 +139140,14 @@ var NoteReadPane = (0, import_react11.forwardRef)(function NoteReadPane2({
         event.preventDefault();
         setMode(view === "read" ? "live" : view === "live" ? "source" : "read");
       }
+      if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        onSave?.();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [view]);
+  }, [view, onSave]);
   const jumpTo = (index2) => {
     if (view === "read") {
       const heading2 = markdownHeadings2(text2)[index2];
@@ -138942,7 +139159,7 @@ var NoteReadPane = (0, import_react11.forwardRef)(function NoteReadPane2({
       const entry = outlineRef.current[index2];
       if (entry) {
         scrollToHeading(editorRef.current.view, entry.from);
-        onEditorScroll();
+        onEditorScroll(activeOutlineIndex(editorRef.current.view, outlineRef.current ?? []));
       }
     }
   };
@@ -139105,7 +139322,7 @@ var NoteReadPane = (0, import_react11.forwardRef)(function NoteReadPane2({
       ] })
     ] }) : null,
     view === "read" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { ref: readerRef, className: "dpl-vault2-readerscroll", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(MarkdownView, { className: "dpl-note-body dpl-vault2-body", markdown: text2, onWikilink }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(MarkdownView, { className: "dpl-note-body dpl-vault2-body", markdown: text2, onWikilink, resolveImage }),
       /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-bodyend" })
     ] }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "dpl-vault2-editwrap", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { ref: hostRef, className: "dpl-vault2-cmhost", "data-testid": "vault-editor" }) })
   ] });
@@ -139818,6 +140035,13 @@ function DropletsPanel({ api, SessionProvider, renderSlot }) {
     }
   }, []);
   const [material, setMaterial] = (0, import_react14.useState)({ space: "feed", title: "" });
+  const [vaultNoteRequest, setVaultNoteRequest] = (0, import_react14.useState)(null);
+  const openVaultNote = (0, import_react14.useCallback)((notePath) => {
+    if (typeof notePath === "string" && notePath !== "") {
+      setVaultNoteRequest({ path: notePath, nonce: Date.now() });
+      setSpace("vault");
+    }
+  }, []);
   const onFocus = (0, import_react14.useCallback)(() => {
     void api.vaultReindex?.().catch(() => {
     });
@@ -139911,9 +140135,17 @@ function DropletsPanel({ api, SessionProvider, renderSlot }) {
     ] }),
     /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "dpl-body" + (companionOpen && companionForm === "docked" ? " has-docked" : ""), children: [
       /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "dpl-space", children: settingsOpen ? /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(SettingsView, { api, onClose: () => setSettingsOpen(false) }) : /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(import_jsx_runtime11.Fragment, { children: [
-        space4 === "feed" && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(FeedView, { api, onMaterial, onJumpSpace: setSpace }),
-        space4 === "inbox" && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(InboxView, { api, onMaterial }),
-        space4 === "vault" && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(VaultView, { api, onMaterial })
+        space4 === "feed" && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(FeedView, { api, onMaterial, onJumpSpace: setSpace, onOpenVaultNote: openVaultNote }),
+        space4 === "inbox" && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(InboxView, { api, onMaterial, onOpenVaultNote: openVaultNote }),
+        space4 === "vault" && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+          VaultView,
+          {
+            api,
+            onMaterial,
+            noteRequest: vaultNoteRequest,
+            onNoteRequestHandled: () => setVaultNoteRequest(null)
+          }
+        )
       ] }) }),
       companionOpen && companionForm === "docked" && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
         Companion,
@@ -140160,6 +140392,9 @@ var TYPERT_REMOTE = {
     "vaultTags",
     "vaultTrashList",
     "vaultTrashRestore",
+    "vaultWriteAttachment",
+    "vaultReadAttachment",
+    "vaultStat",
     "getSettings",
     "saveSettings",
     "getWorkspace",
@@ -140168,7 +140403,8 @@ var TYPERT_REMOTE = {
     "getStorageInfo",
     "clearData",
     "setReadingContext",
-    "prepareChat"
+    "prepareChat",
+    "saveAsNote"
   ].map((name2) => method(name2, !NO_PARAM_METHODS.has(name2)))
 };
 var inject = ["slots", "layout", "remote"];
@@ -140237,6 +140473,7 @@ function registerPanel(ctx) {
     vaultReindex: () => call("vaultReindex"),
     vaultTree: () => call("vaultTree"),
     vaultRead: (path) => call("vaultRead", { path }),
+    vaultStat: (path) => call("vaultStat", { path }),
     vaultSearch: (params) => call("vaultSearch", params),
     vaultGraph: () => call("vaultGraph"),
     vaultBacklinks: (path) => call("vaultBacklinks", { path }),
@@ -140251,7 +140488,10 @@ function registerPanel(ctx) {
     vaultTrashList: () => call("vaultTrashList"),
     vaultTrashRestore: (id2) => call("vaultTrashRestore", { id: id2 }),
     vaultWrite: (params) => call("vaultWrite", params),
+    vaultWriteAttachment: (params) => call("vaultWriteAttachment", params),
+    vaultReadAttachment: (path) => call("vaultReadAttachment", { path }),
     getSettings: () => call("getSettings"),
+    saveAsNote: (params) => call("saveAsNote", params),
     getWorkspace: () => call("getWorkspace"),
     setWorkspace: (params) => call("setWorkspace", params),
     openPath: (params) => call("openPath", params),
