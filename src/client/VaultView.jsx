@@ -17,6 +17,8 @@ import { createVaultEditor, outlineOf, scrollToHeading, activeOutlineIndex } fro
 const TABS_KEY = 'droplets.vault.tabs';
 const EXPANDED_KEY = 'droplets.vault.expanded';
 const SIDEPANE_KEY = 'droplets.vault.sidepane';
+// File index survives space switches: re-entering the vault must not re-walk.
+let fileIndexCache = null;
 
 function loadJson(key, fallback) {
   try {
@@ -93,18 +95,14 @@ export function VaultView({ api, onMaterial }) {
       const status = await api.vaultStatus();
       setStats({ files: status.files });
     } catch { /* surfaced elsewhere */ }
+    // Paint the cached index immediately (no await), then refresh in the
+    // background via ONE host-side walk — never a per-directory RPC storm,
+    // which used to starve the tree's own requests on first entry.
+    if (fileIndexCache) setFileIndex(fileIndexCache);
     try {
-      const walk = async (dir, visiting) => {
-        // Cycle/depth guard: a stub or symlink loop must not spin forever.
-        if (visiting.has(dir) || visiting.size > 32) return [];
-        visiting.add(dir);
-        const { entries } = await api.vaultList(dir);
-        const files = entries.filter((entry) => entry.kind === 'file');
-        const dirs = entries.filter((entry) => entry.kind === 'dir');
-        for (const child of dirs) files.push(...await walk(child.path, visiting));
-        return files;
-      };
-      setFileIndex(await walk('', new Set()));
+      const files = await api.vaultIndexFiles();
+      fileIndexCache = files;
+      setFileIndex(files);
     } catch { /* offline tolerated: search falls back to tree filter */ }
   }, [api]);
 

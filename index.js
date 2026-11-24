@@ -139901,6 +139901,13 @@ var Vault = class {
     this.root = root;
     this.cacheHolder = cacheHolder;
     this.logger = logger;
+    this._gen = 0;
+    this._fileIndex = null;
+    this._fileIndexGen = -1;
+  }
+  /** Invalidate the cached file index after any mutation. */
+  _genBump() {
+    this._gen += 1;
   }
   cache() {
     return this.cacheHolder.get();
@@ -139920,6 +139927,7 @@ var Vault = class {
     }
     const builtAt = Date.now();
     this.cacheHolder.set({ path: this.root, builtAt, files: next });
+    this._genBump();
     return { files: Object.keys(next).length, builtAt };
   }
   /** Spot-check stamps for the files touched by a query; re-read changes. */
@@ -140060,6 +140068,7 @@ var Vault = class {
       cache.files[normalized] = record;
       this.cacheHolder.touch();
     }
+    this._genBump();
     return { conflict: false, path: normalized, sha: record.sha, title: record.title, created: existing === null };
   }
   /** Files whose wikilinks point at rel (resolved through the index). */
@@ -140130,6 +140139,36 @@ var Vault = class {
   // P0 tree operations: lazy listing, create, rename(+links), duplicate,
   // trash. Paths outside *.md files go through dir-safe normalization.
   // ------------------------------------------------------------------
+  /**
+   * One-shot flat file index for the client (quick switcher, filter,
+   * wikilink resolution). A single host-side walk replaces the client's
+   * per-directory RPC storm that starved the tree's own requests.
+   * mtime comes from the index cache when present; only unknown files get
+   * a stat, in chunks of 200 so 2261 files stay well under a second.
+   */
+  async indexFiles() {
+    if (this._fileIndex !== null && this._fileIndexGen === this._gen) return this._fileIndex;
+    const rels = await walkVault(this.root);
+    const files = this.cache()?.files ?? {};
+    const out = [];
+    const chunkSize2 = 200;
+    for (let i2 = 0; i2 < rels.length; i2 += chunkSize2) {
+      const chunk = rels.slice(i2, i2 + chunkSize2);
+      const entries = await Promise.all(chunk.map(async (rel) => {
+        const cached = files[rel];
+        let mtime = cached?.mtimeMs;
+        if (mtime === void 0) {
+          const info3 = await stat5(path2.join(this.root, rel)).catch(() => null);
+          mtime = info3?.mtimeMs;
+        }
+        return { path: rel, name: path2.basename(rel), mtime };
+      }));
+      out.push(...entries);
+    }
+    this._fileIndex = out;
+    this._fileIndexGen = this._gen;
+    return out;
+  }
   /** One real fs directory listing (empty dirs included, unlike tree()). */
   async list(dir) {
     const rel = normalizeVaultDir(dir);
@@ -140140,23 +140179,24 @@ var Vault = class {
       throw new VaultError("list_failed", `\u5217\u76EE\u5F55\u5931\u8D25\uFF1A${error.message}`);
     });
     const files = this.cache()?.files ?? {};
-    const out = [];
+    const dirs = [];
+    const fileRels = [];
     for (const entry of entries) {
       if (entry.name.startsWith(".") || EXCLUDED_DIRS.has(entry.name)) continue;
       const childRel = rel === "" ? entry.name : `${rel}/${entry.name}`;
       if (entry.isDirectory()) {
-        out.push({ kind: "dir", name: entry.name, path: childRel, mtime: void 0 });
+        dirs.push({ kind: "dir", name: entry.name, path: childRel, mtime: void 0 });
       } else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) {
-        const record = files[childRel];
-        let mtime;
-        try {
-          mtime = (await stat5(path2.join(this.root, childRel))).mtimeMs;
-        } catch {
-          mtime = record?.mtimeMs;
-        }
-        out.push({ kind: "file", name: entry.name, path: childRel, mtime, title: record?.title ?? entry.name.replace(/\.md$/i, "") });
+        fileRels.push({ entry, childRel });
       }
     }
+    const stats = await Promise.all(fileRels.map(({ childRel }) => stat5(path2.join(this.root, childRel)).catch(() => null)));
+    const filesOut = fileRels.map(({ entry, childRel }, index) => {
+      const record = files[childRel];
+      const mtime = stats[index]?.mtimeMs ?? record?.mtimeMs;
+      return { kind: "file", name: entry.name, path: childRel, mtime, title: record?.title ?? entry.name.replace(/\.md$/i, "") };
+    });
+    const out = [...dirs, ...filesOut];
     out.sort((a, b) => a.kind === b.kind ? a.name.localeCompare(b.name) : a.kind === "dir" ? -1 : 1);
     return { dir: rel, entries: out };
   }
@@ -140188,6 +140228,7 @@ created: ${created}
       if (error?.code === "ENOENT") throw new VaultError("not_found", `\u7236\u76EE\u5F55\u4E0D\u5B58\u5728\uFF1A${rel}`);
       throw error;
     });
+    this._genBump();
     return { dir: rel };
   }
   /**
@@ -140254,6 +140295,7 @@ created: ${created}
       }
     }
     this.cacheHolder.touch();
+    this._genBump();
     return { path: toRel, updatedLinks };
   }
   /** 「x 副本」递增命名复制。 */
@@ -140322,6 +140364,7 @@ created: ${created}
       }
       this.cacheHolder.touch();
     }
+    this._genBump();
     return { trashed: true, trashId: meta.id, title };
   }
   /** Best-effort pre-rewrite backup of the files a rename will touch. */
@@ -141571,6 +141614,11 @@ var DropletsService = class extends TypertRemoteService {
     const dir = typeof request === "string" ? request : request?.dir;
     return stripUndefined(await this.vaultService().list(dir ?? ""));
   }
+  /** One-shot flat file index (quick switcher / filter / wikilinks). */
+  async vaultIndexFiles() {
+    await this.ready;
+    return this.vaultService().indexFiles();
+  }
   async vaultCreate(request) {
     await this.ready;
     await this.ensureVault();
@@ -142026,6 +142074,7 @@ var DropletsService = class extends TypertRemoteService {
     "vaultBacklinks",
     "vaultWrite",
     "vaultList",
+    "vaultIndexFiles",
     "vaultCreate",
     "vaultCreateDir",
     "vaultRename",

@@ -235,3 +235,26 @@ test('neighborhoodOf keeps center + hops; capByDegree keeps hubs', () => {
   const whole = fn(graph, 'a', 5, 300);
   assert.equal(whole.nodes.length, 4);
 });
+
+// ---- P0 perf: indexFiles one-shot walk with generation cache ----
+test('indexFiles walks once, caches by generation, reflects mutations', async () => {
+  const v = tempVault();
+  try {
+    writeFileSync(path.join(v.dir, 'a.md'), 'A');
+    mkdirSync(path.join(v.dir, 'sub'), { recursive: true });
+    writeFileSync(path.join(v.dir, 'sub', 'b.md'), 'B');
+    const vault = makeVault(v.dir);
+    const first = await vault.indexFiles();
+    assert.equal(first.length, 2);
+    assert.ok(first.every((file) => typeof file.name === 'string' && typeof file.mtime === 'number'));
+    // Cached: same array identity until a mutation bumps the generation.
+    assert.equal(await vault.indexFiles(), first);
+    await vault.write('sub/c.md', 'C', { expectedSha: null, createOnly: true });
+    const afterWrite = await vault.indexFiles();
+    assert.notEqual(afterWrite, first, 'write bumps generation');
+    assert.equal(afterWrite.length, 3);
+    await vault.trash('a.md');
+    const afterTrash = await vault.indexFiles();
+    assert.equal(afterTrash.length, 2);
+  } finally { v.cleanup(); }
+});

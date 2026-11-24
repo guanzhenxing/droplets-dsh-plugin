@@ -1013,6 +1013,12 @@ export class DropletsService extends TypertRemoteService {
     return stripUndefined(await this.vaultService().list(dir ?? ''));
   }
 
+  /** One-shot flat file index (quick switcher / filter / wikilinks). */
+  async vaultIndexFiles() {
+    await this.ready;
+    return this.vaultService().indexFiles();
+  }
+
   async vaultCreate(request) {
     await this.ready;
     await this.ensureVault();
@@ -1459,7 +1465,7 @@ export class DropletsService extends TypertRemoteService {
     'inboxMoveToLibrary', 'inboxMoveToTrash', 'inboxMarkDone',
     // vault
     'vaultStatus', 'vaultReindex', 'vaultTree', 'vaultRead', 'vaultSearch', 'vaultGraph', 'vaultBacklinks', 'vaultWrite',
-    'vaultList', 'vaultCreate', 'vaultCreateDir', 'vaultRename', 'vaultDuplicate', 'vaultDelete', 'vaultTags', 'vaultTrashList', 'vaultTrashRestore',
+    'vaultList', 'vaultIndexFiles', 'vaultCreate', 'vaultCreateDir', 'vaultRename', 'vaultDuplicate', 'vaultDelete', 'vaultTags', 'vaultTrashList', 'vaultTrashRestore',
     // settings / companion
     'getSettings', 'saveSettings', 'getStorageInfo', 'getWorkspace', 'setWorkspace', 'openPath', 'clearData', 'setReadingContext', 'prepareChat',
   ];

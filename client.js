@@ -137022,6 +137022,7 @@ var import_jsx_runtime8 = require("react/jsx-runtime");
 var TABS_KEY = "droplets.vault.tabs";
 var EXPANDED_KEY = "droplets.vault.expanded";
 var SIDEPANE_KEY = "droplets.vault.sidepane";
+var fileIndexCache = null;
 function loadJson(key, fallback) {
   try {
     const raw = localStorage.getItem(key);
@@ -137100,17 +137101,11 @@ function VaultView({ api, onMaterial }) {
       setStats({ files: status.files });
     } catch {
     }
+    if (fileIndexCache) setFileIndex(fileIndexCache);
     try {
-      const walk = async (dir, visiting) => {
-        if (visiting.has(dir) || visiting.size > 32) return [];
-        visiting.add(dir);
-        const { entries: entries2 } = await api.vaultList(dir);
-        const files = entries2.filter((entry) => entry.kind === "file");
-        const dirs = entries2.filter((entry) => entry.kind === "dir");
-        for (const child of dirs) files.push(...await walk(child.path, visiting));
-        return files;
-      };
-      setFileIndex(await walk("", /* @__PURE__ */ new Set()));
+      const files = await api.vaultIndexFiles();
+      fileIndexCache = files;
+      setFileIndex(files);
     } catch {
     }
   }, [api]);
@@ -139158,6 +139153,7 @@ var NO_PARAM_METHODS = /* @__PURE__ */ new Set([
   "vaultGraph",
   "vaultTags",
   "vaultTrashList",
+  "vaultIndexFiles",
   "getSettings",
   "getWorkspace",
   "getStorageInfo",
@@ -139208,6 +139204,7 @@ var TYPERT_REMOTE = {
     "vaultBacklinks",
     "vaultWrite",
     "vaultList",
+    "vaultIndexFiles",
     "vaultCreate",
     "vaultCreateDir",
     "vaultRename",
@@ -139295,6 +139292,7 @@ function registerPanel(ctx) {
     vaultGraph: () => call("vaultGraph"),
     vaultBacklinks: (path) => call("vaultBacklinks", { path }),
     vaultList: (dir) => call("vaultList", { dir }),
+    vaultIndexFiles: () => call("vaultIndexFiles"),
     vaultCreate: (params) => call("vaultCreate", params),
     vaultCreateDir: (params) => call("vaultCreateDir", params),
     vaultRename: (params) => call("vaultRename", params),
