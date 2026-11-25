@@ -2365,3 +2365,11 @@
 .dpl-vault2-note[data-view='read'] { box-shadow: inset 3px 0 0 var(--dpl-accent); }
 .dpl-vault2-note[data-view='live'] { box-shadow: inset 3px 0 0 var(--dpl-link); }
 .dpl-vault2-note[data-view='source'] { box-shadow: inset 3px 0 0 var(--dpl-faint); }
+
+/* 模式按钮文字标签：三视图（阅读/实时/源码）的当前态必须在按钮上直接
+   可读，不能只靠左缘色条与 tooltip——色条没有图例时用户只能猜（实测
+   反馈：「为什么这里有一条蓝色的线？」）。色条降级为辅助线索。 */
+.dpl-vault2-modetext { font-size: 11.5px; color: var(--dpl-muted); white-space: nowrap; }
+.dpl-vault2-modelabel:hover .dpl-vault2-modetext { color: var(--dpl-fg); }
+.dpl-vault2-modelabel[data-view-current='live'] .dpl-vault2-modetext,
+.dpl-vault2-crumbbtn[data-view-current='live'] .dpl-vault2-modetext { color: var(--dpl-link); }

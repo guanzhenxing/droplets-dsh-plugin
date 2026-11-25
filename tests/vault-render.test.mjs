@@ -260,6 +260,9 @@ test('vault renders tree/tabs/read + native menus + graph', { skip: !existsSync(
   try {
     const modeButton = container.querySelector('[data-testid="vault-mode"]');
     assert.ok(modeButton, 'mode dropdown present');
+    // The current mode must be readable ON the button (self-explaining
+    // indicator — the edge color bar alone prompted "why is there a blue line?").
+    assert.ok(modeButton.textContent.includes('阅读视图'), 'mode button shows the current mode as text');
     modeButton.click();
     await new Promise((resolve) => setTimeout(resolve, 100));
     assert.ok(container.querySelector('[data-testid="vault-mode-live"]'), 'mode menu lists 实时预览');

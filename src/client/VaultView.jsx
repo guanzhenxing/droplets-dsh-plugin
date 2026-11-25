@@ -1885,11 +1885,13 @@ const NoteReadPane = forwardRef(function NoteReadPane({
           ) : null}
           <div className="dpl-relative">
             <button
-              type="button" className="dpl-vault2-crumbbtn" title={`切换视图 (⌘E) · 当前：${viewLabel}`}
+              type="button" className="dpl-vault2-crumbbtn dpl-vault2-modelabel" data-view-current={view} title={`切换视图 (⌘E) · 当前：${viewLabel}`}
               onClick={() => { setModeMenu(!modeMenu); setMoreMenu(false); }}
               data-testid="vault-mode"
             >
-              <ModeIcon size={14} /> <ChevronDown size={12} />
+              <ModeIcon size={14} />
+              <span className="dpl-vault2-modetext">{viewLabel}</span>
+              <ChevronDown size={12} />
             </button>
             {modeMenu ? (
               <PopMenu onClose={() => setModeMenu(false)}>
