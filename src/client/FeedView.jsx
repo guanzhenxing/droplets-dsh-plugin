@@ -180,6 +180,7 @@ export function FeedView({ api, surface = 'rss', onMaterial, onJumpSpace, onOpen
         { id: 'items', initialWidth: 320, minWidth: 240, collapsible: true, render: ({ collapsed, expand, collapse }) => (
           <ItemList
             api={api} feeds={surfaceFeeds} icons={icons} sourceId={sourceId} selectedGroup={selectedGroup}
+            surface={surface}
             itemsVersion={itemsVersion}
             selected={selected} onSelect={setSelected} onMaterial={onMaterial}
             onUnreadChange={bumpUnread}
@@ -198,7 +199,7 @@ export function FeedView({ api, surface = 'rss', onMaterial, onJumpSpace, onOpen
 
 /** Items pane: title + pill + refresh + three-state filter + mark-all + «. */
 function ItemList(props) {
-  const { api, feeds, icons, sourceId, selectedGroup, itemsVersion, selected, onSelect, onMaterial, onUnreadChange, spinning, onRefresh, onFeedsChanged, onManage, collapsed, onExpand, onCollapse } = props;
+  const { api, feeds, icons, sourceId, selectedGroup, surface, itemsVersion, selected, onSelect, onMaterial, onUnreadChange, spinning, onRefresh, onFeedsChanged, onManage, collapsed, onExpand, onCollapse } = props;
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewFilter, setViewFilter] = useState('all');

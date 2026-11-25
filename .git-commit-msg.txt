@@ -1,13 +1,4 @@
-feat: 信息流分区(RSS/News)+ 收件箱 MCP 开放接口(V1)
+fix: ItemList 缺 surface prop——渲染测试(评估构建产物)暴露的自由变量
 
-- 订阅池统一维护,surface(rss|news)分区:顶栏改为 RSS/News/收件箱/知识库,
-  同一 FeedView 按 surface 服务端过滤(listItems/entriesOf),管理表可改分区
-- surface 存 data.surfaces 边车映射:私有模式随 data.json,共享工作区随
-  .droplets-dsh 边车(SQLite 无此列),两后端一致持久化
-- 收件箱 MCP:手写无状态 streamable-http 服务端(/droplets-inbox/mcp,
-  Bearer 令牌),五工具 list/read/add_url/update/mark_done;
-  webServer 就绪即挂路由,并向 mcpManager 注册 droplets-inbox
-  (宿主 agent 经标准 MCP 客户端拿到工具);外部客户端用同一地址+令牌
-- 设置新增 MCP 开放接口页:状态/地址/令牌(显示/复制/轮换)
-- droplets_feed 工具与 list_channels/list_articles 支持 surface 参数
-- 新增 tests/surface.test.mjs(4)与 tests/mcp.test.mjs(6),全套 198 绿
+feed-render 测试加载的是构建后的 client.js,源码里 ItemList 引用了
+未接收的 surface 变量,补上 prop 传递与解构;重建后 198 测试全绿。

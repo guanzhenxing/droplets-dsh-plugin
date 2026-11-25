@@ -4249,7 +4249,7 @@ function formatWhenFull(ts) {
 
 // src/client/feed/ManageTable.jsx
 var import_jsx_runtime4 = require("react/jsx-runtime");
-function ManageTable({ api, feeds, surface: surface2 = "rss", onBack, onChanged }) {
+function ManageTable({ api, feeds, surface = "rss", onBack, onChanged }) {
   const [query, setQuery] = (0, import_react7.useState)("");
   const [status, setStatus] = (0, import_react7.useState)("all");
   const [checked, setChecked] = (0, import_react7.useState)(() => /* @__PURE__ */ new Set());
@@ -4528,7 +4528,7 @@ function ManageTable({ api, feeds, surface: surface2 = "rss", onBack, onChanged 
         feeds.some((f) => f.lastFetchAt) ? formatWhenFull(Math.max(...feeds.map((f) => f.lastFetchAt ?? 0))) : "\u4ECE\u672A"
       ] })
     ] }),
-    adding ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(AddDialog, { api, surface: surface2, onClose: () => setAdding(false), onChanged }) : null,
+    adding ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(AddDialog, { api, surface, onClose: () => setAdding(false), onChanged }) : null,
     editingId ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
       EditDialog,
       {
@@ -4567,7 +4567,7 @@ function ManageTable({ api, feeds, surface: surface2 = "rss", onBack, onChanged 
     ] }) }) : null
   ] });
 }
-function AddDialog({ api, surface: surface2 = "rss", onClose, onChanged }) {
+function AddDialog({ api, surface = "rss", onClose, onChanged }) {
   const [url, setUrl] = (0, import_react7.useState)("");
   const [name2, setName] = (0, import_react7.useState)("");
   const [group, setGroup] = (0, import_react7.useState)("");
@@ -4578,7 +4578,7 @@ function AddDialog({ api, surface: surface2 = "rss", onClose, onChanged }) {
     setBusy(true);
     setError("");
     try {
-      await api.addSubscription({ url: url.trim(), name: name2.trim() || void 0, group: group.trim() || void 0, surface: surface2 });
+      await api.addSubscription({ url: url.trim(), name: name2.trim() || void 0, group: group.trim() || void 0, surface });
       await onChanged();
       if (isLanUrl(url.trim())) {
         setLanWarning("\u8BE5\u6E90\u5141\u8BB8\u8BBF\u95EE\u5185\u7F51/\u56DE\u73AF\u5730\u5740\uFF0C\u8BF7\u786E\u8BA4\u6765\u6E90\u53EF\u4FE1\u3002");
@@ -4600,7 +4600,7 @@ function AddDialog({ api, surface: surface2 = "rss", onClose, onChanged }) {
     /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "dpl-dialog-body", children: [
       /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "dpl-dialog-field", children: [
         /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { children: "\u5206\u533A" }),
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "dpl-seg", children: surface2 === "news" ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "dpl-seg-item is-active", children: "News\uFF08\u65B0\u95FB\u6E90\uFF09" }) : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "dpl-seg-item is-active", children: "RSS\uFF08\u535A\u5BA2 / \u6587\u7AE0\uFF09" }) })
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "dpl-seg", children: surface === "news" ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "dpl-seg-item is-active", children: "News\uFF08\u65B0\u95FB\u6E90\uFF09" }) : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "dpl-seg-item is-active", children: "RSS\uFF08\u535A\u5BA2 / \u6587\u7AE0\uFF09" }) })
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("label", { className: "dpl-dialog-field", children: [
         /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { children: "Feed \u5730\u5740" }),
@@ -4616,7 +4616,7 @@ function AddDialog({ api, surface: surface2 = "rss", onClose, onChanged }) {
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "dpl-dialog-hint", children: [
         "\u6DFB\u52A0\u65F6\u9A8C\u8BC1\u6E90\u5E76\u81EA\u52A8\u6293\u53D6\u6807\u9898\u4E0E\u9996\u6279\u6761\u76EE\u3002\u5728 ",
-        surface2 === "news" ? "News" : "RSS",
+        surface === "news" ? "News" : "RSS",
         " \u5206\u533A\u6DFB\u52A0;\u4E4B\u540E\u53EF\u5728\u7F16\u8F91\u91CC\u6362\u5206\u533A\u3002"
       ] }),
       error ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "dpl-dialog-error", children: error }) : null,
@@ -4634,7 +4634,7 @@ function AddDialog({ api, surface: surface2 = "rss", onClose, onChanged }) {
 function EditDialog({ api, feed, availableGroups, onClose, onChanged }) {
   const [name2, setName] = (0, import_react7.useState)(feed?.title ?? "");
   const [group, setGroup] = (0, import_react7.useState)(feed?.groupName ?? "");
-  const [surface2, setSurface] = (0, import_react7.useState)(feed?.surface ?? "rss");
+  const [surface, setSurface] = (0, import_react7.useState)(feed?.surface ?? "rss");
   const [groupMenuOpen, setGroupMenuOpen] = (0, import_react7.useState)(false);
   const [enabled, setEnabled] = (0, import_react7.useState)(feed?.enabled ?? true);
   const [confirmDelete, setConfirmDelete] = (0, import_react7.useState)(false);
@@ -4655,7 +4655,7 @@ function EditDialog({ api, feed, availableGroups, onClose, onChanged }) {
     setBusy(true);
     setError("");
     try {
-      await api.setFeed({ id: feed.id, patch: { name: name2.trim(), group: group.trim(), surface: surface2 } });
+      await api.setFeed({ id: feed.id, patch: { name: name2.trim(), group: group.trim(), surface } });
       await onChanged();
       onClose();
     } catch (cause) {
@@ -4730,7 +4730,7 @@ function EditDialog({ api, feed, availableGroups, onClose, onChanged }) {
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "dpl-dialog-row", children: [
         /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "dpl-dialog-label", children: "\u5206\u533A" }),
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "dpl-seg", children: ["rss", "news"].map((value) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { type: "button", className: "dpl-seg-item" + (surface2 === value ? " is-active" : ""), onClick: () => setSurface(value), children: value === "rss" ? "RSS\uFF08\u535A\u5BA2 / \u6587\u7AE0\uFF09" : "News\uFF08\u65B0\u95FB\u6E90\uFF09" }, value)) })
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "dpl-seg", children: ["rss", "news"].map((value) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { type: "button", className: "dpl-seg-item" + (surface === value ? " is-active" : ""), onClick: () => setSurface(value), children: value === "rss" ? "RSS\uFF08\u535A\u5BA2 / \u6587\u7AE0\uFF09" : "News\uFF08\u65B0\u95FB\u6E90\uFF09" }, value)) })
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "dpl-dialog-row", children: [
         /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "dpl-dialog-label", children: "Feed \u5730\u5740" }),
@@ -5128,7 +5128,7 @@ function htmlHeadings(html3) {
 // src/client/FeedView.jsx
 var import_jsx_runtime6 = require("react/jsx-runtime");
 var STATE_LABEL = { unseen: "\u672A\u8BFB", seen: "\u5DF2\u8BFB", skipped: "\u7565\u8FC7" };
-function FeedView({ api, surface: surface2 = "rss", onMaterial, onJumpSpace, onOpenVaultNote }) {
+function FeedView({ api, surface = "rss", onMaterial, onJumpSpace, onOpenVaultNote }) {
   const [feeds, setFeeds] = (0, import_react9.useState)([]);
   const [managing, setManaging] = (0, import_react9.useState)(false);
   const [sourceId, setSourceId] = (0, import_react9.useState)(null);
@@ -5142,8 +5142,8 @@ function FeedView({ api, surface: surface2 = "rss", onMaterial, onJumpSpace, onO
     setFeeds((current) => current.map((feed) => feed.id === feedId ? { ...feed, unreadCount: Math.max(0, (feed.unreadCount ?? 0) + delta) } : feed));
   }, []);
   const surfaceFeeds = (0, import_react9.useMemo)(
-    () => feeds.filter((feed) => (feed.surface ?? "rss") === surface2),
-    [feeds, surface2]
+    () => feeds.filter((feed) => (feed.surface ?? "rss") === surface),
+    [feeds, surface]
   );
   const loadFeeds = (0, import_react9.useCallback)(async () => {
     try {
@@ -5264,7 +5264,7 @@ function FeedView({ api, surface: surface2 = "rss", onMaterial, onJumpSpace, onO
               onCollapse: collapse
             }
           ) },
-          { id: "manage", initialWidth: 900, minWidth: 480, collapsible: false, render: () => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(ManageTable, { api, feeds, surface: surface2, onBack: () => setManaging(false), onChanged }) }
+          { id: "manage", initialWidth: 900, minWidth: 480, collapsible: false, render: () => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(ManageTable, { api, feeds, surface, onBack: () => setManaging(false), onChanged }) }
         ]
       }
     );
@@ -5304,6 +5304,7 @@ function FeedView({ api, surface: surface2 = "rss", onMaterial, onJumpSpace, onO
             icons,
             sourceId,
             selectedGroup,
+            surface,
             itemsVersion,
             selected,
             onSelect: setSelected,
@@ -5324,7 +5325,7 @@ function FeedView({ api, surface: surface2 = "rss", onMaterial, onJumpSpace, onO
   );
 }
 function ItemList(props) {
-  const { api, feeds, icons, sourceId, selectedGroup, itemsVersion, selected, onSelect, onMaterial, onUnreadChange, spinning, onRefresh, onFeedsChanged, onManage, collapsed, onExpand, onCollapse } = props;
+  const { api, feeds, icons, sourceId, selectedGroup, surface, itemsVersion, selected, onSelect, onMaterial, onUnreadChange, spinning, onRefresh, onFeedsChanged, onManage, collapsed, onExpand, onCollapse } = props;
   const [items, setItems] = (0, import_react9.useState)([]);
   const [loading, setLoading] = (0, import_react9.useState)(true);
   const [viewFilter, setViewFilter] = (0, import_react9.useState)("all");
