@@ -56,6 +56,8 @@ function defaults() {
     read: {},
     states: {},
     favorites: {},
+    // RSS/News surface per subscription id ('rss' | 'news'; absent = 'rss').
+    surfaces: {},
     inbox: [],
     // { path, builtAt, files: { [relPath]: { mtimeMs, size, title, tags, links } } }
     vaultCache: null,
@@ -157,6 +159,7 @@ export class DropletsStore {
       if (!this.data.read || typeof this.data.read !== 'object') this.data.read = {};
       if (!this.data.states || typeof this.data.states !== 'object') this.data.states = {};
       if (!this.data.favorites || typeof this.data.favorites !== 'object') this.data.favorites = {};
+      if (!this.data.surfaces || typeof this.data.surfaces !== 'object') this.data.surfaces = {};
       // migration: legacy read map -> 'seen' states (droplets three-state model)
       for (const [key, value] of Object.entries(this.data.read)) {
         if (this.data.states[key] === undefined) this.data.states[key] = 'seen';
@@ -211,7 +214,7 @@ export class DropletsStore {
         if (sub && typeof sub.id === 'string' && !byId.has(sub.id)) mine.subscriptions.push(sub);
       }
     }
-    for (const key of ['states', 'favorites', 'read']) {
+    for (const key of ['states', 'favorites', 'read', 'surfaces']) {
       const theirs = foreign[key];
       if (theirs && typeof theirs === 'object') {
         mine[key] ??= {};

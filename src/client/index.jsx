@@ -38,6 +38,7 @@ function method(name, params = true) {
 const NO_PARAM_METHODS = new Set([
   'listChannels', 'listFeeds', 'refreshStatus', 'listSubscriptions', 'opmlExport', 'vaultStatus', 'vaultReindex',
   'vaultTree', 'vaultGraph', 'vaultTags', 'vaultTrashList', 'vaultIndexFiles', 'getSettings', 'getWorkspace', 'getStorageInfo', 'clearData', 'inboxRetryAllFailed', 'feedIcons',
+  'mcpStatus', 'mcpRotateToken',
 ]);
 
 const TYPERT_REMOTE = {
@@ -52,7 +53,7 @@ const TYPERT_REMOTE = {
     'inboxMoveToLibrary', 'inboxMoveToTrash', 'inboxMarkDone',
     'vaultStatus', 'vaultReindex', 'vaultTree', 'vaultRead', 'vaultSearch', 'vaultGraph', 'vaultBacklinks', 'vaultWrite',
     'vaultList', 'vaultIndexFiles', 'vaultCreate', 'vaultCreateDir', 'vaultRename', 'vaultDuplicate', 'vaultDelete', 'vaultTags', 'vaultTrashList', 'vaultTrashRestore', 'vaultWriteAttachment', 'vaultReadAttachment', 'vaultStat',
-    'getSettings', 'saveSettings', 'getWorkspace', 'setWorkspace', 'openPath', 'getStorageInfo', 'clearData', 'setReadingContext', 'prepareChat', 'saveAsNote',
+    'getSettings', 'saveSettings', 'getWorkspace', 'setWorkspace', 'openPath', 'getStorageInfo', 'clearData', 'setReadingContext', 'prepareChat', 'saveAsNote', 'mcpStatus', 'mcpRotateToken',
   ].map((name) => method(name, !NO_PARAM_METHODS.has(name))),
 };
 
@@ -156,6 +157,9 @@ function registerPanel(ctx) {
     saveSettings: (patch) => call('saveSettings', patch),
     getStorageInfo: () => call('getStorageInfo'),
     clearData: () => call('clearData'),
+    // Inbox MCP (open API): status for the settings card, token rotation.
+    mcpStatus: () => call('mcpStatus'),
+    mcpRotateToken: () => call('mcpRotateToken'),
   };
 
   ctx.slots.inject('main', () => ctx.slots.register({

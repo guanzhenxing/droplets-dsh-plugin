@@ -31,6 +31,7 @@ import { htmlToText } from './sanitize.js';
 import { guardedFetch } from './guarded-fetch.js';
 import { FeedIconStore, ensureFeedIcon } from './icons.js';
 import { TranslationStore, completeWithLlm, translationInputOf, titleOfTranslation, TRANSLATE_SYSTEM_PROMPT } from './translate.js';
+import { createInboxMcpHandler, inboxMcpPath, loadOrCreateMcpToken, rotateMcpToken } from './mcp.js';
 
 export const name = 'droplets';
 
@@ -46,7 +47,7 @@ const FEED_TIMEOUT_MS = 20_000;
  * reference). Keys per the plan: vaultPath, refreshInterval, maxBodies,
  * enableTranslation.
  */
-const CONFIG_KEYS = new Set(['workspacePath', 'vaultPath', 'refreshInterval', 'maxBodies', 'enableTranslation']);
+const CONFIG_KEYS = new Set(['workspacePath', 'vaultPath', 'refreshInterval', 'maxBodies', 'enableTranslation', 'enableMcp']);
 
 export const Config = {
   '~standard': {
@@ -75,6 +76,9 @@ export const Config = {
       if (value.enableTranslation !== undefined && typeof value.enableTranslation !== 'boolean') {
         issues.push({ message: 'droplets：enableTranslation 必须是布尔值', path: ['enableTranslation'] });
       }
+      if (value.enableMcp !== undefined && typeof value.enableMcp !== 'boolean') {
+        issues.push({ message: 'droplets：enableMcp 必须是布尔值', path: ['enableMcp'] });
+      }
       if (issues.length > 0) return { issues };
       const result = {};
       if (typeof value.workspacePath === 'string' && value.workspacePath.trim() !== '') result.workspacePath = path.resolve(value.workspacePath.trim());
@@ -82,6 +86,7 @@ export const Config = {
       if (typeof value.refreshInterval === 'number') result.refreshInterval = Math.max(60_000, Math.floor(value.refreshInterval));
       if (typeof value.maxBodies === 'number') result.maxBodies = Math.floor(value.maxBodies);
       if (typeof value.enableTranslation === 'boolean') result.enableTranslation = value.enableTranslation;
+      if (typeof value.enableMcp === 'boolean') result.enableMcp = value.enableMcp;
       return { value: result };
     },
   },
@@ -164,6 +169,16 @@ export class DropletsService extends TypertRemoteService {
       const disposers = createToolDefinitions(this).map((tool) => tools.register(tool));
       return () => { for (const dispose of disposers) { try { dispose?.(); } catch { /* best effort */ } } };
     }, 'droplets: agent tools');
+
+    // Inbox MCP (the reader's open API): mounts only when a webServer is
+    // composed; both webServer and mcpManager are optional peers, a missing
+    // peer degrades to "no MCP" without taking the plugin down.
+    this.mcpToken = null;
+    this.mcpMount = null;
+    ctx.inject(['webServer'], (scope) => {
+      const mount = this.mountInboxMcp(scope);
+      return () => this.unmountInboxMcp(mount);
+    });
 
     this.startTick();
     ctx.logger?.info?.('droplets: service started');
@@ -261,6 +276,33 @@ export class DropletsService extends TypertRemoteService {
     return (sub.entries ?? []).map((entry) => ({ ...entry, channelKey: sub.id, channelName: sub.name }));
   }
 
+  // ------------------------------------------------------------------
+  // Surfaces (RSS / News): one subscription pool, per-surface views
+  // ------------------------------------------------------------------
+
+  /**
+   * The surface a subscription renders on. Kept in a data-doc sidecar map
+   * ('surfaces', keyed by subscription id) so BOTH storage backends persist
+   * it: the private store writes the whole data doc, the shared Droplets
+   * workspace keeps it in the '.droplets-dsh' sidecar next to the SQLite
+   * tables (which have no column for it). Absent entry = 'rss'.
+   */
+  surfaceOf(sub) {
+    return this.store.data.surfaces?.[sub.id] === 'news' ? 'news' : 'rss';
+  }
+
+  /** Subscriptions restricted to one surface ('news' | 'rss'), or all. */
+  subscriptionsOn(surface) {
+    const subs = this.store.data.subscriptions;
+    if (surface !== 'news' && surface !== 'rss') return subs;
+    return subs.filter((sub) => this.surfaceOf(sub) === surface);
+  }
+
+  setSurface(subId, surface) {
+    if (surface !== 'news' && surface !== 'rss') throw new Error('surface 必须是 rss 或 news');
+    (this.store.data.surfaces ??= {})[subId] = surface;
+  }
+
   async listChannels() {
     await this.ready;
     const data = this.store.data;
@@ -294,6 +336,7 @@ export class DropletsService extends TypertRemoteService {
         kind: 'feed',
         name: sub.name,
         group: sub.group,
+        surface: this.surfaceOf(sub),
         url: sub.url,
         unread: countUnread(sub.entries ?? []),
         total: (sub.entries ?? []).length,
@@ -304,16 +347,16 @@ export class DropletsService extends TypertRemoteService {
     return { channels };
   }
 
-  entriesOf(channel) {
-    const data = this.store.data;
+  entriesOf(channel, surface) {
+    const subs = this.subscriptionsOn(surface);
     if (channel === undefined || channel === 'all') {
-      return data.subscriptions.flatMap((sub) => this.entriesOfFeed(sub));
+      return subs.flatMap((sub) => this.entriesOfFeed(sub));
     }
     if (channel.startsWith('group:')) {
       const wanted = channel.slice('group:'.length);
-      return data.subscriptions.filter((sub) => (sub.group ?? '') === wanted).flatMap((sub) => this.entriesOfFeed(sub));
+      return subs.filter((sub) => (sub.group ?? '') === wanted).flatMap((sub) => this.entriesOfFeed(sub));
     }
-    const sub = data.subscriptions.find((candidate) => candidate.id === channel);
+    const sub = subs.find((candidate) => candidate.id === channel);
     return sub ? this.entriesOfFeed(sub) : [];
   }
 
@@ -349,6 +392,7 @@ export class DropletsService extends TypertRemoteService {
         id: sub.id,
         title: sub.name,
         url: sub.url,
+        surface: this.surfaceOf(sub),
         groupName: sub.group ?? '',
         enabled: sub.enabled !== false,
         lastFetchAt: sub.lastFetchedAt ?? null,
@@ -365,22 +409,25 @@ export class DropletsService extends TypertRemoteService {
    * with sourceId, exactly like droplets).
    */
   async listItems(request) {
-    const { sourceId, groupName, limit } = request ?? {};
+    const { sourceId, groupName, limit, surface } = request ?? {};
     await this.ready;
     const data = this.store.data;
     // The list carries no article bodies (the reader fetches those on open),
     // so it can hold the whole scope instead of a 120-row window.
     const size = Math.min(Math.max(limit ?? 5000, 1), 8000);
+    // Surface scoping (RSS / News): restrict the subscription pool first, so
+    // the source/group/all branches below all stay inside one surface.
+    const scoped = this.subscriptionsOn(surface);
     let pool = [];
     if (typeof sourceId === 'string' && sourceId) {
-      const sub = data.subscriptions.find((candidate) => candidate.id === sourceId);
+      const sub = scoped.find((candidate) => candidate.id === sourceId);
       pool = sub ? this.entriesOfFeed(sub) : [];
     } else if (typeof groupName === 'string') {
-      pool = data.subscriptions
+      pool = scoped
         .filter((sub) => (sub.group ?? '') === groupName)
         .flatMap((sub) => this.entriesOfFeed(sub));
     } else {
-      pool = data.subscriptions.flatMap((sub) => this.entriesOfFeed(sub));
+      pool = scoped.flatMap((sub) => this.entriesOfFeed(sub));
     }
     // Reading order: every unread item first, newest to oldest inside each
     // group — the order the list has to show on entry, for 全部源 as well.
@@ -445,7 +492,7 @@ export class DropletsService extends TypertRemoteService {
     return { marked: count };
   }
 
-  /** Feed management patch: rename / regroup / enable-disable. */
+  /** Feed management patch: rename / regroup / enable-disable / re-surface. */
   async setFeed(request) {
     const { id, patch } = request ?? {};
     await this.ready;
@@ -454,16 +501,20 @@ export class DropletsService extends TypertRemoteService {
     if (typeof patch?.name === 'string' && patch.name.trim() !== '') sub.name = patch.name.trim();
     if (typeof patch?.group === 'string') sub.group = patch.group.trim() || undefined;
     if (typeof patch?.enabled === 'boolean') sub.enabled = patch.enabled;
+    if (patch?.surface === 'rss' || patch?.surface === 'news') {
+      this.setSurface(id, patch.surface);
+      sub.surface = patch.surface;
+    }
     this.store.touch();
     await this.store.flush();
     return { ok: true };
   }
 
   async listEntries(request) {
-    const { channel, filter, search, cursor, limit } = request ?? {};
+    const { channel, filter, search, cursor, limit, surface } = request ?? {};
     await this.ready;
     const size = Math.min(Math.max(limit ?? 30, 1), 100);
-    let entries = this.entriesOf(channel);
+    let entries = this.entriesOf(channel, surface);
     entries.sort(sortByDate);
     if (search && search.trim() !== '') {
       const needle = search.trim().toLowerCase();
@@ -602,6 +653,7 @@ export class DropletsService extends TypertRemoteService {
         url: sub.url,
         name: sub.name,
         group: sub.group,
+        surface: this.surfaceOf(sub),
         addedAt: sub.addedAt,
         lastFetchedAt: sub.lastFetchedAt,
         lastError: sub.lastError,
@@ -611,7 +663,7 @@ export class DropletsService extends TypertRemoteService {
   }
 
   async addSubscription(request) {
-    const { url, name, group } = request ?? {};
+    const { url, name, group, surface } = request ?? {};
     await this.ready;
     const trimmed = String(url ?? '').trim();
     if (!/^https?:\/\//i.test(trimmed)) throw new Error('订阅地址必须是 http(s) URL');
@@ -645,6 +697,7 @@ export class DropletsService extends TypertRemoteService {
       url: trimmed,
       name: displayName || feedTitle || trimmed,
       group: String(group ?? '').trim() || undefined,
+      surface: surface === 'news' ? 'news' : 'rss',
       addedAt: Date.now(),
       lastFetchedAt: feedTitle ? Date.now() : undefined,
       status,
@@ -652,6 +705,9 @@ export class DropletsService extends TypertRemoteService {
       entries: this.sharedWorkspace ? this.remapToNativeKeys(subId, entries) : entries,
     };
     this.store.data.subscriptions.push(sub);
+    // Surface lives in the sidecar map (see surfaceOf): set it for this feed
+    // so both storage backends persist the RSS/News assignment.
+    this.setSurface(sub.id, sub.surface);
     this.store.touch();
     await this.store.flush();
     // Grab the favicon right away so a just-added source shows its own
@@ -677,6 +733,8 @@ export class DropletsService extends TypertRemoteService {
     for (const entry of target.entries ?? []) {
       this.store.bodies.delete([entry.key]);
     }
+    // The surface assignment dies with the subscription.
+    if (this.store.data.surfaces) delete this.store.data.surfaces[id];
     // Derived per-feed caches (favicon file, translations) die with the sub.
     void this.icons.remove(id);
     void this.translations.remove(id);
@@ -686,15 +744,20 @@ export class DropletsService extends TypertRemoteService {
   }
 
   async updateSubscription(request) {
-    const { id, name, group } = request ?? {};
+    const { id, name, group, surface } = request ?? {};
     await this.ready;
     const sub = this.store.data.subscriptions.find((candidate) => candidate.id === id);
     if (!sub) throw new Error(`no subscription ${id}`);
     if (typeof name === 'string' && name.trim() !== '') sub.name = name.trim();
     if (typeof group === 'string') sub.group = group.trim() || undefined;
+    if (surface !== undefined) {
+      // Moving a source between the RSS and News surfaces.
+      this.setSurface(id, surface);
+      sub.surface = surface;
+    }
     this.store.touch();
     await this.store.flush();
-    return { id: sub.id, name: sub.name, group: sub.group };
+    return { id: sub.id, name: sub.name, group: sub.group, surface: this.surfaceOf(sub) };
   }
 
   async opmlPreview(request) {
@@ -1695,6 +1758,101 @@ export class DropletsService extends TypertRemoteService {
   }
 
   // ------------------------------------------------------------------
+  // Inbox MCP (open API)
+  // ------------------------------------------------------------------
+
+  /**
+   * Mount the inbox MCP endpoint on the composed webServer. The route handler
+   * reads the bearer token live (this.mcpToken), so a rotation takes effect
+   * without re-binding the route; the mcpManager entry (which gives in-profile
+   * agents the tools through the standard MCP client) is registered once the
+   * token file has been read.
+   */
+  mountInboxMcp(scope) {
+    if (this.config.enableMcp === false) return null;
+    const webServer = scope.get('webServer');
+    if (webServer === undefined) return null;
+    let origin;
+    try {
+      origin = webServer.getOrigin();
+    } catch (error) {
+      this.ctx.logger?.warn?.(`droplets: inbox MCP not mounted: ${String(error?.message ?? error)}`);
+      return null;
+    }
+    const mount = { scope, url: origin + inboxMcpPath(), registered: false, managerDisposer: null, routeDisposer: null, disposed: false };
+    mount.routeDisposer = webServer.register({
+      kind: 'exact',
+      path: inboxMcpPath(),
+      handler: createInboxMcpHandler(this, { getToken: () => this.mcpToken }),
+    });
+    void this.ready.then(async () => {
+      try {
+        const record = await loadOrCreateMcpToken(storageDir(), this.ctx.logger);
+        if (mount.disposed) return;
+        this.mcpToken = record.token;
+        this.bindMcpManager(mount, record.token);
+      } catch { /* logged inside the token helpers */ }
+    });
+    this.mcpMount = mount;
+    this.ctx.logger?.info?.(`droplets: inbox MCP listening on ${mount.url}`);
+    return mount;
+  }
+
+  /** (Re)register the in-profile mcpManager entry with the current token. */
+  bindMcpManager(mount, token) {
+    if (mount?.managerDisposer) {
+      try { mount.managerDisposer(); } catch { /* best effort */ }
+      mount.managerDisposer = null;
+      mount.registered = false;
+    }
+    const mcpManager = mount?.scope?.get('mcpManager');
+    if (!mcpManager || !mount || mount.disposed) return;
+    try {
+      mount.managerDisposer = mcpManager.register('droplets-inbox', {
+        transport: 'streamable-http',
+        url: mount.url,
+        headers: { authorization: 'Bearer ' + token },
+      });
+      mount.registered = true;
+      this.ctx.logger?.info?.('droplets: inbox MCP registered with the MCP manager (agents see droplets-inbox tools)');
+    } catch (error) {
+      this.ctx.logger?.warn?.(`droplets: inbox MCP manager registration failed: ${String(error?.message ?? error)}`);
+    }
+  }
+
+  unmountInboxMcp(mount = this.mcpMount) {
+    if (mount === null || mount === undefined) return;
+    mount.disposed = true;
+    try { mount.managerDisposer?.(); } catch { /* best effort */ }
+    try { mount.routeDisposer?.(); } catch { /* best effort */ }
+    if (this.mcpMount === mount) this.mcpMount = null;
+  }
+
+  /** Panel-facing status: endpoint, token (to copy into external clients). */
+  async mcpStatus() {
+    await this.ready;
+    return {
+      enabled: this.config.enableMcp !== false,
+      url: this.mcpMount?.url ?? null,
+      token: this.mcpToken ?? null,
+      registered: Boolean(this.mcpMount?.registered),
+    };
+  }
+
+  /** Rotate the bearer token; the route picks it up live, the manager entry re-binds. */
+  async mcpRotateToken() {
+    await this.ready;
+    const record = await rotateMcpToken(storageDir(), this.ctx.logger);
+    this.mcpToken = record.token;
+    if (this.mcpMount && !this.mcpMount.disposed) this.bindMcpManager(this.mcpMount, record.token);
+    return {
+      token: record.token,
+      url: this.mcpMount?.url ?? null,
+      registered: Boolean(this.mcpMount?.registered),
+    };
+  }
+
+  // ------------------------------------------------------------------
   // Companion
   // ------------------------------------------------------------------
 
@@ -1738,8 +1896,9 @@ export class DropletsService extends TypertRemoteService {
     // vault
     'vaultStatus', 'vaultReindex', 'vaultTree', 'vaultRead', 'vaultSearch', 'vaultGraph', 'vaultBacklinks', 'vaultWrite',
     'vaultList', 'vaultIndexFiles', 'vaultCreate', 'vaultCreateDir', 'vaultRename', 'vaultDuplicate', 'vaultDelete', 'vaultTags', 'vaultTrashList', 'vaultTrashRestore', 'vaultCopyTo', 'vaultCopyDirTo', 'vaultReveal', 'vaultCopyPath', 'vaultWriteAttachment', 'vaultReadAttachment', 'vaultStat',
-    // settings / companion
+    // settings / companion / open API
     'getSettings', 'saveSettings', 'getStorageInfo', 'getWorkspace', 'setWorkspace', 'openPath', 'clearData', 'setReadingContext', 'prepareChat', 'saveAsNote',
+    'mcpStatus', 'mcpRotateToken',
   ];
   const prototype = DropletsService.prototype;
   for (const method of names) {

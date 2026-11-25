@@ -33,6 +33,9 @@ function defaultsSidecar() {
       fetchTimeoutSec: 20,
     },
     favorites: {},
+    // RSS/News surface per feed id — SQLite has no column for it, so it
+    // stays plugin-private like favorites and other sidecar fields.
+    surfaces: {},
     inbox: [],
     vaultCache: null,
     companionContexts: {},
@@ -158,6 +161,7 @@ export class WorkspaceStore {
     };
     if (!Array.isArray(this.data.inbox)) this.data.inbox = [];
     if (!this.data.favorites || typeof this.data.favorites !== 'object') this.data.favorites = {};
+    if (!this.data.surfaces || typeof this.data.surfaces !== 'object') this.data.surfaces = {};
     if (!this.data.companionContexts || typeof this.data.companionContexts !== 'object') this.data.companionContexts = {};
 
     // Legacy pollution cleanup (bug class now fixed at the source): plugin
@@ -411,6 +415,7 @@ export class WorkspaceStore {
           version: 1,
           settings: this.data.settings,
           favorites: this.data.favorites,
+          surfaces: this.data.surfaces,
           inbox: this.data.inbox,
           vaultCache: this.data.vaultCache ?? null,
           companionContexts: this.data.companionContexts,

@@ -4249,7 +4249,7 @@ function formatWhenFull(ts) {
 
 // src/client/feed/ManageTable.jsx
 var import_jsx_runtime4 = require("react/jsx-runtime");
-function ManageTable({ api, feeds, onBack, onChanged }) {
+function ManageTable({ api, feeds, surface: surface2 = "rss", onBack, onChanged }) {
   const [query, setQuery] = (0, import_react7.useState)("");
   const [status, setStatus] = (0, import_react7.useState)("all");
   const [checked, setChecked] = (0, import_react7.useState)(() => /* @__PURE__ */ new Set());
@@ -4528,7 +4528,7 @@ function ManageTable({ api, feeds, onBack, onChanged }) {
         feeds.some((f) => f.lastFetchAt) ? formatWhenFull(Math.max(...feeds.map((f) => f.lastFetchAt ?? 0))) : "\u4ECE\u672A"
       ] })
     ] }),
-    adding ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(AddDialog, { api, onClose: () => setAdding(false), onChanged }) : null,
+    adding ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(AddDialog, { api, surface: surface2, onClose: () => setAdding(false), onChanged }) : null,
     editingId ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
       EditDialog,
       {
@@ -4567,7 +4567,7 @@ function ManageTable({ api, feeds, onBack, onChanged }) {
     ] }) }) : null
   ] });
 }
-function AddDialog({ api, onClose, onChanged }) {
+function AddDialog({ api, surface: surface2 = "rss", onClose, onChanged }) {
   const [url, setUrl] = (0, import_react7.useState)("");
   const [name2, setName] = (0, import_react7.useState)("");
   const [group, setGroup] = (0, import_react7.useState)("");
@@ -4578,7 +4578,7 @@ function AddDialog({ api, onClose, onChanged }) {
     setBusy(true);
     setError("");
     try {
-      await api.addSubscription({ url: url.trim(), name: name2.trim() || void 0, group: group.trim() || void 0 });
+      await api.addSubscription({ url: url.trim(), name: name2.trim() || void 0, group: group.trim() || void 0, surface: surface2 });
       await onChanged();
       if (isLanUrl(url.trim())) {
         setLanWarning("\u8BE5\u6E90\u5141\u8BB8\u8BBF\u95EE\u5185\u7F51/\u56DE\u73AF\u5730\u5740\uFF0C\u8BF7\u786E\u8BA4\u6765\u6E90\u53EF\u4FE1\u3002");
@@ -4598,6 +4598,10 @@ function AddDialog({ api, onClose, onChanged }) {
       /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { type: "button", className: "dpl-icon-btn dpl-round", onClick: onClose, "aria-label": "\u5173\u95ED", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(X, { size: 15 }) })
     ] }),
     /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "dpl-dialog-body", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "dpl-dialog-field", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { children: "\u5206\u533A" }),
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "dpl-seg", children: surface2 === "news" ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "dpl-seg-item is-active", children: "News\uFF08\u65B0\u95FB\u6E90\uFF09" }) : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "dpl-seg-item is-active", children: "RSS\uFF08\u535A\u5BA2 / \u6587\u7AE0\uFF09" }) })
+      ] }),
       /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("label", { className: "dpl-dialog-field", children: [
         /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { children: "Feed \u5730\u5740" }),
         /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("input", { autoFocus: true, placeholder: "https://\u2026\uFF08\u652F\u6301 RSS / Atom / JSON Feed\uFF09", value: url, onChange: (e) => setUrl(e.target.value) })
@@ -4610,7 +4614,11 @@ function AddDialog({ api, onClose, onChanged }) {
         /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { children: "\u5206\u7EC4\uFF08\u53EF\u9009\uFF09" }),
         /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("input", { placeholder: "\u5982\uFF1ATech", value: group, onChange: (e) => setGroup(e.target.value) })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "dpl-dialog-hint", children: "\u6DFB\u52A0\u65F6\u9A8C\u8BC1\u6E90\u5E76\u81EA\u52A8\u6293\u53D6\u6807\u9898\u4E0E\u9996\u6279\u6761\u76EE\u3002" }),
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "dpl-dialog-hint", children: [
+        "\u6DFB\u52A0\u65F6\u9A8C\u8BC1\u6E90\u5E76\u81EA\u52A8\u6293\u53D6\u6807\u9898\u4E0E\u9996\u6279\u6761\u76EE\u3002\u5728 ",
+        surface2 === "news" ? "News" : "RSS",
+        " \u5206\u533A\u6DFB\u52A0;\u4E4B\u540E\u53EF\u5728\u7F16\u8F91\u91CC\u6362\u5206\u533A\u3002"
+      ] }),
       error ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "dpl-dialog-error", children: error }) : null,
       lanWarning ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "dpl-dialog-warn", children: lanWarning }) : null
     ] }),
@@ -4626,6 +4634,7 @@ function AddDialog({ api, onClose, onChanged }) {
 function EditDialog({ api, feed, availableGroups, onClose, onChanged }) {
   const [name2, setName] = (0, import_react7.useState)(feed?.title ?? "");
   const [group, setGroup] = (0, import_react7.useState)(feed?.groupName ?? "");
+  const [surface2, setSurface] = (0, import_react7.useState)(feed?.surface ?? "rss");
   const [groupMenuOpen, setGroupMenuOpen] = (0, import_react7.useState)(false);
   const [enabled, setEnabled] = (0, import_react7.useState)(feed?.enabled ?? true);
   const [confirmDelete, setConfirmDelete] = (0, import_react7.useState)(false);
@@ -4646,7 +4655,7 @@ function EditDialog({ api, feed, availableGroups, onClose, onChanged }) {
     setBusy(true);
     setError("");
     try {
-      await api.setFeed({ id: feed.id, patch: { name: name2.trim(), group: group.trim() } });
+      await api.setFeed({ id: feed.id, patch: { name: name2.trim(), group: group.trim(), surface: surface2 } });
       await onChanged();
       onClose();
     } catch (cause) {
@@ -4718,6 +4727,10 @@ function EditDialog({ api, feed, availableGroups, onClose, onChanged }) {
             ] }, g))
           ] }) : null
         ] })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "dpl-dialog-row", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "dpl-dialog-label", children: "\u5206\u533A" }),
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "dpl-seg", children: ["rss", "news"].map((value) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { type: "button", className: "dpl-seg-item" + (surface2 === value ? " is-active" : ""), onClick: () => setSurface(value), children: value === "rss" ? "RSS\uFF08\u535A\u5BA2 / \u6587\u7AE0\uFF09" : "News\uFF08\u65B0\u95FB\u6E90\uFF09" }, value)) })
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "dpl-dialog-row", children: [
         /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "dpl-dialog-label", children: "Feed \u5730\u5740" }),
@@ -5115,7 +5128,7 @@ function htmlHeadings(html3) {
 // src/client/FeedView.jsx
 var import_jsx_runtime6 = require("react/jsx-runtime");
 var STATE_LABEL = { unseen: "\u672A\u8BFB", seen: "\u5DF2\u8BFB", skipped: "\u7565\u8FC7" };
-function FeedView({ api, onMaterial, onJumpSpace, onOpenVaultNote }) {
+function FeedView({ api, surface: surface2 = "rss", onMaterial, onJumpSpace, onOpenVaultNote }) {
   const [feeds, setFeeds] = (0, import_react9.useState)([]);
   const [managing, setManaging] = (0, import_react9.useState)(false);
   const [sourceId, setSourceId] = (0, import_react9.useState)(null);
@@ -5128,6 +5141,10 @@ function FeedView({ api, onMaterial, onJumpSpace, onOpenVaultNote }) {
     if (typeof feedId !== "string" || !delta) return;
     setFeeds((current) => current.map((feed) => feed.id === feedId ? { ...feed, unreadCount: Math.max(0, (feed.unreadCount ?? 0) + delta) } : feed));
   }, []);
+  const surfaceFeeds = (0, import_react9.useMemo)(
+    () => feeds.filter((feed) => (feed.surface ?? "rss") === surface2),
+    [feeds, surface2]
+  );
   const loadFeeds = (0, import_react9.useCallback)(async () => {
     try {
       const { feeds: next } = await api.listFeeds();
@@ -5229,7 +5246,7 @@ function FeedView({ api, onMaterial, onJumpSpace, onOpenVaultNote }) {
             SourcesPane,
             {
               api,
-              feeds,
+              feeds: surfaceFeeds,
               icons,
               sourceId,
               selectedGroup,
@@ -5247,7 +5264,7 @@ function FeedView({ api, onMaterial, onJumpSpace, onOpenVaultNote }) {
               onCollapse: collapse
             }
           ) },
-          { id: "manage", initialWidth: 900, minWidth: 480, collapsible: false, render: () => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(ManageTable, { api, feeds, onBack: () => setManaging(false), onChanged }) }
+          { id: "manage", initialWidth: 900, minWidth: 480, collapsible: false, render: () => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(ManageTable, { api, feeds, surface: surface2, onBack: () => setManaging(false), onChanged }) }
         ]
       }
     );
@@ -5261,7 +5278,7 @@ function FeedView({ api, onMaterial, onJumpSpace, onOpenVaultNote }) {
           SourcesPane,
           {
             api,
-            feeds,
+            feeds: surfaceFeeds,
             icons,
             sourceId,
             selectedGroup,
@@ -5283,7 +5300,7 @@ function FeedView({ api, onMaterial, onJumpSpace, onOpenVaultNote }) {
           ItemList,
           {
             api,
-            feeds,
+            feeds: surfaceFeeds,
             icons,
             sourceId,
             selectedGroup,
@@ -5301,7 +5318,7 @@ function FeedView({ api, onMaterial, onJumpSpace, onOpenVaultNote }) {
             onCollapse: collapse
           }
         ) },
-        { id: "preview", initialWidth: 700, minWidth: 420, collapsible: false, render: () => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Preview, { api, feeds, icons, item: selected, onMaterial, onJumpSpace, onOpenVaultNote, onMarked: loadFeeds, onUnreadChange: bumpUnread }) }
+        { id: "preview", initialWidth: 700, minWidth: 420, collapsible: false, render: () => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Preview, { api, feeds: surfaceFeeds, icons, item: selected, onMaterial, onJumpSpace, onOpenVaultNote, onMarked: loadFeeds, onUnreadChange: bumpUnread }) }
       ]
     }
   );
@@ -5329,7 +5346,8 @@ function ItemList(props) {
       try {
         const result = await api.listItems({
           sourceId: selectedGroup === null && sourceId ? sourceId : void 0,
-          groupName: selectedGroup ?? void 0
+          groupName: selectedGroup ?? void 0,
+          surface
         });
         if (cancelled) return;
         setItems(result.items ?? []);
@@ -5342,7 +5360,7 @@ function ItemList(props) {
     return () => {
       cancelled = true;
     };
-  }, [api, sourceId, selectedGroup, itemsVersion]);
+  }, [api, sourceId, selectedGroup, itemsVersion, surface]);
   const partitioned = (0, import_react9.useMemo)(() => {
     if (!loading && readSnapshot.current.session !== sessionKey) {
       readSnapshot.current = { session: sessionKey, read: snapshotReadItems(items) };
@@ -140092,6 +140110,7 @@ var import_jsx_runtime9 = require("react/jsx-runtime");
 var SECTIONS = [
   { id: "workspace", label: () => t("settings.workspace") },
   { id: "feed", label: () => t("settings.feed") },
+  { id: "mcp", label: () => "MCP \u5F00\u653E\u63A5\u53E3" },
   { id: "appearance", label: () => t("settings.appearance") },
   { id: "data", label: () => t("settings.data") },
   { id: "about", label: () => t("settings.about") }
@@ -140102,6 +140121,10 @@ function SettingsView({ api, onClose }) {
   const [workspace, setWorkspace] = (0, import_react12.useState)(null);
   const [settings, setSettings] = (0, import_react12.useState)(null);
   const [storage, setStorage] = (0, import_react12.useState)(null);
+  const [mcp, setMcp] = (0, import_react12.useState)(null);
+  const [mcpBusy, setMcpBusy] = (0, import_react12.useState)(false);
+  const [mcpTokenShown, setMcpTokenShown] = (0, import_react12.useState)(false);
+  const [mcpFlash, setMcpFlash] = (0, import_react12.useState)("");
   const [busy, setBusy] = (0, import_react12.useState)(false);
   const [error, setError] = (0, import_react12.useState)("");
   const [savedFlash, setSavedFlash] = (0, import_react12.useState)("");
@@ -140113,14 +140136,16 @@ function SettingsView({ api, onClose }) {
     setBusy(true);
     setError("");
     try {
-      const [workspaceResult, settingsResult, storageResult] = await Promise.all([
+      const [workspaceResult, settingsResult, storageResult, mcpResult] = await Promise.all([
         api.getWorkspace?.() ?? Promise.resolve(null),
         api.getSettings(),
-        api.getStorageInfo?.() ?? Promise.resolve(null)
+        api.getStorageInfo?.() ?? Promise.resolve(null),
+        api.mcpStatus?.() ?? Promise.resolve(null)
       ]);
       setWorkspace(workspaceResult);
       setSettings(settingsResult);
       setStorage(storageResult);
+      setMcp(mcpResult);
     } catch (cause) {
       setError(String(cause?.message ?? cause));
     } finally {
@@ -140369,6 +140394,73 @@ function SettingsView({ api, onClose }) {
                 onChange: (event) => void patch({ fetchTimeoutSec: Number(event.target.value) })
               }
             )
+          ] })
+        ] })
+      ] }) : null,
+      section2 === "mcp" ? /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "dpl-settings-section", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h2", { children: "MCP \u5F00\u653E\u63A5\u53E3" }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "dpl-settings-card", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { className: "dpl-settings-hint", children: "\u6536\u4EF6\u7BB1\u4EE5 MCP(Model Context Protocol)\u5F00\u653E\u7ED9\u4EFB\u610F MCP \u5BA2\u6237\u7AEF:\u672C\u5BBF\u4E3B\u7684 agent \u4F1A\u81EA\u52A8\u83B7\u5F97 droplets-inbox \u5DE5\u5177;\u5916\u90E8\u5BA2\u6237\u7AEF(Claude Desktop \u7B49)\u7528\u4E0B\u65B9\u5730\u5740\u4E0E\u4EE4\u724C\u63A5\u5165\u3002" }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "dpl-settings-metrics", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { children: "\u72B6\u6001" }),
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("strong", { children: mcp === null ? "\u2026" : mcp.enabled ? mcp.url ? "\u5DF2\u5F00\u542F" : "\u672A\u6302\u8F7D(\u65E0 webServer)" : "\u5DF2\u505C\u7528(enableMcp: false)" })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { children: "\u5BBF\u4E3B agent \u5DE5\u5177" }),
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("strong", { children: mcp?.registered ? "\u5DF2\u6CE8\u518C(droplets-inbox)" : "\u672A\u6CE8\u518C" })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { children: "\u5730\u5740" }),
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("strong", { className: "dpl-settings-mono", children: mcp?.url ?? "\u2014" })
+            ] })
+          ] }),
+          mcp?.token ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "dpl-settings-metrics", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { children: [
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { children: "Bearer \u4EE4\u724C" }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("strong", { className: "dpl-settings-mono", children: mcpTokenShown ? mcp.token : "\u2022".repeat(Math.min(mcp.token.length, 24)) })
+          ] }) }) : null,
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "dpl-form-row", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { type: "button", className: "dpl-btn dpl-sm", onClick: () => setMcpTokenShown((v) => !v), disabled: !mcp?.token, children: mcpTokenShown ? "\u9690\u85CF\u4EE4\u724C" : "\u663E\u793A\u4EE4\u724C" }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+              "button",
+              {
+                type: "button",
+                className: "dpl-btn dpl-sm",
+                disabled: !mcp?.token || mcpBusy,
+                onClick: () => {
+                  void navigator.clipboard?.writeText(mcp.token).then(() => {
+                    setMcpFlash("\u4EE4\u724C\u5DF2\u590D\u5236");
+                    setTimeout(() => setMcpFlash(""), 2e3);
+                  }).catch(() => {
+                  });
+                },
+                children: "\u590D\u5236\u4EE4\u724C"
+              }
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+              "button",
+              {
+                type: "button",
+                className: "dpl-btn dpl-sm dpl-danger",
+                disabled: mcpBusy || !mcp?.url,
+                onClick: () => {
+                  setMcpBusy(true);
+                  void api.mcpRotateToken?.().then((result) => {
+                    setMcp(result);
+                    setMcpTokenShown(true);
+                    setMcpFlash("\u5DF2\u8F6E\u6362;\u5916\u90E8\u5BA2\u6237\u7AEF\u9700\u66F4\u65B0\u4EE4\u724C");
+                    setTimeout(() => setMcpFlash(""), 4e3);
+                  }).catch((cause) => setError(String(cause?.message ?? cause))).finally(() => setMcpBusy(false));
+                },
+                children: "\u8F6E\u6362\u4EE4\u724C"
+              }
+            )
+          ] }),
+          mcpFlash ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { className: "dpl-settings-hint", role: "status", children: mcpFlash }) : null,
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("p", { className: "dpl-settings-hint", children: [
+            "\u5916\u90E8\u5BA2\u6237\u7AEF\u793A\u4F8B(streamable HTTP):\u5730\u5740\u586B ",
+            mcp?.url ?? "<host>/droplets-inbox/mcp",
+            ",\u8BF7\u6C42\u5934 Authorization: Bearer <\u4EE4\u724C>\u3002\u4EE4\u724C\u5B58\u50A8\u5728\u63D2\u4EF6\u6570\u636E\u76EE\u5F55 mcp.json\u3002"
           ] })
         ] })
       ] }) : null,
@@ -140720,12 +140812,13 @@ function hostOf(url) {
 // src/client/Panel.jsx
 var import_jsx_runtime11 = require("react/jsx-runtime");
 var SPACES = [
-  { id: "feed", label: () => t("spaces.feed") },
+  { id: "rss", label: () => "RSS" },
+  { id: "news", label: () => "News" },
   { id: "inbox", label: () => t("spaces.inbox") },
   { id: "vault", label: () => t("spaces.vault") }
 ];
 function DropletsPanel({ api, SessionProvider, renderSlot }) {
-  const [space4, setSpace] = (0, import_react14.useState)("feed");
+  const [space4, setSpace] = (0, import_react14.useState)("rss");
   const [settingsOpen, setSettingsOpen] = (0, import_react14.useState)(false);
   const [companionOpen, setCompanionOpen] = (0, import_react14.useState)(false);
   const [companionForm, setCompanionForm] = (0, import_react14.useState)(() => localStorage.getItem("droplets.ai.form") ?? "docked");
@@ -140837,7 +140930,7 @@ function DropletsPanel({ api, SessionProvider, renderSlot }) {
     ] }),
     /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "dpl-body" + (companionOpen && companionForm === "docked" ? " has-docked" : ""), children: [
       /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "dpl-space", children: settingsOpen ? /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(SettingsView, { api, onClose: () => setSettingsOpen(false) }) : /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(import_jsx_runtime11.Fragment, { children: [
-        space4 === "feed" && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(FeedView, { api, onMaterial, onJumpSpace: setSpace, onOpenVaultNote: openVaultNote }),
+        (space4 === "rss" || space4 === "news") && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(FeedView, { api, surface: space4, onMaterial, onJumpSpace: setSpace, onOpenVaultNote: openVaultNote }),
         space4 === "inbox" && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(InboxView, { api, onMaterial, onOpenVaultNote: openVaultNote }),
         space4 === "vault" && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
           VaultView,
@@ -141037,7 +141130,9 @@ var NO_PARAM_METHODS = /* @__PURE__ */ new Set([
   "getStorageInfo",
   "clearData",
   "inboxRetryAllFailed",
-  "feedIcons"
+  "feedIcons",
+  "mcpStatus",
+  "mcpRotateToken"
 ]);
 var TYPERT_REMOTE = {
   package: PLUGIN_ID,
@@ -141106,7 +141201,9 @@ var TYPERT_REMOTE = {
     "clearData",
     "setReadingContext",
     "prepareChat",
-    "saveAsNote"
+    "saveAsNote",
+    "mcpStatus",
+    "mcpRotateToken"
   ].map((name2) => method(name2, !NO_PARAM_METHODS.has(name2)))
 };
 var inject = ["slots", "layout", "remote"];
@@ -141201,7 +141298,10 @@ function registerPanel(ctx) {
     // object is silently ignored), so send the patch as the request itself.
     saveSettings: (patch) => call("saveSettings", patch),
     getStorageInfo: () => call("getStorageInfo"),
-    clearData: () => call("clearData")
+    clearData: () => call("clearData"),
+    // Inbox MCP (open API): status for the settings card, token rotation.
+    mcpStatus: () => call("mcpStatus"),
+    mcpRotateToken: () => call("mcpRotateToken")
   };
   ctx.slots.inject("main", () => ctx.slots.register({
     name: "main",

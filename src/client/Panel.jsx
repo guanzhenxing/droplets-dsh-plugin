@@ -8,8 +8,11 @@ import { SettingsView } from './SettingsView.jsx';
 import { Settings } from 'lucide-react';
 import { Companion } from './Companion.jsx';
 
+// RSS 与 News 是同一订阅池的两个分区(surface):同一个 FeedView,不同
+// 的 surface 过滤;收件箱不变;知识库留在本包,直到独立知识库插件落地。
 const SPACES = [
-  { id: 'feed', label: () => t('spaces.feed') },
+  { id: 'rss', label: () => 'RSS' },
+  { id: 'news', label: () => 'News' },
   { id: 'inbox', label: () => t('spaces.inbox') },
   { id: 'vault', label: () => t('spaces.vault') },
 ];
@@ -20,7 +23,7 @@ const SPACES = [
  * chain breaks the three data spaces keep working with a visible notice.
  */
 export function DropletsPanel({ api, SessionProvider, renderSlot }) {
-  const [space, setSpace] = useState('feed');
+  const [space, setSpace] = useState('rss');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [companionOpen, setCompanionOpen] = useState(false);
   // Docked = a real flex pane that squeezes the spaces (never covers the
@@ -141,7 +144,9 @@ export function DropletsPanel({ api, SessionProvider, renderSlot }) {
             <SettingsView api={api} onClose={() => setSettingsOpen(false)} />
           ) : (
             <>
-              {space === 'feed' && <FeedView api={api} onMaterial={onMaterial} onJumpSpace={setSpace} onOpenVaultNote={openVaultNote} />}
+              {(space === 'rss' || space === 'news') && (
+                <FeedView api={api} surface={space} onMaterial={onMaterial} onJumpSpace={setSpace} onOpenVaultNote={openVaultNote} />
+              )}
               {space === 'inbox' && <InboxView api={api} onMaterial={onMaterial} onOpenVaultNote={openVaultNote} />}
               {space === 'vault' && (
                 <VaultView

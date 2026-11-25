@@ -29,7 +29,7 @@ export function createToolDefinitions(service) {
     // ---------------------------------------------------------------- droplets_feed
     defineTool({
       name: 'droplets_feed',
-      description: 'Droplets 信息流:管理 RSS/Atom/JSON Feed 订阅、列出与阅读条目、搜索、刷新。用户提到订阅、信息流、RSS、看文章时用它。',
+      description: 'Droplets 信息流:管理 RSS/Atom/JSON Feed 订阅、列出与阅读条目、搜索、刷新。订阅分 rss(博客文章)与 news(新闻)两个分区,经 surface 参数选择。用户提到订阅、信息流、RSS、新闻、看文章时用它。',
       parameters: {
         action: {
           type: 'string',
@@ -46,18 +46,23 @@ export function createToolDefinitions(service) {
         url: { type: 'string', description: 'add_subscription 的订阅地址 (http/https)。' },
         name: { type: 'string', description: 'add_subscription 的显示名(可选)。' },
         group: { type: 'string', description: 'add_subscription 的分组(可选)。' },
+        surface: { type: 'string', description: '信息流分区:rss(默认,博客文章)或 news(新闻源)。add_subscription 归入该分区;list_articles/list_channels 按分区过滤。' },
       },
       output: { schema: { type: 'string' }, render: (_args, value) => text(value) },
       execute: async (args) => {
         switch (args?.action) {
           case 'list_channels': {
             const { channels } = await service.listChannels();
-            if (channels.length === 0) return '还没有订阅。用 add_subscription 添加,或 refresh 刷新。';
-            const lines = channels.map((channel) => `- ${channel.key} | ${channel.name}${channel.group ? ` (${channel.group})` : ''} | ${channel.kind} | 未读 ${channel.unread}/${channel.total}${channel.lastError ? ' | 上次失败' : ''}`);
+            const wanted = args?.surface;
+            const visible = (wanted === 'rss' || wanted === 'news')
+              ? channels.filter((channel) => channel.surface === wanted || channel.kind === 'aggregate')
+              : channels;
+            if (visible.length === 0) return '还没有订阅。用 add_subscription 添加,或 refresh 刷新。';
+            const lines = visible.map((channel) => `- ${channel.key} | ${channel.name}${channel.group ? ` (${channel.group})` : ''} | ${channel.kind}${channel.surface ? ` | ${channel.surface}` : ''} | 未读 ${channel.unread}/${channel.total}${channel.lastError ? ' | 上次失败' : ''}`);
             return `源列表:\n${lines.join('\n')}`;
           }
           case 'list_articles': {
-            const page = await service.listEntries({ channel: args.channel, filter: args.filter, search: args.search, limit: Math.min(args.limit ?? 20, 50) });
+            const page = await service.listEntries({ channel: args.channel, filter: args.filter, search: args.search, limit: Math.min(args.limit ?? 20, 50), surface: args.surface });
             if (page.entries.length === 0) return '没有匹配的条目。试试 refresh 或换个过滤。';
             return [`条目 (${page.entries.length}${page.hasMore ? '+,还有更多' : ''}):`, ...page.entries.map(formatEntryLine)].join('\n');
           }
@@ -86,7 +91,7 @@ export function createToolDefinitions(service) {
           }
           case 'add_subscription': {
             if (typeof args?.url !== 'string' || !/^https?:\/\//i.test(args.url)) throw new Error('add_subscription 需要 http(s) url');
-            const result = await service.addSubscription({ url: args.url, name: args.name, group: args.group });
+            const result = await service.addSubscription({ url: args.url, name: args.name, group: args.group, surface: args.surface });
             return `已订阅「${result.name}」(${result.id}),${result.entryCount} 条种子条目${result.status === 'error' ? `;首次抓取失败:${result.lastError}(会自动重试)` : ''}。`;
           }
           case 'refresh': {

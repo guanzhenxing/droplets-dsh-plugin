@@ -11,6 +11,7 @@ import { t } from './i18n.js';
 const SECTIONS = [
   { id: 'workspace', label: () => t('settings.workspace') },
   { id: 'feed', label: () => t('settings.feed') },
+  { id: 'mcp', label: () => 'MCP 开放接口' },
   { id: 'appearance', label: () => t('settings.appearance') },
   { id: 'data', label: () => t('settings.data') },
   { id: 'about', label: () => t('settings.about') },
@@ -23,6 +24,10 @@ export function SettingsView({ api, onClose }) {
   const [workspace, setWorkspace] = useState(null);
   const [settings, setSettings] = useState(null);
   const [storage, setStorage] = useState(null);
+  const [mcp, setMcp] = useState(null);
+  const [mcpBusy, setMcpBusy] = useState(false);
+  const [mcpTokenShown, setMcpTokenShown] = useState(false);
+  const [mcpFlash, setMcpFlash] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [savedFlash, setSavedFlash] = useState('');
@@ -35,14 +40,16 @@ export function SettingsView({ api, onClose }) {
     setBusy(true);
     setError('');
     try {
-      const [workspaceResult, settingsResult, storageResult] = await Promise.all([
+      const [workspaceResult, settingsResult, storageResult, mcpResult] = await Promise.all([
         api.getWorkspace?.() ?? Promise.resolve(null),
         api.getSettings(),
         api.getStorageInfo?.() ?? Promise.resolve(null),
+        api.mcpStatus?.() ?? Promise.resolve(null),
       ]);
       setWorkspace(workspaceResult);
       setSettings(settingsResult);
       setStorage(storageResult);
+      setMcp(mcpResult);
     } catch (cause) {
       setError(String(cause?.message ?? cause));
     } finally {
@@ -280,6 +287,65 @@ export function SettingsView({ api, onClose }) {
                   onChange={(event) => void patch({ fetchTimeoutSec: Number(event.target.value) })}
                 />
               </label>
+            </div>
+          </div>
+        ) : null}
+
+        {section === 'mcp' ? (
+          <div className="dpl-settings-section">
+            <h2>MCP 开放接口</h2>
+            <div className="dpl-settings-card">
+              <p className="dpl-settings-hint">
+                收件箱以 MCP(Model Context Protocol)开放给任意 MCP 客户端:本宿主的 agent 会自动获得 droplets-inbox 工具;外部客户端(Claude Desktop 等)用下方地址与令牌接入。
+              </p>
+              <div className="dpl-settings-metrics">
+                <div><span>状态</span><strong>{mcp === null ? '…' : mcp.enabled ? (mcp.url ? '已开启' : '未挂载(无 webServer)') : '已停用(enableMcp: false)'}</strong></div>
+                <div><span>宿主 agent 工具</span><strong>{mcp?.registered ? '已注册(droplets-inbox)' : '未注册'}</strong></div>
+                <div><span>地址</span><strong className="dpl-settings-mono">{mcp?.url ?? '—'}</strong></div>
+              </div>
+              {mcp?.token ? (
+                <div className="dpl-settings-metrics">
+                  <div>
+                    <span>Bearer 令牌</span>
+                    <strong className="dpl-settings-mono">
+                      {mcpTokenShown ? mcp.token : '•'.repeat(Math.min(mcp.token.length, 24))}
+                    </strong>
+                  </div>
+                </div>
+              ) : null}
+              <div className="dpl-form-row">
+                <button type="button" className="dpl-btn dpl-sm" onClick={() => setMcpTokenShown((v) => !v)} disabled={!mcp?.token}>
+                  {mcpTokenShown ? '隐藏令牌' : '显示令牌'}
+                </button>
+                <button
+                  type="button"
+                  className="dpl-btn dpl-sm"
+                  disabled={!mcp?.token || mcpBusy}
+                  onClick={() => { void navigator.clipboard?.writeText(mcp.token).then(() => { setMcpFlash('令牌已复制'); setTimeout(() => setMcpFlash(''), 2000); }).catch(() => {}); }}
+                >
+                  复制令牌
+                </button>
+                <button
+                  type="button"
+                  className="dpl-btn dpl-sm dpl-danger"
+                  disabled={mcpBusy || !mcp?.url}
+                  onClick={() => {
+                    setMcpBusy(true);
+                    void api.mcpRotateToken?.().then((result) => {
+                      setMcp(result);
+                      setMcpTokenShown(true);
+                      setMcpFlash('已轮换;外部客户端需更新令牌');
+                      setTimeout(() => setMcpFlash(''), 4000);
+                    }).catch((cause) => setError(String(cause?.message ?? cause))).finally(() => setMcpBusy(false));
+                  }}
+                >
+                  轮换令牌
+                </button>
+              </div>
+              {mcpFlash ? <p className="dpl-settings-hint" role="status">{mcpFlash}</p> : null}
+              <p className="dpl-settings-hint">
+                外部客户端示例(streamable HTTP):地址填 {mcp?.url ?? '<host>/droplets-inbox/mcp'},请求头 Authorization: Bearer &lt;令牌&gt;。令牌存储在插件数据目录 mcp.json。
+              </p>
             </div>
           </div>
         ) : null}

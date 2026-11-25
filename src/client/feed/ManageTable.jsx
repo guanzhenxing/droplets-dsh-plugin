@@ -12,7 +12,7 @@ import { formatWhenFull } from './format.js';
  * switch + badge + counts + last fetch + health dot + edit, stats footer,
  * add/edit dialogs and the batch-delete confirmation.
  */
-export function ManageTable({ api, feeds, onBack, onChanged }) {
+export function ManageTable({ api, feeds, surface = 'rss', onBack, onChanged }) {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('all');
   const [checked, setChecked] = useState(() => new Set());
@@ -272,7 +272,7 @@ export function ManageTable({ api, feeds, onBack, onChanged }) {
         <span>最近刷新 {feeds.some((f) => f.lastFetchAt) ? formatWhenFull(Math.max(...feeds.map((f) => f.lastFetchAt ?? 0))) : '从未'}</span>
       </div>
 
-      {adding ? <AddDialog api={api} onClose={() => setAdding(false)} onChanged={onChanged} /> : null}
+      {adding ? <AddDialog api={api} surface={surface} onClose={() => setAdding(false)} onChanged={onChanged} /> : null}
       {editingId ? (
         <EditDialog
           api={api}
@@ -311,7 +311,7 @@ export function ManageTable({ api, feeds, onBack, onChanged }) {
   );
 }
 
-function AddDialog({ api, onClose, onChanged }) {
+function AddDialog({ api, surface = 'rss', onClose, onChanged }) {
   const [url, setUrl] = useState('');
   const [name, setName] = useState('');
   const [group, setGroup] = useState('');
@@ -323,7 +323,7 @@ function AddDialog({ api, onClose, onChanged }) {
     setBusy(true);
     setError('');
     try {
-      await api.addSubscription({ url: url.trim(), name: name.trim() || undefined, group: group.trim() || undefined });
+      await api.addSubscription({ url: url.trim(), name: name.trim() || undefined, group: group.trim() || undefined, surface });
       await onChanged();
       if (isLanUrl(url.trim())) {
         setLanWarning('该源允许访问内网/回环地址，请确认来源可信。');
@@ -343,6 +343,14 @@ function AddDialog({ api, onClose, onChanged }) {
           <button type="button" className="dpl-icon-btn dpl-round" onClick={onClose} aria-label="关闭"><X size={15} /></button>
         </div>
         <div className="dpl-dialog-body">
+          <div className="dpl-dialog-field">
+            <span>分区</span>
+            <div className="dpl-seg">
+              {surface === 'news'
+                ? <span className="dpl-seg-item is-active">News（新闻源）</span>
+                : <span className="dpl-seg-item is-active">RSS（博客 / 文章）</span>}
+            </div>
+          </div>
           <label className="dpl-dialog-field">
             <span>Feed 地址</span>
             <input autoFocus placeholder="https://…（支持 RSS / Atom / JSON Feed）" value={url} onChange={(e) => setUrl(e.target.value)} />
@@ -355,7 +363,7 @@ function AddDialog({ api, onClose, onChanged }) {
             <span>分组（可选）</span>
             <input placeholder="如：Tech" value={group} onChange={(e) => setGroup(e.target.value)} />
           </label>
-          <div className="dpl-dialog-hint">添加时验证源并自动抓取标题与首批条目。</div>
+          <div className="dpl-dialog-hint">添加时验证源并自动抓取标题与首批条目。在 {surface === 'news' ? 'News' : 'RSS'} 分区添加;之后可在编辑里换分区。</div>
           {error ? <div className="dpl-dialog-error">{error}</div> : null}
           {lanWarning ? <div className="dpl-dialog-warn">{lanWarning}</div> : null}
         </div>
@@ -377,6 +385,7 @@ function AddDialog({ api, onClose, onChanged }) {
 function EditDialog({ api, feed, availableGroups, onClose, onChanged }) {
   const [name, setName] = useState(feed?.title ?? '');
   const [group, setGroup] = useState(feed?.groupName ?? '');
+  const [surface, setSurface] = useState(feed?.surface ?? 'rss');
   const [groupMenuOpen, setGroupMenuOpen] = useState(false);
   // Enabled is an immediate-effect control in droplets (toggle.mutate on
   // change, never part of the save payload); keep a local mirror for render.
@@ -401,7 +410,7 @@ function EditDialog({ api, feed, availableGroups, onClose, onChanged }) {
     setBusy(true);
     setError('');
     try {
-      await api.setFeed({ id: feed.id, patch: { name: name.trim(), group: group.trim() } });
+      await api.setFeed({ id: feed.id, patch: { name: name.trim(), group: group.trim(), surface } });
       await onChanged();
       onClose();
     } catch (cause) { setError(String(cause?.message ?? cause)); }
@@ -456,6 +465,16 @@ function EditDialog({ api, feed, availableGroups, onClose, onChanged }) {
                   ))}
                 </div>
               ) : null}
+            </div>
+          </div>
+          <div className="dpl-dialog-row">
+            <span className="dpl-dialog-label">分区</span>
+            <div className="dpl-seg">
+              {['rss', 'news'].map((value) => (
+                <button key={value} type="button" className={'dpl-seg-item' + (surface === value ? ' is-active' : '')} onClick={() => setSurface(value)}>
+                  {value === 'rss' ? 'RSS（博客 / 文章）' : 'News（新闻源）'}
+                </button>
+              ))}
             </div>
           </div>
           <div className="dpl-dialog-row">

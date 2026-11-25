@@ -25,7 +25,7 @@ const STATE_LABEL = { unseen: '未读', seen: '已读', skipped: '略过' };
  * (sourceId/group mutually exclusive, three-state items, frozen partition,
  * new-entries pill, auto-select, sticky round actions, AuxRail).
  */
-export function FeedView({ api, onMaterial, onJumpSpace, onOpenVaultNote }) {
+export function FeedView({ api, surface = 'rss', onMaterial, onJumpSpace, onOpenVaultNote }) {
   const [feeds, setFeeds] = useState([]);
   const [managing, setManaging] = useState(false);
   const [sourceId, setSourceId] = useState(null);
@@ -49,6 +49,13 @@ export function FeedView({ api, onMaterial, onJumpSpace, onOpenVaultNote }) {
     )));
   }, []);
 
+  // One pool, per-surface views: the feeds list is filtered client-side so
+  // the manage table can still show everything, while the reading panes scope
+  // to the current surface server-side (listItems(surface)).
+  const surfaceFeeds = useMemo(
+    () => feeds.filter((feed) => (feed.surface ?? 'rss') === surface),
+    [feeds, surface],
+  );
   const loadFeeds = useCallback(async () => {
     try {
       const { feeds: next } = await api.listFeeds();
@@ -138,7 +145,7 @@ export function FeedView({ api, onMaterial, onJumpSpace, onOpenVaultNote }) {
         panels={[
           { id: 'sources', initialWidth: 240, minWidth: 205, collapsible: true, render: ({ collapsed, expand, collapse }) => (
             <SourcesPane
-              api={api} feeds={feeds} icons={icons} sourceId={sourceId} selectedGroup={selectedGroup}
+              api={api} feeds={surfaceFeeds} icons={icons} sourceId={sourceId} selectedGroup={selectedGroup}
               spinning={spinning} onRefresh={() => void refresh()}
               onManage={() => setManaging(false)}
               onSelectSource={selectSource} onSelectGroup={selectGroup}
@@ -148,7 +155,7 @@ export function FeedView({ api, onMaterial, onJumpSpace, onOpenVaultNote }) {
             />
           ) },
           { id: 'manage', initialWidth: 900, minWidth: 480, collapsible: false, render: () => (
-            <ManageTable api={api} feeds={feeds} onBack={() => setManaging(false)} onChanged={onChanged} />
+            <ManageTable api={api} feeds={feeds} surface={surface} onBack={() => setManaging(false)} onChanged={onChanged} />
           ) },
         ]}
       />
@@ -161,7 +168,7 @@ export function FeedView({ api, onMaterial, onJumpSpace, onOpenVaultNote }) {
       panels={[
         { id: 'sources', initialWidth: 240, minWidth: 205, collapsible: true, render: ({ collapsed, expand, collapse }) => (
           <SourcesPane
-            api={api} feeds={feeds} icons={icons} sourceId={sourceId} selectedGroup={selectedGroup}
+            api={api} feeds={surfaceFeeds} icons={icons} sourceId={sourceId} selectedGroup={selectedGroup}
             spinning={spinning} onRefresh={() => void refresh()}
             onManage={() => setManaging(true)}
             onSelectSource={selectSource} onSelectGroup={selectGroup}
@@ -172,7 +179,7 @@ export function FeedView({ api, onMaterial, onJumpSpace, onOpenVaultNote }) {
         ) },
         { id: 'items', initialWidth: 320, minWidth: 240, collapsible: true, render: ({ collapsed, expand, collapse }) => (
           <ItemList
-            api={api} feeds={feeds} icons={icons} sourceId={sourceId} selectedGroup={selectedGroup}
+            api={api} feeds={surfaceFeeds} icons={icons} sourceId={sourceId} selectedGroup={selectedGroup}
             itemsVersion={itemsVersion}
             selected={selected} onSelect={setSelected} onMaterial={onMaterial}
             onUnreadChange={bumpUnread}
@@ -182,7 +189,7 @@ export function FeedView({ api, onMaterial, onJumpSpace, onOpenVaultNote }) {
           />
         ) },
         { id: 'preview', initialWidth: 700, minWidth: 420, collapsible: false, render: () => (
-          <Preview api={api} feeds={feeds} icons={icons} item={selected} onMaterial={onMaterial} onJumpSpace={onJumpSpace} onOpenVaultNote={onOpenVaultNote} onMarked={loadFeeds} onUnreadChange={bumpUnread} />
+          <Preview api={api} feeds={surfaceFeeds} icons={icons} item={selected} onMaterial={onMaterial} onJumpSpace={onJumpSpace} onOpenVaultNote={onOpenVaultNote} onMarked={loadFeeds} onUnreadChange={bumpUnread} />
         ) },
       ]}
     />
@@ -220,6 +227,7 @@ function ItemList(props) {
         const result = await api.listItems({
           sourceId: selectedGroup === null && sourceId ? sourceId : undefined,
           groupName: selectedGroup ?? undefined,
+          surface,
         });
         if (cancelled) return;
         setItems(result.items ?? []);
@@ -229,7 +237,7 @@ function ItemList(props) {
     return () => { cancelled = true; };
     // itemsVersion: a refresh bumps it so the list reloads; selected stays
     // as-is (auto-select only fills an empty selection).
-  }, [api, sourceId, selectedGroup, itemsVersion]);
+  }, [api, sourceId, selectedGroup, itemsVersion, surface]);
 
   const partitioned = useMemo(() => {
     if (!loading && readSnapshot.current.session !== sessionKey) {

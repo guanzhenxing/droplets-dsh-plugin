@@ -7589,7 +7589,7 @@ var require_dispatcher = __commonJS({
     "use strict";
     var EventEmitter = __require("node:events");
     var WrapHandler = require_wrap_handler();
-    var wrapInterceptor = (dispatch) => (opts, handler) => dispatch(opts, WrapHandler.wrap(handler));
+    var wrapInterceptor = (dispatch2) => (opts, handler) => dispatch2(opts, WrapHandler.wrap(handler));
     var Dispatcher = class extends EventEmitter {
       dispatch() {
         throw new Error("not implemented");
@@ -7602,7 +7602,7 @@ var require_dispatcher = __commonJS({
       }
       compose(...args) {
         const interceptors = Array.isArray(args[0]) ? args[0] : args;
-        let dispatch = this.dispatch.bind(this);
+        let dispatch2 = this.dispatch.bind(this);
         for (const interceptor of interceptors) {
           if (interceptor == null) {
             continue;
@@ -7610,14 +7610,14 @@ var require_dispatcher = __commonJS({
           if (typeof interceptor !== "function") {
             throw new TypeError(`invalid interceptor, expected function received ${typeof interceptor}`);
           }
-          dispatch = interceptor(dispatch);
-          dispatch = wrapInterceptor(dispatch);
-          if (dispatch == null || typeof dispatch !== "function" || dispatch.length !== 2) {
+          dispatch2 = interceptor(dispatch2);
+          dispatch2 = wrapInterceptor(dispatch2);
+          if (dispatch2 == null || typeof dispatch2 !== "function" || dispatch2.length !== 2) {
             throw new TypeError("invalid interceptor");
           }
         }
         return new Proxy(this, {
-          get: (target, key) => key === "dispatch" ? dispatch : target[key]
+          get: (target, key) => key === "dispatch" ? dispatch2 : target[key]
         });
       }
     };
@@ -16120,7 +16120,7 @@ var require_retry_handler = __commonJS({
       }
     };
     var RetryHandler = class _RetryHandler {
-      constructor(opts, { dispatch, handler }) {
+      constructor(opts, { dispatch: dispatch2, handler }) {
         const { retryOptions, ...dispatchOpts } = opts;
         const {
           // Retry scoped
@@ -16137,7 +16137,7 @@ var require_retry_handler = __commonJS({
           throwOnError
         } = retryOptions ?? {};
         this.error = null;
-        this.dispatch = dispatch;
+        this.dispatch = dispatch2;
         this.handler = WrapHandler.wrap(handler);
         this.opts = { ...dispatchOpts, body: wrapRequestBody(opts.body) };
         this.retryOpts = {
@@ -17948,11 +17948,11 @@ var require_mock_utils = __commonJS({
       return newMockDispatch;
     }
     function deleteMockDispatch(mockDispatches, key) {
-      const index = mockDispatches.findIndex((dispatch) => {
-        if (!dispatch.consumed) {
+      const index = mockDispatches.findIndex((dispatch2) => {
+        if (!dispatch2.consumed) {
           return false;
         }
-        return matchKey(dispatch, key);
+        return matchKey(dispatch2, key);
       });
       if (index !== -1) {
         mockDispatches.splice(index, 1);
@@ -18070,7 +18070,7 @@ var require_mock_utils = __commonJS({
       const agent = this[kMockAgent];
       const origin = this[kOrigin];
       const originalDispatch = this[kOriginalDispatch];
-      return function dispatch(opts, handler) {
+      return function dispatch2(opts, handler) {
         if (agent.isMockActive) {
           try {
             mockDispatch.call(this, opts, handler);
@@ -18841,7 +18841,7 @@ var require_mock_agent = __commonJS({
       }
       pendingInterceptors() {
         const mockAgentClients = this[kClients];
-        return Array.from(mockAgentClients.entries()).flatMap(([origin, result]) => result.dispatcher[kDispatches].map((dispatch) => ({ ...dispatch, origin }))).filter(({ pending }) => pending);
+        return Array.from(mockAgentClients.entries()).flatMap(([origin, result]) => result.dispatcher[kDispatches].map((dispatch2) => ({ ...dispatch2, origin }))).filter(({ pending }) => pending);
       }
       assertNoPendingInterceptors({ pendingInterceptorsFormatter = new PendingInterceptorsFormatter() } = {}) {
         const pending = this.pendingInterceptors();
@@ -18951,8 +18951,8 @@ var require_snapshot_utils = __commonJS({
 var require_snapshot_recorder = __commonJS({
   "node_modules/undici/lib/mock/snapshot-recorder.js"(exports2, module) {
     "use strict";
-    var { writeFile: writeFile10, readFile: readFile10, mkdir: mkdir10 } = __require("node:fs/promises");
-    var { dirname: dirname5, resolve: resolve2 } = __require("node:path");
+    var { writeFile: writeFile11, readFile: readFile11, mkdir: mkdir11 } = __require("node:fs/promises");
+    var { dirname: dirname6, resolve: resolve2 } = __require("node:path");
     var { setTimeout: setTimeout2, clearTimeout: clearTimeout2 } = __require("node:timers");
     var { InvalidArgumentError, UndiciError } = require_errors();
     var { hashId, isUrlExcludedFactory, normalizeHeaders, createHeaderFilters } = require_snapshot_utils();
@@ -19153,7 +19153,7 @@ var require_snapshot_recorder = __commonJS({
           throw new InvalidArgumentError("Snapshot path is required");
         }
         try {
-          const data = await readFile10(resolve2(path5), "utf8");
+          const data = await readFile11(resolve2(path5), "utf8");
           const parsed = JSON.parse(data);
           if (Array.isArray(parsed)) {
             this.#snapshots.clear();
@@ -19183,12 +19183,12 @@ var require_snapshot_recorder = __commonJS({
           throw new InvalidArgumentError("Snapshot path is required");
         }
         const resolvedPath = resolve2(path5);
-        await mkdir10(dirname5(resolvedPath), { recursive: true });
+        await mkdir11(dirname6(resolvedPath), { recursive: true });
         const data = Array.from(this.#snapshots.entries()).map(([hash, snapshot]) => ({
           hash,
           snapshot
         }));
-        await writeFile10(resolvedPath, JSON.stringify(data, null, 2), { flush: true });
+        await writeFile11(resolvedPath, JSON.stringify(data, null, 2), { flush: true });
       }
       /**
        * Clears all recorded snapshots
@@ -19749,14 +19749,14 @@ var require_redirect_handler = __commonJS({
         if (maxRedirections != null && (!Number.isInteger(maxRedirections) || maxRedirections < 0)) {
           throw new InvalidArgumentError("maxRedirections must be a positive number");
         }
-        const dispatch = dispatcher.dispatch.bind(dispatcher);
-        return (opts, originalHandler) => dispatch(opts, new _RedirectHandler(dispatch, maxRedirections, opts, originalHandler));
+        const dispatch2 = dispatcher.dispatch.bind(dispatcher);
+        return (opts, originalHandler) => dispatch2(opts, new _RedirectHandler(dispatch2, maxRedirections, opts, originalHandler));
       }
-      constructor(dispatch, maxRedirections, opts, handler) {
+      constructor(dispatch2, maxRedirections, opts, handler) {
         if (maxRedirections != null && (!Number.isInteger(maxRedirections) || maxRedirections < 0)) {
           throw new InvalidArgumentError("maxRedirections must be a positive number");
         }
-        this.dispatch = dispatch;
+        this.dispatch = dispatch2;
         this.location = null;
         const { maxRedirections: _, ...cleanOpts } = opts;
         this.opts = cleanOpts;
@@ -19903,15 +19903,15 @@ var require_redirect = __commonJS({
     "use strict";
     var RedirectHandler = require_redirect_handler();
     function createRedirectInterceptor({ maxRedirections: defaultMaxRedirections } = {}) {
-      return (dispatch) => {
+      return (dispatch2) => {
         return function Intercept(opts, handler) {
           const { maxRedirections = defaultMaxRedirections, ...rest } = opts;
           if (maxRedirections == null || maxRedirections === 0) {
-            return dispatch(opts, handler);
+            return dispatch2(opts, handler);
           }
           const dispatchOpts = { ...rest };
-          const redirectHandler = new RedirectHandler(dispatch, maxRedirections, dispatchOpts, handler);
-          return dispatch(dispatchOpts, redirectHandler);
+          const redirectHandler = new RedirectHandler(dispatch2, maxRedirections, dispatchOpts, handler);
+          return dispatch2(dispatchOpts, redirectHandler);
         };
       };
     }
@@ -19992,9 +19992,9 @@ var require_response_error = __commonJS({
       }
     };
     module.exports = () => {
-      return (dispatch) => {
+      return (dispatch2) => {
         return function Intercept(opts, handler) {
-          return dispatch(opts, new ResponseErrorHandler(opts, { handler }));
+          return dispatch2(opts, new ResponseErrorHandler(opts, { handler }));
         };
       };
     };
@@ -20007,15 +20007,15 @@ var require_retry = __commonJS({
     "use strict";
     var RetryHandler = require_retry_handler();
     module.exports = (globalOpts) => {
-      return (dispatch) => {
+      return (dispatch2) => {
         return function retryInterceptor(opts, handler) {
-          return dispatch(
+          return dispatch2(
             opts,
             new RetryHandler(
               { ...opts, retryOptions: { ...globalOpts, ...opts.retryOptions } },
               {
                 handler,
-                dispatch
+                dispatch: dispatch2
               }
             )
           );
@@ -20090,11 +20090,11 @@ var require_dump = __commonJS({
     function createDumpInterceptor({ maxSize: defaultMaxSize } = {
       maxSize: 1024 * 1024
     }) {
-      return (dispatch) => {
+      return (dispatch2) => {
         return function Intercept(opts, handler) {
           const { dumpMaxSize = defaultMaxSize } = opts;
           const dumpHandler = new DumpHandler({ maxSize: dumpMaxSize, signal: opts.signal }, handler);
-          return dispatch(opts, dumpHandler);
+          return dispatch2(opts, dumpHandler);
         };
       };
     }
@@ -20414,13 +20414,13 @@ var require_dns = __commonJS({
       #controller = null;
       #newOrigin = null;
       #firstTry = true;
-      constructor(state, { origin, handler, dispatch, newOrigin }, opts) {
+      constructor(state, { origin, handler, dispatch: dispatch2, newOrigin }, opts) {
         super(handler);
         this.#origin = origin;
         this.#newOrigin = newOrigin;
         this.#opts = { ...opts };
         this.#state = state;
-        this.#dispatch = dispatch;
+        this.#dispatch = dispatch2;
       }
       onResponseError(controller, err2) {
         switch (err2.code) {
@@ -20509,11 +20509,11 @@ var require_dns = __commonJS({
         storage: interceptorOpts?.storage
       };
       const instance = new DNSInstance(opts);
-      return (dispatch) => {
+      return (dispatch2) => {
         return function dnsInterceptor(origDispatchOpts, handler) {
           const origin = origDispatchOpts.origin.constructor === URL ? origDispatchOpts.origin : new URL(origDispatchOpts.origin);
           if (isIP(origin.hostname) !== 0) {
-            return dispatch(origDispatchOpts, handler);
+            return dispatch2(origDispatchOpts, handler);
           }
           instance.runLookup(origin, origDispatchOpts, (err2, newOrigin) => {
             if (err2) {
@@ -20526,10 +20526,10 @@ var require_dns = __commonJS({
               origin: newOrigin.origin,
               headers: withHostHeader(origin.host, origDispatchOpts.headers)
             };
-            dispatch(
+            dispatch2(
               dispatchOpts,
               instance.getHandler(
-                { origin, dispatch, handler, newOrigin },
+                { origin, dispatch: dispatch2, handler, newOrigin },
                 origDispatchOpts
               )
             );
@@ -22791,7 +22791,7 @@ var require_cache2 = __commonJS({
       const staleWhileRevalidateExpiry = result.staleAt + staleWhileRevalidate * 1e3;
       return now <= staleWhileRevalidateExpiry;
     }
-    function handleUncachedResponse(dispatch, globalOpts, cacheKey, handler, opts, reqCacheControl) {
+    function handleUncachedResponse(dispatch2, globalOpts, cacheKey, handler, opts, reqCacheControl) {
       if (reqCacheControl?.["only-if-cached"]) {
         let aborted = false;
         try {
@@ -22819,7 +22819,7 @@ var require_cache2 = __commonJS({
         }
         return true;
       }
-      return dispatch(opts, new CacheHandler(globalOpts, cacheKey, handler));
+      return dispatch2(opts, new CacheHandler(globalOpts, cacheKey, handler));
     }
     function sendCachedValue(handler, opts, result, age, context, isStale2) {
       const stream = util.isStream(result.body) ? result.body : Readable.from(result.body ?? []);
@@ -22890,20 +22890,20 @@ var require_cache2 = __commonJS({
         });
       }
     }
-    function handleResult(dispatch, globalOpts, cacheKey, handler, opts, reqCacheControl, result) {
+    function handleResult(dispatch2, globalOpts, cacheKey, handler, opts, reqCacheControl, result) {
       if (!result) {
-        return handleUncachedResponse(dispatch, globalOpts, cacheKey, handler, opts, reqCacheControl);
+        return handleUncachedResponse(dispatch2, globalOpts, cacheKey, handler, opts, reqCacheControl);
       }
       if (globalOpts.type === "shared" && Object.hasOwn(result.headers, "set-cookie")) {
         if (util.isStream(result.body)) {
           result.body.on("error", nop).destroy();
         }
         deleteCachedValue(globalOpts.store, cacheKey);
-        return handleUncachedResponse(dispatch, globalOpts, cacheKey, handler, opts, reqCacheControl);
+        return handleUncachedResponse(dispatch2, globalOpts, cacheKey, handler, opts, reqCacheControl);
       }
       const now = Date.now();
       if (now > result.deleteAt) {
-        return dispatch(opts, new CacheHandler(globalOpts, cacheKey, handler));
+        return dispatch2(opts, new CacheHandler(globalOpts, cacheKey, handler));
       }
       const age = Math.round((now - result.cachedAt) / 1e3);
       const requestMaxAgeExpired = reqCacheControl?.["max-age"] !== void 0 && age >= reqCacheControl["max-age"];
@@ -22911,13 +22911,13 @@ var require_cache2 = __commonJS({
       const revalidate = requestMaxAgeExpired || needsRevalidation(result, reqCacheControl, opts);
       if (stale || revalidate) {
         if (util.isStream(opts.body) && util.bodyLength(opts.body) !== 0) {
-          return dispatch(opts, new CacheHandler(globalOpts, cacheKey, handler));
+          return dispatch2(opts, new CacheHandler(globalOpts, cacheKey, handler));
         }
         if (!revalidate && withinStaleWhileRevalidateWindow(result, globalOpts.type)) {
           sendCachedValue(handler, opts, result, age, null, true);
           queueMicrotask(() => {
             const headers2 = makeRevalidationHeaders(opts, result);
-            dispatch(
+            dispatch2(
               {
                 ...opts,
                 headers: headers2
@@ -22954,9 +22954,9 @@ var require_cache2 = __commonJS({
             result.body.on("error", nop).destroy();
           }
           deleteCachedValue(globalOpts.store, cacheKey);
-          return dispatch(opts, new CacheHandler(globalOpts, cacheKey, handler));
+          return dispatch2(opts, new CacheHandler(globalOpts, cacheKey, handler));
         };
-        return dispatch(
+        return dispatch2(
           {
             ...opts,
             headers
@@ -23022,10 +23022,10 @@ var require_cache2 = __commonJS({
           safeMethodsToNotCache.push(method);
         }
       }
-      return (dispatch) => {
+      return (dispatch2) => {
         return (opts2, handler) => {
           if (!opts2.origin || arrayIncludes(safeMethodsToNotCache, opts2.method)) {
-            return dispatch(opts2, handler);
+            return dispatch2(opts2, handler);
           }
           if (origins !== void 0) {
             const requestOrigin = opts2.origin.toString().toLowerCase();
@@ -23043,7 +23043,7 @@ var require_cache2 = __commonJS({
               }
             }
             if (!isAllowed) {
-              return dispatch(opts2, handler);
+              return dispatch2(opts2, handler);
             }
           }
           opts2 = {
@@ -23052,16 +23052,16 @@ var require_cache2 = __commonJS({
           };
           const reqCacheControl = opts2.headers?.["cache-control"] ? parseCacheControlHeader(opts2.headers["cache-control"]) : hasPragmaNoCache(opts2.headers) ? { "no-cache": true } : void 0;
           if (reqCacheControl?.["no-store"]) {
-            return dispatch(opts2, handler);
+            return dispatch2(opts2, handler);
           }
           const cacheKey = makeCacheKey(opts2);
           if (!arrayIncludes(util.safeHTTPMethods, opts2.method)) {
-            return dispatch(opts2, new CacheHandler(globalOpts, cacheKey, handler));
+            return dispatch2(opts2, new CacheHandler(globalOpts, cacheKey, handler));
           }
           const result = store.get(cacheKey);
           if (result && typeof result.then === "function") {
             return result.then((result2) => handleResult(
-              dispatch,
+              dispatch2,
               globalOpts,
               cacheKey,
               handler,
@@ -23095,7 +23095,7 @@ var require_cache2 = __commonJS({
             });
           } else {
             return handleResult(
-              dispatch,
+              dispatch2,
               globalOpts,
               cacheKey,
               handler,
@@ -23576,10 +23576,10 @@ var require_decompress = __commonJS({
         );
         warningEmitted = true;
       }
-      return (dispatch) => {
+      return (dispatch2) => {
         return (opts, handler) => {
           const decompressHandler = new DecompressHandler(handler, options);
-          return dispatch(opts, decompressHandler);
+          return dispatch2(opts, decompressHandler);
         };
       };
     }
@@ -24017,10 +24017,10 @@ var require_deduplicate = __commonJS({
       const skipHeaderNamesSet = new Set(skipHeaderNames.map((name2) => name2.toLowerCase()));
       const excludeHeaderNamesSet = new Set(excludeHeaderNames.map((name2) => name2.toLowerCase()));
       const pendingRequests = /* @__PURE__ */ new Map();
-      return (dispatch) => {
+      return (dispatch2) => {
         return (opts2, handler) => {
           if (!opts2.origin || methods.includes(opts2.method) === false) {
-            return dispatch(opts2, handler);
+            return dispatch2(opts2, handler);
           }
           opts2 = {
             ...opts2,
@@ -24029,7 +24029,7 @@ var require_deduplicate = __commonJS({
           if (skipHeaderNamesSet.size > 0) {
             for (const headerName of Object.keys(opts2.headers)) {
               if (skipHeaderNamesSet.has(headerName.toLowerCase())) {
-                return dispatch(opts2, handler);
+                return dispatch2(opts2, handler);
               }
             }
           }
@@ -24040,7 +24040,7 @@ var require_deduplicate = __commonJS({
             if (pendingHandler.addWaitingHandler(handler)) {
               return true;
             }
-            return dispatch(opts2, handler);
+            return dispatch2(opts2, handler);
           }
           const deduplicationHandler = new DeduplicationHandler(
             handler,
@@ -24056,7 +24056,7 @@ var require_deduplicate = __commonJS({
           if (pendingRequestsChannel.hasSubscribers) {
             pendingRequestsChannel.publish({ size: pendingRequests.size, key: dedupeKey, type: "added" });
           }
-          return dispatch(opts2, deduplicationHandler);
+          return dispatch2(opts2, deduplicationHandler);
         };
       };
     };
@@ -27061,7 +27061,7 @@ var require_fetch = __commonJS({
         })();
       }
       try {
-        const { body, status, statusText, headersList, socket } = await dispatch({ body: requestBody });
+        const { body, status, statusText, headersList, socket } = await dispatch2({ body: requestBody });
         if (socket) {
           response = makeResponse({ status, statusText, headersList, socket });
         } else {
@@ -27157,7 +27157,7 @@ var require_fetch = __commonJS({
         fetchParams.controller.connection.destroy();
       }
       return response;
-      function dispatch({ body }) {
+      function dispatch2({ body }) {
         const url = requestCurrentURL(request);
         const agent = fetchParams.controller.dispatcher;
         const path5 = url.pathname + url.search;
@@ -35061,7 +35061,7 @@ var init_pdf = __esm({
       var defineProperty = Object.defineProperty;
       var stringSlice = uncurryThis("".slice);
       var replace = uncurryThis("".replace);
-      var join7 = uncurryThis([].join);
+      var join8 = uncurryThis([].join);
       var CONFIGURABLE_LENGTH = DESCRIPTORS && !fails(function() {
         return defineProperty(function() {
         }, "length", { value: 8 }).length !== 8;
@@ -35088,7 +35088,7 @@ var init_pdf = __esm({
         }
         var state = enforceInternalState(value);
         if (!hasOwn(state, "source")) {
-          state.source = join7(TEMPLATE, typeof name2 == "string" ? name2 : "");
+          state.source = join8(TEMPLATE, typeof name2 == "string" ? name2 : "");
         }
         return value;
       };
@@ -36965,7 +36965,7 @@ var init_pdf = __esm({
           var currentOrdered;
           var marked = false;
           var root = true;
-          var json = stringifyWithProperSymbolsConversion(text2, function(key, value) {
+          var json2 = stringifyWithProperSymbolsConversion(text2, function(key, value) {
             key = $String(key);
             if (propertyList) {
               if (key === END_MARK) {
@@ -36992,16 +36992,16 @@ var init_pdf = __esm({
             }
             return value;
           }, space);
-          if (typeof json != "string") return json;
-          if (ILL_FORMED_UNICODE) json = replace(json, surrogates, fixIllFormedJSON);
-          if (!marked) return json;
+          if (typeof json2 != "string") return json2;
+          if (ILL_FORMED_UNICODE) json2 = replace(json2, surrogates, fixIllFormedJSON);
+          if (!marked) return json2;
           var result = "";
-          var length = json.length;
+          var length = json2.length;
           for (var i2 = 0; i2 < length; i2++) {
-            var chr = charAt(json, i2);
+            var chr = charAt(json2, i2);
             if (chr === '"') {
-              var end = parseJSONString(json, ++i2).end - 1;
-              var string = slice(json, i2, end);
+              var end = parseJSONString(json2, ++i2).end - 1;
+              var string = slice(json2, i2, end);
               if (slice(string, 0, RAW_MARK_LENGTH) === RAW_MARK) result += rawStrings[slice(string, RAW_MARK_LENGTH)];
               else if (slice(string, 0, KEY_MARK_LENGTH) === KEY_MARK) result += '"' + slice(string, KEY_MARK_LENGTH) + '"';
               else result += '"' + string + '"';
@@ -37469,7 +37469,7 @@ var init_pdf = __esm({
       var charAt = uncurryThis("".charAt);
       var Uint8Array2 = globalThis2.Uint8Array;
       var $Array = globalThis2.Array;
-      var join7 = uncurryThis([].join);
+      var join8 = uncurryThis([].join);
       var INCORRECT_BEHAVIOR_OR_DOESNT_EXISTS = !Uint8Array2 || !Uint8Array2.prototype.toBase64 || !(function() {
         try {
           var target = new Uint8Array2();
@@ -37515,7 +37515,7 @@ var init_pdf = __esm({
               result[written++] = "=";
             }
           }
-          return join7(result, "");
+          return join8(result, "");
         }
       });
     });
@@ -37526,7 +37526,7 @@ var init_pdf = __esm({
       var anUint8Array = an_uint8_array_namespaceFn();
       var notDetached = array_buffer_not_detached_namespaceFn();
       var numberToString = uncurryThis(1.1.toString);
-      var join7 = uncurryThis([].join);
+      var join8 = uncurryThis([].join);
       var $Array = Array;
       var Uint8Array2 = globalThis2.Uint8Array;
       var INCORRECT_BEHAVIOR_OR_DOESNT_EXISTS = !Uint8Array2 || !Uint8Array2.prototype.toHex || !(function() {
@@ -37546,7 +37546,7 @@ var init_pdf = __esm({
             var hex = numberToString(this[i2], 16);
             result[i2] = hex.length === 1 ? "0" + hex : hex;
           }
-          return join7(result, "");
+          return join8(result, "");
         }
       });
     });
@@ -74363,7 +74363,7 @@ var init_pdf_worker = __esm({
       var defineProperty = Object.defineProperty;
       var stringSlice = uncurryThis("".slice);
       var replace = uncurryThis("".replace);
-      var join7 = uncurryThis([].join);
+      var join8 = uncurryThis([].join);
       var CONFIGURABLE_LENGTH = DESCRIPTORS && !fails(function() {
         return defineProperty(function() {
         }, "length", { value: 8 }).length !== 8;
@@ -74390,7 +74390,7 @@ var init_pdf_worker = __esm({
         }
         var state = enforceInternalState(value);
         if (!hasOwn(state, "source")) {
-          state.source = join7(TEMPLATE, typeof name2 == "string" ? name2 : "");
+          state.source = join8(TEMPLATE, typeof name2 == "string" ? name2 : "");
         }
         return value;
       };
@@ -75894,7 +75894,7 @@ var init_pdf_worker = __esm({
           var currentOrdered;
           var marked = false;
           var root = true;
-          var json = stringifyWithProperSymbolsConversion(text2, function(key, value) {
+          var json2 = stringifyWithProperSymbolsConversion(text2, function(key, value) {
             key = $String(key);
             if (propertyList) {
               if (key === END_MARK) {
@@ -75921,16 +75921,16 @@ var init_pdf_worker = __esm({
             }
             return value;
           }, space);
-          if (typeof json != "string") return json;
-          if (ILL_FORMED_UNICODE) json = replace(json, surrogates, fixIllFormedJSON);
-          if (!marked) return json;
+          if (typeof json2 != "string") return json2;
+          if (ILL_FORMED_UNICODE) json2 = replace(json2, surrogates, fixIllFormedJSON);
+          if (!marked) return json2;
           var result = "";
-          var length = json.length;
+          var length = json2.length;
           for (var i2 = 0; i2 < length; i2++) {
-            var chr = charAt(json, i2);
+            var chr = charAt(json2, i2);
             if (chr === '"') {
-              var end = parseJSONString(json, ++i2).end - 1;
-              var string = slice(json, i2, end);
+              var end = parseJSONString(json2, ++i2).end - 1;
+              var string = slice(json2, i2, end);
               if (slice(string, 0, RAW_MARK_LENGTH) === RAW_MARK) result += rawStrings[slice(string, RAW_MARK_LENGTH)];
               else if (slice(string, 0, KEY_MARK_LENGTH) === KEY_MARK) result += '"' + slice(string, KEY_MARK_LENGTH) + '"';
               else result += '"' + string + '"';
@@ -76398,7 +76398,7 @@ var init_pdf_worker = __esm({
       var charAt = uncurryThis("".charAt);
       var Uint8Array2 = globalThis2.Uint8Array;
       var $Array = globalThis2.Array;
-      var join7 = uncurryThis([].join);
+      var join8 = uncurryThis([].join);
       var INCORRECT_BEHAVIOR_OR_DOESNT_EXISTS = !Uint8Array2 || !Uint8Array2.prototype.toBase64 || !(function() {
         try {
           var target = new Uint8Array2();
@@ -76444,7 +76444,7 @@ var init_pdf_worker = __esm({
               result[written++] = "=";
             }
           }
-          return join7(result, "");
+          return join8(result, "");
         }
       });
     });
@@ -76455,7 +76455,7 @@ var init_pdf_worker = __esm({
       var anUint8Array = an_uint8_array_namespaceFn2();
       var notDetached = array_buffer_not_detached_namespaceFn2();
       var numberToString = uncurryThis(1.1.toString);
-      var join7 = uncurryThis([].join);
+      var join8 = uncurryThis([].join);
       var $Array = Array;
       var Uint8Array2 = globalThis2.Uint8Array;
       var INCORRECT_BEHAVIOR_OR_DOESNT_EXISTS = !Uint8Array2 || !Uint8Array2.prototype.toHex || !(function() {
@@ -76475,7 +76475,7 @@ var init_pdf_worker = __esm({
             var hex = numberToString(this[i2], 16);
             result[i2] = hex.length === 1 ? "0" + hex : hex;
           }
-          return join7(result, "");
+          return join8(result, "");
         }
       });
     });
@@ -132778,9 +132778,9 @@ var init_vault_index = __esm({
 // src/host/index.js
 import path4 from "node:path";
 import { randomUUID as randomUUID3 } from "node:crypto";
-import { mkdir as mkdir9, readdir as readdir5, readFile as readFile9, rename as rename8, stat as stat6, writeFile as writeFile9 } from "node:fs/promises";
+import { mkdir as mkdir10, readdir as readdir5, readFile as readFile10, rename as rename9, stat as stat6, writeFile as writeFile10 } from "node:fs/promises";
 import { existsSync as existsSync2, statSync } from "node:fs";
-import { join as join6, resolve, sep as sep2 } from "node:path";
+import { join as join7, resolve, sep as sep2 } from "node:path";
 import { TypertRemoteService, Remote } from "@deepseek-ai/dsh-typert-protocol";
 import { defineTool as defineTool2 } from "@deepseek-ai/dsh-tools";
 
@@ -132953,6 +132953,8 @@ function defaults() {
     read: {},
     states: {},
     favorites: {},
+    // RSS/News surface per subscription id ('rss' | 'news'; absent = 'rss').
+    surfaces: {},
     inbox: [],
     // { path, builtAt, files: { [relPath]: { mtimeMs, size, title, tags, links } } }
     vaultCache: null,
@@ -133043,6 +133045,7 @@ var DropletsStore = class {
       if (!this.data.read || typeof this.data.read !== "object") this.data.read = {};
       if (!this.data.states || typeof this.data.states !== "object") this.data.states = {};
       if (!this.data.favorites || typeof this.data.favorites !== "object") this.data.favorites = {};
+      if (!this.data.surfaces || typeof this.data.surfaces !== "object") this.data.surfaces = {};
       for (const [key, value] of Object.entries(this.data.read)) {
         if (this.data.states[key] === void 0) this.data.states[key] = "seen";
         delete this.data.read[key];
@@ -133090,7 +133093,7 @@ var DropletsStore = class {
         if (sub && typeof sub.id === "string" && !byId.has(sub.id)) mine.subscriptions.push(sub);
       }
     }
-    for (const key of ["states", "favorites", "read"]) {
+    for (const key of ["states", "favorites", "read", "surfaces"]) {
       const theirs = foreign[key];
       if (theirs && typeof theirs === "object") {
         mine[key] ??= {};
@@ -137816,6 +137819,9 @@ function defaultsSidecar() {
       fetchTimeoutSec: 20
     },
     favorites: {},
+    // RSS/News surface per feed id — SQLite has no column for it, so it
+    // stays plugin-private like favorites and other sidecar fields.
+    surfaces: {},
     inbox: [],
     vaultCache: null,
     companionContexts: {}
@@ -137932,6 +137938,7 @@ var WorkspaceStore = class {
     };
     if (!Array.isArray(this.data.inbox)) this.data.inbox = [];
     if (!this.data.favorites || typeof this.data.favorites !== "object") this.data.favorites = {};
+    if (!this.data.surfaces || typeof this.data.surfaces !== "object") this.data.surfaces = {};
     if (!this.data.companionContexts || typeof this.data.companionContexts !== "object") this.data.companionContexts = {};
     this.#dedupeLegacyItemRows();
     this.#migrateLegacyStateRows();
@@ -138178,6 +138185,7 @@ var WorkspaceStore = class {
           version: 1,
           settings: this.data.settings,
           favorites: this.data.favorites,
+          surfaces: this.data.surfaces,
           inbox: this.data.inbox,
           vaultCache: this.data.vaultCache ?? null,
           companionContexts: this.data.companionContexts
@@ -140961,7 +140969,7 @@ function createToolDefinitions(service) {
     // ---------------------------------------------------------------- droplets_feed
     defineTool({
       name: "droplets_feed",
-      description: "Droplets \u4FE1\u606F\u6D41:\u7BA1\u7406 RSS/Atom/JSON Feed \u8BA2\u9605\u3001\u5217\u51FA\u4E0E\u9605\u8BFB\u6761\u76EE\u3001\u641C\u7D22\u3001\u5237\u65B0\u3002\u7528\u6237\u63D0\u5230\u8BA2\u9605\u3001\u4FE1\u606F\u6D41\u3001RSS\u3001\u770B\u6587\u7AE0\u65F6\u7528\u5B83\u3002",
+      description: "Droplets \u4FE1\u606F\u6D41:\u7BA1\u7406 RSS/Atom/JSON Feed \u8BA2\u9605\u3001\u5217\u51FA\u4E0E\u9605\u8BFB\u6761\u76EE\u3001\u641C\u7D22\u3001\u5237\u65B0\u3002\u8BA2\u9605\u5206 rss(\u535A\u5BA2\u6587\u7AE0)\u4E0E news(\u65B0\u95FB)\u4E24\u4E2A\u5206\u533A,\u7ECF surface \u53C2\u6570\u9009\u62E9\u3002\u7528\u6237\u63D0\u5230\u8BA2\u9605\u3001\u4FE1\u606F\u6D41\u3001RSS\u3001\u65B0\u95FB\u3001\u770B\u6587\u7AE0\u65F6\u7528\u5B83\u3002",
       parameters: {
         action: {
           type: "string",
@@ -140977,20 +140985,23 @@ function createToolDefinitions(service) {
         limit: { type: "number", description: "\u8FD4\u56DE\u4E0A\u9650(\u9ED8\u8BA4 20)\u3002" },
         url: { type: "string", description: "add_subscription \u7684\u8BA2\u9605\u5730\u5740 (http/https)\u3002" },
         name: { type: "string", description: "add_subscription \u7684\u663E\u793A\u540D(\u53EF\u9009)\u3002" },
-        group: { type: "string", description: "add_subscription \u7684\u5206\u7EC4(\u53EF\u9009)\u3002" }
+        group: { type: "string", description: "add_subscription \u7684\u5206\u7EC4(\u53EF\u9009)\u3002" },
+        surface: { type: "string", description: "\u4FE1\u606F\u6D41\u5206\u533A:rss(\u9ED8\u8BA4,\u535A\u5BA2\u6587\u7AE0)\u6216 news(\u65B0\u95FB\u6E90)\u3002add_subscription \u5F52\u5165\u8BE5\u5206\u533A;list_articles/list_channels \u6309\u5206\u533A\u8FC7\u6EE4\u3002" }
       },
       output: { schema: { type: "string" }, render: (_args, value) => text(value) },
       execute: async (args) => {
         switch (args?.action) {
           case "list_channels": {
             const { channels } = await service.listChannels();
-            if (channels.length === 0) return "\u8FD8\u6CA1\u6709\u8BA2\u9605\u3002\u7528 add_subscription \u6DFB\u52A0,\u6216 refresh \u5237\u65B0\u3002";
-            const lines = channels.map((channel) => `- ${channel.key} | ${channel.name}${channel.group ? ` (${channel.group})` : ""} | ${channel.kind} | \u672A\u8BFB ${channel.unread}/${channel.total}${channel.lastError ? " | \u4E0A\u6B21\u5931\u8D25" : ""}`);
+            const wanted = args?.surface;
+            const visible = wanted === "rss" || wanted === "news" ? channels.filter((channel) => channel.surface === wanted || channel.kind === "aggregate") : channels;
+            if (visible.length === 0) return "\u8FD8\u6CA1\u6709\u8BA2\u9605\u3002\u7528 add_subscription \u6DFB\u52A0,\u6216 refresh \u5237\u65B0\u3002";
+            const lines = visible.map((channel) => `- ${channel.key} | ${channel.name}${channel.group ? ` (${channel.group})` : ""} | ${channel.kind}${channel.surface ? ` | ${channel.surface}` : ""} | \u672A\u8BFB ${channel.unread}/${channel.total}${channel.lastError ? " | \u4E0A\u6B21\u5931\u8D25" : ""}`);
             return `\u6E90\u5217\u8868:
 ${lines.join("\n")}`;
           }
           case "list_articles": {
-            const page = await service.listEntries({ channel: args.channel, filter: args.filter, search: args.search, limit: Math.min(args.limit ?? 20, 50) });
+            const page = await service.listEntries({ channel: args.channel, filter: args.filter, search: args.search, limit: Math.min(args.limit ?? 20, 50), surface: args.surface });
             if (page.entries.length === 0) return "\u6CA1\u6709\u5339\u914D\u7684\u6761\u76EE\u3002\u8BD5\u8BD5 refresh \u6216\u6362\u4E2A\u8FC7\u6EE4\u3002";
             return [`\u6761\u76EE (${page.entries.length}${page.hasMore ? "+,\u8FD8\u6709\u66F4\u591A" : ""}):`, ...page.entries.map(formatEntryLine)].join("\n");
           }
@@ -141021,7 +141032,7 @@ ${results.map(formatEntryLine).join("\n")}`;
           }
           case "add_subscription": {
             if (typeof args?.url !== "string" || !/^https?:\/\//i.test(args.url)) throw new Error("add_subscription \u9700\u8981 http(s) url");
-            const result = await service.addSubscription({ url: args.url, name: args.name, group: args.group });
+            const result = await service.addSubscription({ url: args.url, name: args.name, group: args.group, surface: args.surface });
             return `\u5DF2\u8BA2\u9605\u300C${result.name}\u300D(${result.id}),${result.entryCount} \u6761\u79CD\u5B50\u6761\u76EE${result.status === "error" ? `;\u9996\u6B21\u6293\u53D6\u5931\u8D25:${result.lastError}(\u4F1A\u81EA\u52A8\u91CD\u8BD5)` : ""}\u3002`;
           }
           case "refresh": {
@@ -141280,12 +141291,280 @@ var TranslationStore = class {
   }
 };
 
+// src/host/mcp.js
+import { randomBytes } from "node:crypto";
+import { mkdir as mkdir9, readFile as readFile9, rename as rename8, rm as rm10, writeFile as writeFile9 } from "node:fs/promises";
+import { dirname as dirname5, join as join6 } from "node:path";
+var MCP_ENDPOINT_PATH = "/droplets-inbox/mcp";
+var FALLBACK_PROTOCOL_VERSION = "2025-06-18";
+var SERVER_INFO = { name: "droplets-inbox", version: "0.5.0" };
+function inboxMcpPath() {
+  return MCP_ENDPOINT_PATH;
+}
+function tokenFile(storageDir2) {
+  return join6(storageDir2, "mcp.json");
+}
+async function loadOrCreateMcpToken(storageDir2, logger) {
+  const file = tokenFile(storageDir2);
+  try {
+    const raw = JSON.parse(await readFile9(file, "utf8"));
+    if (typeof raw.token === "string" && raw.token.length >= 16) return raw;
+  } catch {
+  }
+  const record = { token: randomBytes(24).toString("base64url"), createdAt: (/* @__PURE__ */ new Date()).toISOString() };
+  await mkdir9(dirname5(file), { recursive: true });
+  const temp = `${file}.${process.pid}.tmp`;
+  try {
+    await writeFile9(temp, JSON.stringify(record), { encoding: "utf8", mode: 384 });
+    await rename8(temp, file);
+  } catch (error) {
+    await rm10(temp, { force: true }).catch(() => {
+    });
+    logger?.warn?.(`droplets: cannot persist MCP token: ${String(error)}`);
+    throw error;
+  }
+  return record;
+}
+async function rotateMcpToken(storageDir2, logger) {
+  await rm10(tokenFile(storageDir2), { force: true }).catch(() => {
+  });
+  return loadOrCreateMcpToken(storageDir2, logger);
+}
+function json(res, status, body) {
+  const payload = JSON.stringify(body);
+  res.writeHead(status, { "content-type": "application/json", "content-length": Buffer.byteLength(payload) });
+  res.end(payload);
+}
+function textResult(id, text2, isError = false) {
+  return {
+    jsonrpc: "2.0",
+    id,
+    result: {
+      content: [{ type: "text", text: text2 }],
+      ...isError ? { isError: true } : {}
+    }
+  };
+}
+function errorResult(id, code, message) {
+  return { jsonrpc: "2.0", id, error: { code, message } };
+}
+function inboxLine(item) {
+  const tags = Array.isArray(item?.tags) && item.tags.length > 0 ? ` [${item.tags.join(",")}]` : "";
+  const when = item?.createdAt ? ` (${new Date(item.createdAt).toISOString().slice(0, 10)})` : "";
+  return `- ${item.id} | ${item.title ?? "\u672A\u547D\u540D"}${when}${tags} | ${item.status ?? ""}`;
+}
+function inboxMcpTools() {
+  return [
+    {
+      name: "inbox_list",
+      description: "List inbox items (capture queue). filter: all | unread | finished | fetch_failed; tag narrows by tag.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          filter: { type: "string", enum: ["all", "unread", "finished", "fetch_failed"], description: "\u9ED8\u8BA4 unread\u3002" },
+          tag: { type: "string" },
+          limit: { type: "number", description: "\u8FD4\u56DE\u4E0A\u9650(\u9ED8\u8BA4 20)\u3002" }
+        }
+      }
+    },
+    {
+      name: "inbox_read",
+      description: "Read one inbox item: metadata plus the stored markdown body (or extracted text layer for PDF/EPUB).",
+      inputSchema: {
+        type: "object",
+        properties: { key: { type: "string", description: "\u6761\u76EE id(inbox_list \u8FD4\u56DE)\u3002" } },
+        required: ["key"]
+      }
+    },
+    {
+      name: "inbox_add_url",
+      description: "Capture a URL into the inbox (real fetch: first byte 20s / total 60s / 50MB cap).",
+      inputSchema: {
+        type: "object",
+        properties: { url: { type: "string", description: "http(s) \u5730\u5740\u3002" } },
+        required: ["url"]
+      }
+    },
+    {
+      name: "inbox_update",
+      description: "Update one item's tags (agent triage: label items while filing them).",
+      inputSchema: {
+        type: "object",
+        properties: {
+          key: { type: "string", description: "\u6761\u76EE id\u3002" },
+          tags: { type: "array", items: { type: "string" } }
+        },
+        required: ["key"]
+      }
+    },
+    {
+      name: "inbox_mark_done",
+      description: "Finish one item: action library keeps it in the Droplets library, trash moves it to the recoverable recycle bin. Default trash.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          key: { type: "string", description: "\u6761\u76EE id\u3002" },
+          action: { type: "string", enum: ["library", "trash"] }
+        },
+        required: ["key"]
+      }
+    }
+  ];
+}
+async function callTool(service, name2, args) {
+  switch (name2) {
+    case "inbox_list": {
+      const filter = args?.filter === "all" || args?.filter === "finished" || args?.filter === "fetch_failed" ? args.filter : "unread";
+      const { items, counts } = await service.inboxList({ status: filter, tag: args?.tag });
+      const limit = Math.min(Number.isFinite(args?.limit) ? args.limit : 20, 50);
+      const page = (items ?? []).slice(0, limit);
+      if (page.length === 0) return `\u6536\u4EF6\u7BB1(${filter})\u6CA1\u6709\u6761\u76EE\u3002`;
+      const header = `\u6761\u76EE ${page.length}${(items ?? []).length > page.length ? "/${items.length}+" : ""} \xB7 \u672A\u8BFB ${counts?.unread ?? "?"}:`;
+      return [header, ...page.map(inboxLine)].join("\n");
+    }
+    case "inbox_read": {
+      if (typeof args?.key !== "string" || args.key === "") throw new Error("inbox_read \u9700\u8981 key(inbox_list \u8FD4\u56DE)");
+      const { item, text: text2 } = await service.inboxRead({ key: args.key });
+      const header = [
+        `# ${item?.title ?? "\u672A\u547D\u540D"}`,
+        "",
+        item?.source?.url ? `\u539F\u6587: ${item.source.url}` : null,
+        item?.createdAt ? `\u6536\u5F55\u65F6\u95F4: ${new Date(item.createdAt).toISOString()}` : null,
+        Array.isArray(item?.tags) && item.tags.length > 0 ? `\u6807\u7B7E: ${item.tags.join(", ")}` : null,
+        ""
+      ].filter((line) => line !== null).join("\n");
+      const body = String(text2 ?? "");
+      return body === "" ? `${header}(\u8FD9\u6761\u6CA1\u6709\u53EF\u8BFB\u6B63\u6587)` : `${header}
+${body.slice(0, 6e4)}${body.length > 6e4 ? "\n(\u6B63\u6587\u8FC7\u957F\u5DF2\u622A\u65AD)" : ""}`;
+    }
+    case "inbox_add_url": {
+      if (typeof args?.url !== "string" || !/^https?:\/\//i.test(args.url)) throw new Error("inbox_add_url \u9700\u8981 http(s) url");
+      const { item, duplicate } = await service.inboxAddUrl({ url: args.url });
+      return duplicate ? `\u6536\u4EF6\u7BB1\u91CC\u5DF2\u6709\u8FD9\u4E00\u6761(${item.id}),\u672A\u91CD\u590D\u6293\u53D6\u3002` : `\u5DF2\u52A0\u5165\u6536\u4EF6\u7BB1:${item.id}(${item.title ?? "\u6293\u53D6\u4E2D"})\u3002`;
+    }
+    case "inbox_update": {
+      if (typeof args?.key !== "string" || args.key === "") throw new Error("inbox_update \u9700\u8981 key");
+      const tags = Array.isArray(args?.tags) ? args.tags.filter((tag) => typeof tag === "string") : void 0;
+      const { item } = await service.inboxUpdate({ id: args.key, patch: { tags } });
+      return `\u5DF2\u66F4\u65B0\u6807\u7B7E:${item?.title ?? args.key} \u2192 [${(item?.tags ?? []).join(", ")}]`;
+    }
+    case "inbox_mark_done": {
+      if (typeof args?.key !== "string" || args.key === "") throw new Error("inbox_mark_done \u9700\u8981 key");
+      const action = args?.action === "library" ? "library" : "trash";
+      if (action === "library") {
+        await service.inboxMoveToLibrary({ id: args.key });
+        return `\u5DF2\u5904\u7406\u5B8C\u6210\u5E76\u4FDD\u7559\u5230\u8D44\u6599\u5E93:${args.key}\u3002`;
+      }
+      await service.inboxMoveToTrash({ id: args.key });
+      return `\u5DF2\u5904\u7406\u5B8C\u6210\u5E76\u79FB\u5165\u56DE\u6536\u7AD9(\u53EF\u6062\u590D):${args.key}\u3002`;
+    }
+    default:
+      throw new Error(`\u672A\u77E5\u5DE5\u5177:${name2}`);
+  }
+}
+async function dispatch(service, message) {
+  if (!message || typeof message !== "object" || message.jsonrpc !== "2.0") {
+    return errorResult(null, -32600, "Invalid Request");
+  }
+  const { id, method } = message;
+  const isNotification = id === void 0 || id === null;
+  if (method === "initialize") {
+    const requested = message.params?.protocolVersion;
+    return {
+      jsonrpc: "2.0",
+      id,
+      result: {
+        protocolVersion: typeof requested === "string" && requested !== "" ? requested : FALLBACK_PROTOCOL_VERSION,
+        capabilities: { tools: { listChanged: false } },
+        serverInfo: SERVER_INFO,
+        instructions: "Droplets \u6536\u4EF6\u7BB1:\u7F51\u9875/PDF/EPUB \u7684\u5F85\u8BFB\u961F\u5217\u3002\u5178\u578B\u4EE3\u7406\u5DE5\u4F5C\u6D41:inbox_list \u8FC7\u6EE4 unread \u2192 inbox_read \u8BFB\u6B63\u6587 \u2192 \u51B3\u5B9A\u53BB\u7559(\u5B58\u77E5\u8BC6\u5E93/\u4E22\u5F03) \u2192 inbox_mark_done \u6536\u5C3E,\u5904\u7406\u4E2D\u53EF\u7528 inbox_update \u6253\u6807\u7B7E\u3002"
+      }
+    };
+  }
+  if (method === "notifications/initialized" || isNotification && typeof method === "string" && method.startsWith("notifications/")) {
+    return void 0;
+  }
+  if (method === "ping") return { jsonrpc: "2.0", id, result: {} };
+  if (method === "tools/list") return { jsonrpc: "2.0", id, result: { tools: inboxMcpTools() } };
+  if (method === "tools/call") {
+    const name2 = message.params?.name;
+    if (typeof name2 !== "string") return errorResult(id, -32602, "tools/call requires params.name");
+    try {
+      const text2 = await callTool(service, name2, message.params?.arguments ?? {});
+      return textResult(id, String(text2));
+    } catch (error) {
+      return textResult(id, String(error?.message ?? error), true);
+    }
+  }
+  if (isNotification) return void 0;
+  return errorResult(id, -32601, `Method not found: ${String(method)}`);
+}
+function createInboxMcpHandler(service, { getToken }) {
+  return async (req, res) => {
+    try {
+      const authorization = String(req.headers.authorization ?? "");
+      const token = getToken();
+      if (typeof token !== "string" || authorization !== "Bearer " + token) {
+        json(res, 401, { jsonrpc: "2.0", id: null, error: { code: -32001, message: "invalid or missing bearer token" } });
+        return;
+      }
+      if (req.method === "GET") {
+        res.writeHead(405, { allow: "POST" });
+        res.end();
+        return;
+      }
+      if (req.method === "DELETE") {
+        res.writeHead(405, { allow: "POST" });
+        res.end();
+        return;
+      }
+      if (req.method !== "POST") {
+        res.writeHead(405, { allow: "POST" });
+        res.end();
+        return;
+      }
+      const chunks = [];
+      for await (const chunk of req) chunks.push(chunk);
+      const body = Buffer.concat(chunks).toString("utf8");
+      let message;
+      try {
+        message = JSON.parse(body);
+      } catch {
+        json(res, 400, errorResult(null, -32700, "Parse error"));
+        return;
+      }
+      const batch = Array.isArray(message) ? message : [message];
+      if (batch.length === 0) {
+        json(res, 400, errorResult(null, -32600, "Invalid Request"));
+        return;
+      }
+      const replies = [];
+      for (const entry of batch) {
+        const reply = await dispatch(service, entry);
+        if (reply !== void 0) replies.push(reply);
+      }
+      if (replies.length === 0) {
+        res.writeHead(202);
+        res.end();
+        return;
+      }
+      json(res, 200, Array.isArray(message) ? replies : replies[0]);
+    } catch (error) {
+      if (!res.headersSent) {
+        json(res, 500, errorResult(null, -32603, "Internal error"));
+      } else {
+        res.end();
+      }
+    }
+  };
+}
+
 // src/host/index.js
 var name = "droplets";
 var inject = ["tools"];
 var REFRESH_WORKERS = 3;
 var FEED_TIMEOUT_MS = 2e4;
-var CONFIG_KEYS = /* @__PURE__ */ new Set(["workspacePath", "vaultPath", "refreshInterval", "maxBodies", "enableTranslation"]);
+var CONFIG_KEYS = /* @__PURE__ */ new Set(["workspacePath", "vaultPath", "refreshInterval", "maxBodies", "enableTranslation", "enableMcp"]);
 var Config2 = {
   "~standard": {
     version: 1,
@@ -141313,6 +141592,9 @@ var Config2 = {
       if (value.enableTranslation !== void 0 && typeof value.enableTranslation !== "boolean") {
         issues.push({ message: "droplets\uFF1AenableTranslation \u5FC5\u987B\u662F\u5E03\u5C14\u503C", path: ["enableTranslation"] });
       }
+      if (value.enableMcp !== void 0 && typeof value.enableMcp !== "boolean") {
+        issues.push({ message: "droplets\uFF1AenableMcp \u5FC5\u987B\u662F\u5E03\u5C14\u503C", path: ["enableMcp"] });
+      }
       if (issues.length > 0) return { issues };
       const result = {};
       if (typeof value.workspacePath === "string" && value.workspacePath.trim() !== "") result.workspacePath = path4.resolve(value.workspacePath.trim());
@@ -141320,6 +141602,7 @@ var Config2 = {
       if (typeof value.refreshInterval === "number") result.refreshInterval = Math.max(6e4, Math.floor(value.refreshInterval));
       if (typeof value.maxBodies === "number") result.maxBodies = Math.floor(value.maxBodies);
       if (typeof value.enableTranslation === "boolean") result.enableTranslation = value.enableTranslation;
+      if (typeof value.enableMcp === "boolean") result.enableMcp = value.enableMcp;
       return { value: result };
     }
   }
@@ -141330,14 +141613,14 @@ var DropletsService = class extends TypertRemoteService {
     super(ctx, "droplets");
     this.ctx = ctx;
     this.config = config;
-    this.workspacePointer = join6(storageDir(), "workspace.json");
+    this.workspacePointer = join7(storageDir(), "workspace.json");
     this.workspacePath = config.workspacePath ?? null;
     this.store = this.workspacePath ? new WorkspaceStore(ctx.logger, this.workspacePath, config.maxBodies ?? 300) : new DropletsStore(ctx.logger, config.maxBodies ?? 300);
     this.sharedWorkspace = Boolean(this.workspacePath);
     this.fetcher = guardedFetch;
     this.inbox = this.createInbox();
-    this.icons = new FeedIconStore(join6(storageDir(), "icons"), ctx.logger);
-    this.translations = new TranslationStore(join6(storageDir(), "translations"), ctx.logger);
+    this.icons = new FeedIconStore(join7(storageDir(), "icons"), ctx.logger);
+    this.translations = new TranslationStore(join7(storageDir(), "translations"), ctx.logger);
     this.iconJobs = /* @__PURE__ */ new Set();
     this.refreshing = false;
     this.tickTimer = void 0;
@@ -141352,7 +141635,7 @@ var DropletsService = class extends TypertRemoteService {
             this.inbox = this.createInbox();
           }
         } else if (pointer !== this.workspacePath) {
-          const probe = await stat6(join6(pointer, "state", "app.sqlite")).catch(() => null);
+          const probe = await stat6(join7(pointer, "state", "app.sqlite")).catch(() => null);
           if (probe) {
             this.workspacePath = pointer;
             this.sharedWorkspace = true;
@@ -141388,6 +141671,12 @@ var DropletsService = class extends TypertRemoteService {
         }
       };
     }, "droplets: agent tools");
+    this.mcpToken = null;
+    this.mcpMount = null;
+    ctx.inject(["webServer"], (scope) => {
+      const mount = this.mountInboxMcp(scope);
+      return () => this.unmountInboxMcp(mount);
+    });
     this.startTick();
     ctx.logger?.info?.("droplets: service started");
     ctx.effect(() => () => this.shutdown(), "droplets: flush store on dispose");
@@ -141417,7 +141706,7 @@ var DropletsService = class extends TypertRemoteService {
   vaultRoot() {
     const configured = this.config.vaultPath;
     if (typeof configured === "string" && configured.trim() !== "") return configured;
-    if (this.sharedWorkspace) return join6(this.store.root, "vault");
+    if (this.sharedWorkspace) return join7(this.store.root, "vault");
     return defaultVaultPath();
   }
   /**
@@ -141427,7 +141716,7 @@ var DropletsService = class extends TypertRemoteService {
    * the same layout inside the plugin's own storage dir.
    */
   createInbox() {
-    const root = this.sharedWorkspace && this.store?.root ? this.store.root : join6(storageDir(), "inbox-workspace");
+    const root = this.sharedWorkspace && this.store?.root ? this.store.root : join7(storageDir(), "inbox-workspace");
     return new WorkspaceInbox(root, this.ctx?.logger, () => this.fetcher);
   }
   vaultService() {
@@ -141477,6 +141766,29 @@ var DropletsService = class extends TypertRemoteService {
   entriesOfFeed(sub) {
     return (sub.entries ?? []).map((entry) => ({ ...entry, channelKey: sub.id, channelName: sub.name }));
   }
+  // ------------------------------------------------------------------
+  // Surfaces (RSS / News): one subscription pool, per-surface views
+  // ------------------------------------------------------------------
+  /**
+   * The surface a subscription renders on. Kept in a data-doc sidecar map
+   * ('surfaces', keyed by subscription id) so BOTH storage backends persist
+   * it: the private store writes the whole data doc, the shared Droplets
+   * workspace keeps it in the '.droplets-dsh' sidecar next to the SQLite
+   * tables (which have no column for it). Absent entry = 'rss'.
+   */
+  surfaceOf(sub) {
+    return this.store.data.surfaces?.[sub.id] === "news" ? "news" : "rss";
+  }
+  /** Subscriptions restricted to one surface ('news' | 'rss'), or all. */
+  subscriptionsOn(surface) {
+    const subs = this.store.data.subscriptions;
+    if (surface !== "news" && surface !== "rss") return subs;
+    return subs.filter((sub) => this.surfaceOf(sub) === surface);
+  }
+  setSurface(subId, surface) {
+    if (surface !== "news" && surface !== "rss") throw new Error("surface \u5FC5\u987B\u662F rss \u6216 news");
+    (this.store.data.surfaces ??= {})[subId] = surface;
+  }
   async listChannels() {
     await this.ready;
     const data = this.store.data;
@@ -141510,6 +141822,7 @@ var DropletsService = class extends TypertRemoteService {
         kind: "feed",
         name: sub.name,
         group: sub.group,
+        surface: this.surfaceOf(sub),
         url: sub.url,
         unread: countUnread(sub.entries ?? []),
         total: (sub.entries ?? []).length,
@@ -141519,16 +141832,16 @@ var DropletsService = class extends TypertRemoteService {
     }
     return { channels };
   }
-  entriesOf(channel) {
-    const data = this.store.data;
+  entriesOf(channel, surface) {
+    const subs = this.subscriptionsOn(surface);
     if (channel === void 0 || channel === "all") {
-      return data.subscriptions.flatMap((sub2) => this.entriesOfFeed(sub2));
+      return subs.flatMap((sub2) => this.entriesOfFeed(sub2));
     }
     if (channel.startsWith("group:")) {
       const wanted = channel.slice("group:".length);
-      return data.subscriptions.filter((sub2) => (sub2.group ?? "") === wanted).flatMap((sub2) => this.entriesOfFeed(sub2));
+      return subs.filter((sub2) => (sub2.group ?? "") === wanted).flatMap((sub2) => this.entriesOfFeed(sub2));
     }
-    const sub = data.subscriptions.find((candidate) => candidate.id === channel);
+    const sub = subs.find((candidate) => candidate.id === channel);
     return sub ? this.entriesOfFeed(sub) : [];
   }
   entrySummary(entry) {
@@ -141561,6 +141874,7 @@ var DropletsService = class extends TypertRemoteService {
         id: sub.id,
         title: sub.name,
         url: sub.url,
+        surface: this.surfaceOf(sub),
         groupName: sub.group ?? "",
         enabled: sub.enabled !== false,
         lastFetchAt: sub.lastFetchedAt ?? null,
@@ -141576,18 +141890,19 @@ var DropletsService = class extends TypertRemoteService {
    * with sourceId, exactly like droplets).
    */
   async listItems(request) {
-    const { sourceId, groupName, limit } = request ?? {};
+    const { sourceId, groupName, limit, surface } = request ?? {};
     await this.ready;
     const data = this.store.data;
     const size = Math.min(Math.max(limit ?? 5e3, 1), 8e3);
+    const scoped = this.subscriptionsOn(surface);
     let pool = [];
     if (typeof sourceId === "string" && sourceId) {
-      const sub = data.subscriptions.find((candidate) => candidate.id === sourceId);
+      const sub = scoped.find((candidate) => candidate.id === sourceId);
       pool = sub ? this.entriesOfFeed(sub) : [];
     } else if (typeof groupName === "string") {
-      pool = data.subscriptions.filter((sub) => (sub.group ?? "") === groupName).flatMap((sub) => this.entriesOfFeed(sub));
+      pool = scoped.filter((sub) => (sub.group ?? "") === groupName).flatMap((sub) => this.entriesOfFeed(sub));
     } else {
-      pool = data.subscriptions.flatMap((sub) => this.entriesOfFeed(sub));
+      pool = scoped.flatMap((sub) => this.entriesOfFeed(sub));
     }
     const isUnread = (entry) => data.states[entry.key] === void 0 ? 0 : 1;
     pool.sort((a, b) => isUnread(a) - isUnread(b) || sortByDate(a, b));
@@ -141645,7 +141960,7 @@ var DropletsService = class extends TypertRemoteService {
     this.store.touch();
     return { marked: count };
   }
-  /** Feed management patch: rename / regroup / enable-disable. */
+  /** Feed management patch: rename / regroup / enable-disable / re-surface. */
   async setFeed(request) {
     const { id, patch } = request ?? {};
     await this.ready;
@@ -141654,15 +141969,19 @@ var DropletsService = class extends TypertRemoteService {
     if (typeof patch?.name === "string" && patch.name.trim() !== "") sub.name = patch.name.trim();
     if (typeof patch?.group === "string") sub.group = patch.group.trim() || void 0;
     if (typeof patch?.enabled === "boolean") sub.enabled = patch.enabled;
+    if (patch?.surface === "rss" || patch?.surface === "news") {
+      this.setSurface(id, patch.surface);
+      sub.surface = patch.surface;
+    }
     this.store.touch();
     await this.store.flush();
     return { ok: true };
   }
   async listEntries(request) {
-    const { channel, filter, search, cursor, limit } = request ?? {};
+    const { channel, filter, search, cursor, limit, surface } = request ?? {};
     await this.ready;
     const size = Math.min(Math.max(limit ?? 30, 1), 100);
-    let entries = this.entriesOf(channel);
+    let entries = this.entriesOf(channel, surface);
     entries.sort(sortByDate);
     if (search && search.trim() !== "") {
       const needle = search.trim().toLowerCase();
@@ -141790,6 +142109,7 @@ var DropletsService = class extends TypertRemoteService {
         url: sub.url,
         name: sub.name,
         group: sub.group,
+        surface: this.surfaceOf(sub),
         addedAt: sub.addedAt,
         lastFetchedAt: sub.lastFetchedAt,
         lastError: sub.lastError,
@@ -141798,7 +142118,7 @@ var DropletsService = class extends TypertRemoteService {
     };
   }
   async addSubscription(request) {
-    const { url, name: name2, group } = request ?? {};
+    const { url, name: name2, group, surface } = request ?? {};
     await this.ready;
     const trimmed = String(url ?? "").trim();
     if (!/^https?:\/\//i.test(trimmed)) throw new Error("\u8BA2\u9605\u5730\u5740\u5FC5\u987B\u662F http(s) URL");
@@ -141828,6 +142148,7 @@ var DropletsService = class extends TypertRemoteService {
       url: trimmed,
       name: displayName || feedTitle || trimmed,
       group: String(group ?? "").trim() || void 0,
+      surface: surface === "news" ? "news" : "rss",
       addedAt: Date.now(),
       lastFetchedAt: feedTitle ? Date.now() : void 0,
       status,
@@ -141835,6 +142156,7 @@ var DropletsService = class extends TypertRemoteService {
       entries: this.sharedWorkspace ? this.remapToNativeKeys(subId, entries) : entries
     };
     this.store.data.subscriptions.push(sub);
+    this.setSurface(sub.id, sub.surface);
     this.store.touch();
     await this.store.flush();
     if (parsed) {
@@ -141859,6 +142181,7 @@ var DropletsService = class extends TypertRemoteService {
     for (const entry of target.entries ?? []) {
       this.store.bodies.delete([entry.key]);
     }
+    if (this.store.data.surfaces) delete this.store.data.surfaces[id];
     void this.icons.remove(id);
     void this.translations.remove(id);
     this.store.touch();
@@ -141866,15 +142189,19 @@ var DropletsService = class extends TypertRemoteService {
     return true;
   }
   async updateSubscription(request) {
-    const { id, name: name2, group } = request ?? {};
+    const { id, name: name2, group, surface } = request ?? {};
     await this.ready;
     const sub = this.store.data.subscriptions.find((candidate) => candidate.id === id);
     if (!sub) throw new Error(`no subscription ${id}`);
     if (typeof name2 === "string" && name2.trim() !== "") sub.name = name2.trim();
     if (typeof group === "string") sub.group = group.trim() || void 0;
+    if (surface !== void 0) {
+      this.setSurface(id, surface);
+      sub.surface = surface;
+    }
     this.store.touch();
     await this.store.flush();
-    return { id: sub.id, name: sub.name, group: sub.group };
+    return { id: sub.id, name: sub.name, group: sub.group, surface: this.surfaceOf(sub) };
   }
   async opmlPreview(request) {
     await this.ready;
@@ -142304,7 +142631,7 @@ var DropletsService = class extends TypertRemoteService {
     await this.ready;
     const rel = typeof request === "string" ? request : request?.path;
     const vault = this.vaultService();
-    const absolute = join6(vault.root, rel);
+    const absolute = join7(vault.root, rel);
     const text2 = request?.relative ? rel : absolute;
     const { execFile } = await import("node:child_process");
     const candidates = process.platform === "darwin" ? ["pbcopy"] : process.platform === "win32" ? ["clip"] : ["xclip", "-selection", "clipboard"];
@@ -142329,11 +142656,11 @@ var DropletsService = class extends TypertRemoteService {
   async vaultTrashList() {
     await this.ready;
     const entries = [];
-    const names = await readdir5(join6(this.vaultRoot(), ".trash")).catch(() => []);
+    const names = await readdir5(join7(this.vaultRoot(), ".trash")).catch(() => []);
     for (const name2 of names) {
       if (name2.startsWith(".")) continue;
-      const dir = join6(this.vaultRoot(), ".trash", name2);
-      const metaRaw = await readFile9(join6(dir, "trash-meta.json"), "utf8").catch(() => null);
+      const dir = join7(this.vaultRoot(), ".trash", name2);
+      const metaRaw = await readFile10(join7(dir, "trash-meta.json"), "utf8").catch(() => null);
       let meta;
       try {
         meta = JSON.parse(metaRaw);
@@ -142344,7 +142671,7 @@ var DropletsService = class extends TypertRemoteService {
         id: name2,
         title: meta?.title ?? name2,
         deletedAt: meta?.deletedAt,
-        entryKind: meta?.entryKind ?? (existsSync2(join6(dir, "payload")) && statSync(join6(dir, "payload")).isDirectory() ? "directory" : "file"),
+        entryKind: meta?.entryKind ?? (existsSync2(join7(dir, "payload")) && statSync(join7(dir, "payload")).isDirectory() ? "directory" : "file"),
         sizeBytes: meta?.sizeBytes,
         fileCount: meta?.fileCount
       });
@@ -142357,8 +142684,8 @@ var DropletsService = class extends TypertRemoteService {
     await this.ready;
     const id = typeof request === "string" ? request : request?.id;
     if (typeof id !== "string" || id === "" || id.includes("/") || id.startsWith(".")) throw new Error("\u65E0\u6548\u56DE\u6536\u7AD9\u6761\u76EE");
-    const trashDir = join6(this.vaultRoot(), ".trash", id);
-    const metaRaw = await readFile9(join6(trashDir, "trash-meta.json"), "utf8").catch(() => null);
+    const trashDir = join7(this.vaultRoot(), ".trash", id);
+    const metaRaw = await readFile10(join7(trashDir, "trash-meta.json"), "utf8").catch(() => null);
     let meta = null;
     try {
       meta = metaRaw ? JSON.parse(metaRaw) : null;
@@ -142368,10 +142695,10 @@ var DropletsService = class extends TypertRemoteService {
     const original = String(meta?.originalRelPath ?? "");
     const rel = original.startsWith("vault/") ? original.slice("vault/".length).replace(/\/+$/, "") : "";
     if (rel === "") throw new Error("\u8BE5\u6761\u76EE\u7F3A\u5C11\u539F\u59CB\u8DEF\u5F84\u4FE1\u606F\uFF0C\u65E0\u6CD5\u81EA\u52A8\u6062\u590D");
-    const target = join6(this.vaultRoot(), rel);
+    const target = join7(this.vaultRoot(), rel);
     if (existsSync2(target)) throw new Error(`\u76EE\u6807\u5DF2\u5B58\u5728\uFF0C\u65E0\u6CD5\u6062\u590D\uFF1A${rel}`);
-    await mkdir9(path4.dirname(target), { recursive: true });
-    await rename8(join6(trashDir, "payload"), target);
+    await mkdir10(path4.dirname(target), { recursive: true });
+    await rename9(join7(trashDir, "payload"), target);
     await rm(trashDir, { recursive: true, force: true });
     return { restored: rel };
   }
@@ -142566,7 +142893,7 @@ var DropletsService = class extends TypertRemoteService {
   /** Read the persisted workspace pointer (null = private storage). */
   async readWorkspacePointer() {
     try {
-      const raw = await readFile9(this.workspacePointer, "utf8");
+      const raw = await readFile10(this.workspacePointer, "utf8");
       const parsed = JSON.parse(raw);
       return typeof parsed?.path === "string" && parsed.path.trim() !== "" ? parsed.path : null;
     } catch {
@@ -142586,8 +142913,8 @@ var DropletsService = class extends TypertRemoteService {
     if (requested !== "") {
       const resolved = path4.resolve(requested);
       const checks = await Promise.all([
-        stat6(join6(resolved, "state", "app.sqlite")).catch(() => null),
-        stat6(join6(resolved, "droplets.json")).catch(() => null)
+        stat6(join7(resolved, "state", "app.sqlite")).catch(() => null),
+        stat6(join7(resolved, "droplets.json")).catch(() => null)
       ]);
       if (!checks[0] && !checks[1]) {
         throw new Error("droplets\uFF1A\u8FD9\u4E2A\u76EE\u5F55\u4E0D\u50CF Droplets \u5DE5\u4F5C\u533A\uFF08\u7F3A\u5C11 state/app.sqlite \u6216 droplets.json\uFF09");
@@ -142604,16 +142931,16 @@ var DropletsService = class extends TypertRemoteService {
     this.store = target ? new WorkspaceStore(this.ctx.logger, target, this.config.maxBodies ?? 300) : new DropletsStore(this.ctx.logger, this.config.maxBodies ?? 300);
     this.vaultInstance = void 0;
     this.inbox = this.createInbox();
-    this.translations = new TranslationStore(join6(storageDir(), "translations"), this.ctx.logger);
+    this.translations = new TranslationStore(join7(storageDir(), "translations"), this.ctx.logger);
     this.ready = this.store.load().then(async () => {
       this.store.setMaxBodies(this.config.maxBodies ?? 300);
       await ensureDefaultVault(this.vaultRoot());
     });
     await this.ready;
-    await mkdir9(storageDir(), { recursive: true });
+    await mkdir10(storageDir(), { recursive: true });
     const temp = this.workspacePointer + "." + process.pid + ".tmp";
-    await writeFile9(temp, JSON.stringify({ path: target ?? "" }), { encoding: "utf8", mode: 384 });
-    await rename8(temp, this.workspacePointer);
+    await writeFile10(temp, JSON.stringify({ path: target ?? "" }), { encoding: "utf8", mode: 384 });
+    await rename9(temp, this.workspacePointer);
     return this.getWorkspace();
   }
   /** Workspace screen: where the data actually lives, its layout and git state. */
@@ -142625,7 +142952,7 @@ var DropletsService = class extends TypertRemoteService {
       const stats = await this.store.stats().catch(() => null);
       const directory2 = [];
       const probe2 = async (relPath, label, kind) => {
-        const full = join6(root, relPath);
+        const full = join7(root, relPath);
         const info3 = await stat6(full).catch(() => null);
         directory2.push({
           path: relPath,
@@ -142671,7 +142998,7 @@ var DropletsService = class extends TypertRemoteService {
     const entryDir = entriesDir();
     const directory = [];
     const probe = async (relPath, label, kind) => {
-      const full = join6(root, relPath);
+      const full = join7(root, relPath);
       const info3 = await stat6(full).catch(() => null);
       directory.push({
         path: relPath,
@@ -142700,7 +143027,7 @@ var DropletsService = class extends TypertRemoteService {
       for (const name2 of await readdir5(entryDir)) {
         if (!name2.endsWith(".json")) continue;
         entryFiles += 1;
-        entryBytes += (await stat6(join6(entryDir, name2))).size;
+        entryBytes += (await stat6(join7(entryDir, name2))).size;
       }
     } catch {
     }
@@ -142767,6 +143094,105 @@ var DropletsService = class extends TypertRemoteService {
     await this.store.load();
     await this.ensureVault();
     return { ok: true };
+  }
+  // ------------------------------------------------------------------
+  // Inbox MCP (open API)
+  // ------------------------------------------------------------------
+  /**
+   * Mount the inbox MCP endpoint on the composed webServer. The route handler
+   * reads the bearer token live (this.mcpToken), so a rotation takes effect
+   * without re-binding the route; the mcpManager entry (which gives in-profile
+   * agents the tools through the standard MCP client) is registered once the
+   * token file has been read.
+   */
+  mountInboxMcp(scope) {
+    if (this.config.enableMcp === false) return null;
+    const webServer = scope.get("webServer");
+    if (webServer === void 0) return null;
+    let origin;
+    try {
+      origin = webServer.getOrigin();
+    } catch (error) {
+      this.ctx.logger?.warn?.(`droplets: inbox MCP not mounted: ${String(error?.message ?? error)}`);
+      return null;
+    }
+    const mount = { scope, url: origin + inboxMcpPath(), registered: false, managerDisposer: null, routeDisposer: null, disposed: false };
+    mount.routeDisposer = webServer.register({
+      kind: "exact",
+      path: inboxMcpPath(),
+      handler: createInboxMcpHandler(this, { getToken: () => this.mcpToken })
+    });
+    void this.ready.then(async () => {
+      try {
+        const record = await loadOrCreateMcpToken(storageDir(), this.ctx.logger);
+        if (mount.disposed) return;
+        this.mcpToken = record.token;
+        this.bindMcpManager(mount, record.token);
+      } catch {
+      }
+    });
+    this.mcpMount = mount;
+    this.ctx.logger?.info?.(`droplets: inbox MCP listening on ${mount.url}`);
+    return mount;
+  }
+  /** (Re)register the in-profile mcpManager entry with the current token. */
+  bindMcpManager(mount, token) {
+    if (mount?.managerDisposer) {
+      try {
+        mount.managerDisposer();
+      } catch {
+      }
+      mount.managerDisposer = null;
+      mount.registered = false;
+    }
+    const mcpManager = mount?.scope?.get("mcpManager");
+    if (!mcpManager || !mount || mount.disposed) return;
+    try {
+      mount.managerDisposer = mcpManager.register("droplets-inbox", {
+        transport: "streamable-http",
+        url: mount.url,
+        headers: { authorization: "Bearer " + token }
+      });
+      mount.registered = true;
+      this.ctx.logger?.info?.("droplets: inbox MCP registered with the MCP manager (agents see droplets-inbox tools)");
+    } catch (error) {
+      this.ctx.logger?.warn?.(`droplets: inbox MCP manager registration failed: ${String(error?.message ?? error)}`);
+    }
+  }
+  unmountInboxMcp(mount = this.mcpMount) {
+    if (mount === null || mount === void 0) return;
+    mount.disposed = true;
+    try {
+      mount.managerDisposer?.();
+    } catch {
+    }
+    try {
+      mount.routeDisposer?.();
+    } catch {
+    }
+    if (this.mcpMount === mount) this.mcpMount = null;
+  }
+  /** Panel-facing status: endpoint, token (to copy into external clients). */
+  async mcpStatus() {
+    await this.ready;
+    return {
+      enabled: this.config.enableMcp !== false,
+      url: this.mcpMount?.url ?? null,
+      token: this.mcpToken ?? null,
+      registered: Boolean(this.mcpMount?.registered)
+    };
+  }
+  /** Rotate the bearer token; the route picks it up live, the manager entry re-binds. */
+  async mcpRotateToken() {
+    await this.ready;
+    const record = await rotateMcpToken(storageDir(), this.ctx.logger);
+    this.mcpToken = record.token;
+    if (this.mcpMount && !this.mcpMount.disposed) this.bindMcpManager(this.mcpMount, record.token);
+    return {
+      token: record.token,
+      url: this.mcpMount?.url ?? null,
+      registered: Boolean(this.mcpMount?.registered)
+    };
   }
   // ------------------------------------------------------------------
   // Companion
@@ -142858,7 +143284,7 @@ var DropletsService = class extends TypertRemoteService {
     "vaultWriteAttachment",
     "vaultReadAttachment",
     "vaultStat",
-    // settings / companion
+    // settings / companion / open API
     "getSettings",
     "saveSettings",
     "getStorageInfo",
@@ -142868,7 +143294,9 @@ var DropletsService = class extends TypertRemoteService {
     "clearData",
     "setReadingContext",
     "prepareChat",
-    "saveAsNote"
+    "saveAsNote",
+    "mcpStatus",
+    "mcpRotateToken"
   ];
   const prototype = DropletsService.prototype;
   for (const method of names) {
