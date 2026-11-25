@@ -1,4 +1,0 @@
-fix: ItemList 缺 surface prop——渲染测试(评估构建产物)暴露的自由变量
-
-feed-render 测试加载的是构建后的 client.js,源码里 ItemList 引用了
-未接收的 surface 变量,补上 prop 传递与解构;重建后 198 测试全绿。
