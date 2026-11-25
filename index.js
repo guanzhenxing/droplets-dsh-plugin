@@ -133173,1253 +133173,6 @@ var DropletsStore = class {
 // src/host/workspace-store.js
 import { mkdir as mkdir3, readFile as readFile3, rename as rename3, rm as rm4, stat as stat2, writeFile as writeFile3 } from "node:fs/promises";
 import { dirname as dirname3, join as join2 } from "node:path";
-var SIDECAR = ".droplets-dsh";
-function defaultsSidecar() {
-  return {
-    version: 1,
-    settings: {
-      showImages: true,
-      refreshMinutes: 60,
-      refreshOnStart: true,
-      hoverPreview: false,
-      cacheDays: 60,
-      refreshWorkers: 3,
-      fetchTimeoutSec: 20
-    },
-    favorites: {},
-    inbox: [],
-    vaultCache: null,
-    companionContexts: {}
-  };
-}
-async function loadSqlite() {
-  const { DatabaseSync } = await import("node:sqlite");
-  return DatabaseSync;
-}
-var WorkspaceStore = class {
-  constructor(logger, root, maxBodies = 300) {
-    this.logger = logger;
-    this.root = root;
-    this.dir = root;
-    this.appDbPath = join2(root, "state", "app.sqlite");
-    this.indexDbPath = join2(root, "state", "index.sqlite");
-    this.sidecarDir = join2(root, SIDECAR);
-    this.path = join2(this.sidecarDir, "state.json");
-    this.bodies = new BodyStore(join2(this.sidecarDir, "bodies.json"), maxBodies);
-    this.data = { ...defaultsSidecar(), subscriptions: [], states: {}, read: {} };
-    this.saveTimer = void 0;
-    this.saving = Promise.resolve();
-    this.lastKnownMtime = 0;
-    this.appDb = null;
-    this.indexDb = null;
-    this.persistedFeed = /* @__PURE__ */ new Map();
-    this.persistedFeeds = /* @__PURE__ */ new Map();
-    this.persistedStates = /* @__PURE__ */ new Map();
-  }
-  setMaxBodies(maxBodies) {
-    if (Number.isFinite(maxBodies) && maxBodies >= 10) this.bodies.maxBodies = Math.floor(maxBodies);
-  }
-  async cleanStaleTemps() {
-    try {
-      const { readdir: readdir6 } = await import("node:fs/promises");
-      for (const name2 of await readdir6(this.sidecarDir)) {
-        if (!name2.endsWith(".tmp")) continue;
-        const full = join2(this.sidecarDir, name2);
-        const info3 = await stat2(full).catch(() => null);
-        if (info3 && info3.mtimeMs < Date.now() - 10 * 60 * 1e3) await rm4(full, { force: true });
-      }
-    } catch {
-    }
-  }
-  async openDatabases() {
-    const DatabaseSync = await loadSqlite();
-    if (!this.appDb) {
-      this.appDb = new DatabaseSync(this.appDbPath);
-      this.appDb.exec("PRAGMA busy_timeout = 5000");
-    }
-    if (!this.indexDb) {
-      this.indexDb = new DatabaseSync(this.indexDbPath);
-      this.indexDb.exec("PRAGMA busy_timeout = 5000");
-    }
-  }
-  closeDatabases() {
-    try {
-      this.appDb?.close();
-    } catch {
-    }
-    try {
-      this.indexDb?.close();
-    } catch {
-    }
-    this.appDb = null;
-    this.indexDb = null;
-  }
-  /** Feed row -> the subscription shape the rest of the plugin expects. */
-  #toSubscription(row, entries) {
-    return {
-      id: row.id,
-      url: row.url,
-      name: row.title,
-      group: row.group_name || void 0,
-      enabled: row.enabled !== 0,
-      siteUrl: row.site_url || void 0,
-      refreshStrategy: row.refresh_strategy || "follow",
-      showUnreadBadge: row.show_unread_badge !== 0,
-      includeInAll: row.include_in_all !== 0,
-      note: row.note || void 0,
-      createdAt: row.created_at ? Math.round(row.created_at * 1e3) : void 0,
-      lastFetchedAt: row.last_fetch_at ? Math.round(row.last_fetch_at * 1e3) : void 0,
-      lastError: row.last_error || void 0,
-      entries
-    };
-  }
-  /** rss_item row -> the entry shape the reader/sorting code uses. */
-  #toEntry(feedId, row) {
-    const html = row.content_html || row.content || row.summary || "";
-    return {
-      key: feedId + "|" + row.item_key,
-      guid: row.item_key,
-      title: row.title,
-      publishedAt: row.published_at || new Date((row.fetched_at ?? 0) * 1e3).toISOString(),
-      url: row.link || "",
-      summary: row.summary || "",
-      html,
-      truncated: false
-    };
-  }
-  async load() {
-    await this.openDatabases();
-    await mkdir3(this.sidecarDir, { recursive: true });
-    const sidecar = await readFile3(this.path, "utf8").then((raw) => JSON.parse(raw)).catch(() => null);
-    const base = defaultsSidecar();
-    this.data = {
-      ...base,
-      ...sidecar ?? {},
-      settings: { ...base.settings, ...sidecar?.settings ?? {} },
-      states: {},
-      read: {}
-    };
-    if (!Array.isArray(this.data.inbox)) this.data.inbox = [];
-    if (!this.data.favorites || typeof this.data.favorites !== "object") this.data.favorites = {};
-    if (!this.data.companionContexts || typeof this.data.companionContexts !== "object") this.data.companionContexts = {};
-    const feedRows = this.appDb.prepare(
-      "SELECT id, title, url, group_name, enabled, created_at, last_fetch_at, last_error, site_url, refresh_strategy, show_unread_badge, include_in_all, note, consecutive_failures, last_success_at FROM feeds ORDER BY created_at ASC"
-    ).all();
-    const itemsByFeed = /* @__PURE__ */ new Map();
-    const itemRows = this.indexDb.prepare(
-      "SELECT source_id, item_key, title, link, summary, content, content_html, published_at, fetched_at FROM rss_item ORDER BY COALESCE(published_at, '') DESC, fetched_at DESC"
-    ).all();
-    for (const row of itemRows) {
-      const list = itemsByFeed.get(row.source_id) ?? [];
-      list.push(this.#toEntry(row.source_id, row));
-      itemsByFeed.set(row.source_id, list);
-    }
-    this.data.subscriptions = feedRows.map((row) => this.#toSubscription(row, itemsByFeed.get(row.id) ?? []));
-    for (const sub of this.data.subscriptions) {
-      this.persistedFeed.set(sub.id, sub.entries.length);
-      this.persistedFeeds.set(sub.id, this.#feedSignature(sub));
-    }
-    const stateRows = this.appDb.prepare("SELECT source_id, item_key, state FROM rss_item_state").all();
-    for (const row of stateRows) {
-      this.data.states[row.source_id + "|" + row.item_key] = row.state;
-      this.persistedStates.set(row.source_id + "|" + row.item_key, row.state);
-    }
-    await this.cleanStaleTemps();
-  }
-  #feedSignature(sub) {
-    return [sub.name, sub.url, sub.group ?? "", sub.enabled === false ? 0 : 1, sub.note ?? "", sub.siteUrl ?? "", sub.refreshStrategy ?? "follow"].join("\0");
-  }
-  touch() {
-    if (this.saveTimer !== void 0) return;
-    this.saveTimer = setTimeout(() => {
-      this.saveTimer = void 0;
-      void this.flush().catch(() => {
-      });
-    }, 500);
-  }
-  async loadEntries(feedId) {
-    return this.data.subscriptions.find((sub) => sub.id === feedId)?.entries;
-  }
-  async saveEntries(feedId, entries) {
-    const sub = this.data.subscriptions.find((item) => item.id === feedId);
-    if (sub) sub.entries = entries;
-  }
-  /** Persist the in-memory view back into the Droplets tables (transactional). */
-  async flush() {
-    this.saving = this.saving.catch(() => {
-    }).then(async () => {
-      try {
-        await this.openDatabases();
-        await mkdir3(this.sidecarDir, { recursive: true });
-        const liveIds = new Set(this.data.subscriptions.map((sub) => sub.id));
-        const upsertFeed = this.appDb.prepare(
-          `INSERT INTO feeds (id, title, url, group_name, enabled, created_at, last_fetch_at, last_error, site_url, refresh_strategy, show_unread_badge, include_in_all, note)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-           ON CONFLICT(id) DO UPDATE SET title=excluded.title, url=excluded.url, group_name=excluded.group_name,
-             enabled=excluded.enabled, last_fetch_at=excluded.last_fetch_at, last_error=excluded.last_error,
-             site_url=excluded.site_url, refresh_strategy=excluded.refresh_strategy,
-             show_unread_badge=excluded.show_unread_badge, include_in_all=excluded.include_in_all, note=excluded.note`
-        );
-        const upsertItem = this.indexDb.prepare(
-          `INSERT INTO rss_item (source_id, item_key, title, link, summary, content, content_html, published_at, source_title, fetched_at, item_hash)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-           ON CONFLICT(source_id, item_key) DO UPDATE SET title=excluded.title, link=excluded.link,
-             summary=excluded.summary, content=excluded.content, content_html=excluded.content_html,
-             published_at=excluded.published_at, source_title=excluded.source_title`
-        );
-        const upsertState = this.appDb.prepare(
-          "INSERT INTO rss_item_state (source_id, item_key, state, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(source_id, item_key) DO UPDATE SET state=excluded.state, updated_at=excluded.updated_at"
-        );
-        const deleteState = this.appDb.prepare("DELETE FROM rss_item_state WHERE source_id = ? AND item_key = ?");
-        this.appDb.exec("BEGIN");
-        try {
-          for (const sub of this.data.subscriptions) {
-            const signature = this.#feedSignature(sub);
-            if (this.persistedFeeds.get(sub.id) !== signature) {
-              upsertFeed.run(
-                sub.id,
-                sub.name ?? "",
-                sub.url ?? "",
-                sub.group ?? "",
-                sub.enabled === false ? 0 : 1,
-                (sub.createdAt ?? Date.now()) / 1e3,
-                sub.lastFetchedAt ? sub.lastFetchedAt / 1e3 : null,
-                sub.lastError ?? null,
-                sub.siteUrl ?? "",
-                sub.refreshStrategy ?? "follow",
-                sub.showUnreadBadge === false ? 0 : 1,
-                sub.includeInAll === false ? 0 : 1,
-                sub.note ?? ""
-              );
-              this.persistedFeeds.set(sub.id, signature);
-            }
-          }
-          for (const [key, state] of Object.entries(this.data.states)) {
-            if (this.persistedStates.get(key) === state) continue;
-            const split = key.indexOf("|");
-            if (split === -1) continue;
-            upsertState.run(key.slice(0, split), key.slice(split + 1), state, Date.now() / 1e3);
-            this.persistedStates.set(key, state);
-          }
-        } finally {
-          this.appDb.exec("COMMIT");
-        }
-        const seenStates = new Set(Object.keys(this.data.states));
-        this.appDb.exec("BEGIN");
-        try {
-          for (const key of [...this.persistedStates.keys()]) {
-            if (seenStates.has(key)) continue;
-            const split = key.indexOf("|");
-            if (split === -1) continue;
-            deleteState.run(key.slice(0, split), key.slice(split + 1));
-            this.persistedStates.delete(key);
-          }
-        } finally {
-          this.appDb.exec("COMMIT");
-        }
-        this.indexDb.exec("BEGIN");
-        try {
-          for (const sub of this.data.subscriptions) {
-            const entries = sub.entries ?? [];
-            if (this.persistedFeed.get(sub.id) === entries.length) continue;
-            const now = Date.now() / 1e3;
-            for (const entry of entries) {
-              upsertItem.run(
-                sub.id,
-                entry.guid ?? entry.key,
-                entry.title ?? "",
-                entry.url ?? "",
-                entry.summary ?? "",
-                "",
-                entry.html ?? "",
-                entry.publishedAt ?? null,
-                sub.name ?? "",
-                now,
-                null
-              );
-            }
-            this.persistedFeed.set(sub.id, entries.length);
-          }
-        } finally {
-          this.indexDb.exec("COMMIT");
-        }
-        const removed = [...this.persistedFeeds.keys()].filter((id) => !liveIds.has(id));
-        if (removed.length > 0) {
-          const deleteFeed = this.appDb.prepare("DELETE FROM feeds WHERE id = ?");
-          const deleteItems = this.indexDb.prepare("DELETE FROM rss_item WHERE source_id = ?");
-          const deleteFeedStates = this.appDb.prepare("DELETE FROM rss_item_state WHERE source_id = ?");
-          this.appDb.exec("BEGIN");
-          try {
-            for (const id of removed) {
-              deleteFeedStates.run(id);
-              deleteFeed.run(id);
-              this.persistedFeeds.delete(id);
-            }
-          } finally {
-            this.appDb.exec("COMMIT");
-          }
-          this.indexDb.exec("BEGIN");
-          try {
-            for (const id of removed) deleteItems.run(id);
-          } finally {
-            this.indexDb.exec("COMMIT");
-          }
-        }
-        const sidecar = {
-          version: 1,
-          settings: this.data.settings,
-          favorites: this.data.favorites,
-          inbox: this.data.inbox,
-          vaultCache: this.data.vaultCache ?? null,
-          companionContexts: this.data.companionContexts
-        };
-        const temp = `${this.path}.${process.pid}.tmp`;
-        try {
-          await writeFile3(temp, JSON.stringify(sidecar), { encoding: "utf8", mode: 384 });
-          await rename3(temp, this.path);
-        } catch (error) {
-          await rm4(temp, { force: true }).catch(() => {
-          });
-          throw error;
-        }
-        this.lastKnownMtime = (await stat2(this.path)).mtimeMs;
-      } catch (error) {
-        this.logger?.warn?.("droplets: failed to save workspace data: %s", String(error));
-        throw error;
-      }
-    });
-    return this.saving;
-  }
-  /** Release the SQLite handles (the service calls this on shutdown). */
-  async dispose() {
-    if (this.saveTimer !== void 0) {
-      clearTimeout(this.saveTimer);
-      this.saveTimer = void 0;
-    }
-    await this.saving.catch(() => {
-    });
-    this.closeDatabases();
-  }
-  async stats() {
-    const feeds = this.data.subscriptions.length;
-    const items = this.data.subscriptions.reduce((sum, sub) => sum + (sub.entries?.length ?? 0), 0);
-    const appInfo = await stat2(this.appDbPath).catch(() => null);
-    const indexInfo = await stat2(this.indexDbPath).catch(() => null);
-    return {
-      feeds,
-      items,
-      appDbBytes: appInfo?.size ?? 0,
-      indexDbBytes: indexInfo?.size ?? 0
-    };
-  }
-};
-
-// src/host/workspace-inbox.js
-import { createHash as createHash3, randomUUID } from "node:crypto";
-import { copyFile, mkdir as mkdir5, readdir as readdir2, readFile as readFile5, rename as rename4, rm as rm6, rmdir, stat as stat4, writeFile as writeFile5 } from "node:fs/promises";
-import { dirname as dirname4, join as join3 } from "node:path";
-
-// src/host/extract.js
-init_sanitize();
-function metaContent(html, name2) {
-  const patterns = [
-    new RegExp(`<meta[^>]+(?:name|property)=["']${name2}["'][^>]*content=["']([^"']*)["']`, "i"),
-    new RegExp(`<meta[^>]+content=["']([^"']*)["'][^>]*(?:name|property)=["']${name2}["']`, "i")
-  ];
-  for (const pattern of patterns) {
-    const match = pattern.exec(html);
-    if (match) return decodeHtmlEntities(match[1]).trim();
-  }
-  return void 0;
-}
-function titleOf(html, fallback) {
-  const titled = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html);
-  const cleaned = titled ? decodeHtmlEntities(titled[1]).replace(/\s+/g, " ").trim() : "";
-  if (cleaned !== "") return cleaned;
-  return metaContent(html, "og:title") ?? metaContent(html, "twitter:title") ?? fallback;
-}
-function mainRegion(html) {
-  const candidates = [];
-  const block = /<(main|article)[^>]*>([\s\S]*?)<\/\1>/gi;
-  let match;
-  while ((match = block.exec(html)) !== null) {
-    const text2 = match[2].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-    if (text2.length > 200) candidates.push({ html: match[2], score: text2.length });
-  }
-  if (candidates.length === 0) return html;
-  candidates.sort((a, b) => b.score - a.score);
-  return candidates[0].html;
-}
-function extractArticle(html, baseUrl) {
-  const withoutScripts = html.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<noscript[\s\S]*?<\/noscript>/gi, " ").replace(/<!--[\s\S]*?-->/g, " ");
-  const title = titleOf(withoutScripts, baseUrl ?? "Untitled");
-  const description = metaContent(withoutScripts, "description") ?? metaContent(withoutScripts, "og:description");
-  const region = mainRegion(withoutScripts);
-  const safe = sanitizeHtml(region, { baseUrl, maxLength: 3e5 });
-  return { title, description, html: safe, text: "" };
-}
-
-// src/host/html-to-md.js
-var BLOCK_TAGS = /* @__PURE__ */ new Set([
-  "p",
-  "div",
-  "section",
-  "article",
-  "header",
-  "footer",
-  "nav",
-  "aside",
-  "h1",
-  "h2",
-  "h3",
-  "h4",
-  "h5",
-  "h6",
-  "ul",
-  "ol",
-  "li",
-  "blockquote",
-  "pre",
-  "hr",
-  "br",
-  "table",
-  "thead",
-  "tbody",
-  "tfoot",
-  "tr",
-  "figure",
-  "figcaption",
-  "details",
-  "summary",
-  "address",
-  "main",
-  "form",
-  "fieldset"
-]);
-var HEADINGS = { h1: 1, h2: 2, h3: 3, h4: 4, h5: 5, h6: 6 };
-function decodeEntities(text2) {
-  return text2.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&nbsp;/g, " ").replace(/&hellip;/g, "\u2026").replace(/&mdash;/g, "\u2014").replace(/&ndash;/g, "\u2013").replace(/&ldquo;/g, "\u201C").replace(/&rdquo;/g, "\u201D").replace(/&lsquo;/g, "\u2018").replace(/&rsquo;/g, "\u2019").replace(/&#(\d{1,7});/g, (_, code) => {
-    const point = Number(code);
-    return point > 0 && point <= 1114111 ? safeCodePoint(point) : _.slice(1, -1);
-  });
-}
-function safeCodePoint(point) {
-  try {
-    return String.fromCodePoint(point);
-  } catch {
-    return "";
-  }
-}
-function escapeText2(text2, atLineStart = false) {
-  let out = text2.replace(/([\\`*_\[\]~])/g, "\\$1");
-  if (atLineStart) {
-    out = out.replace(/^([ \t]*)([#>+-])/, "$1\\$2").replace(/^([ \t]*)(\d+)\./, "$1$2\\.");
-  }
-  return out;
-}
-function escapeCell(text2) {
-  return escapeText2(text2).replace(/\|/g, "\\|");
-}
-function tokenize(html) {
-  const tokens = [];
-  const pattern = /<!--[\s\S]*?-->|<\/?([a-zA-Z][a-zA-Z0-9]*)((?:[^>"']|"[^"]*"|'[^']*')*)>|([^<]+)/g;
-  let match;
-  while ((match = pattern.exec(html)) !== null) {
-    if (match[3] !== void 0) {
-      if (match[3] !== "") tokens.push({ kind: "text", text: match[3] });
-      continue;
-    }
-    if (match[0].startsWith("<!--")) continue;
-    const name2 = match[1].toLowerCase();
-    const closing = match[0][1] === "/";
-    const attrs = {};
-    const attrPattern = /([a-zA-Z-]+)\s*=\s*("([^"]*)"|'([^']*)')/g;
-    let attr;
-    while ((attr = attrPattern.exec(match[2] ?? "")) !== null) {
-      attrs[attr[1].toLowerCase()] = decodeEntities(attr[3] ?? attr[4] ?? "");
-    }
-    tokens.push({ kind: "tag", name: name2, closing, attrs, selfClosing: /\/>$/.test(match[0]) });
-  }
-  return tokens;
-}
-function parse(tokens) {
-  const root = { kind: "element", name: "#root", children: [] };
-  const stack = [root];
-  for (const token of tokens) {
-    const top = stack[stack.length - 1];
-    if (token.kind === "text") {
-      top.children.push({ kind: "text", text: token.text });
-      continue;
-    }
-    if (token.closing) {
-      for (let index = stack.length - 1; index >= 1; index -= 1) {
-        if (stack[index].name === token.name) {
-          stack.length = index;
-          break;
-        }
-      }
-      continue;
-    }
-    const node = {
-      kind: "element",
-      name: token.name,
-      attrs: token.attrs,
-      children: [],
-      selfClosing: token.selfClosing || token.name === "br" || token.name === "hr" || token.name === "img"
-    };
-    top.children.push(node);
-    if (!node.selfClosing) stack.push(node);
-  }
-  return root;
-}
-function nodeText(node) {
-  if (node.kind === "text") return decodeEntities(node.text);
-  return (node.children ?? []).map(nodeText).join("");
-}
-function renderInline(nodes, state) {
-  state = state ?? { lineStart: true };
-  const parts = [];
-  for (const node of nodes) {
-    if (node.kind === "text") {
-      const flat = decodeEntities(node.text).replace(/\s*\n\s*/g, " ");
-      parts.push(escapeText2(flat, state.lineStart));
-      if (flat.trim() !== "") state.lineStart = false;
-      continue;
-    }
-    const inner = () => renderInline(node.children, state);
-    switch (node.name) {
-      case "br":
-        parts.push("\n");
-        state.lineStart = true;
-        break;
-      case "strong":
-      case "b": {
-        const text2 = inner().trim();
-        if (text2 !== "") parts.push(`**${text2}**`);
-        break;
-      }
-      case "em":
-      case "i": {
-        const text2 = inner().trim();
-        if (text2 !== "") parts.push(`*${text2}*`);
-        break;
-      }
-      case "del":
-      case "s": {
-        const text2 = inner().trim();
-        if (text2 !== "") parts.push(`~~${text2}~~`);
-        break;
-      }
-      case "code":
-      case "kbd":
-      case "samp": {
-        const text2 = nodeText(node);
-        if (text2 !== "") parts.push(text2.includes("`") ? "`` " + text2 + " ``" : `\`${text2}\``);
-        break;
-      }
-      case "a": {
-        const href = String(node.attrs.href ?? "");
-        const text2 = inner().trim() || href;
-        if (href.startsWith("#")) parts.push(text2);
-        else if (href !== "") parts.push(`[${text2}](${href})`);
-        else parts.push(text2);
-        break;
-      }
-      case "img": {
-        const src = String(node.attrs.src ?? "");
-        const alt = String(node.attrs.alt ?? "");
-        if (src !== "") parts.push(`![${alt}](${src})`);
-        break;
-      }
-      case "sup":
-        parts.push(`^${inner()}^`);
-        break;
-      case "sub":
-        parts.push(`~${inner()}~`);
-        break;
-      case "mark":
-        parts.push(`==${inner()}==`);
-        break;
-      default:
-        parts.push(inner());
-    }
-  }
-  return parts.join("");
-}
-function renderBlocks(nodes, out, listDepth = 0) {
-  const buffer = [];
-  const flushParagraph = () => {
-    const text2 = renderInline(buffer).replace(/[ \t]+\n/g, "\n").trim();
-    buffer.length = 0;
-    if (text2 !== "") out.push(text2, "");
-  };
-  for (const node of nodes) {
-    if (node.kind === "text") {
-      const decoded = decodeEntities(node.text);
-      if (decoded.trim() !== "") buffer.push(node);
-      else if (buffer.length > 0 && decoded.includes("\n")) buffer.push({ kind: "text", text: " " });
-      continue;
-    }
-    const inlineOnly = !BLOCK_TAGS.has(node.name);
-    if (inlineOnly) {
-      buffer.push(node);
-      continue;
-    }
-    switch (node.name) {
-      case "br": {
-        buffer.push({ kind: "text", text: "\n" });
-        break;
-      }
-      case "hr": {
-        flushParagraph();
-        out.push("---", "");
-        break;
-      }
-      case "p":
-      case "div":
-      case "section":
-      case "article":
-      case "main":
-      case "header":
-      case "footer":
-      case "nav":
-      case "aside":
-      case "figure":
-      case "address":
-      case "fieldset": {
-        flushParagraph();
-        const nested = [];
-        renderBlocks(node.children, nested, listDepth);
-        if (nested.length > 0) out.push(...nested);
-        break;
-      }
-      case "figcaption": {
-        flushParagraph();
-        const text2 = renderInline(node.children, { lineStart: false }).trim();
-        if (text2 !== "") out.push(`*${text2}*`, "");
-        break;
-      }
-      case "h1":
-      case "h2":
-      case "h3":
-      case "h4":
-      case "h5":
-      case "h6": {
-        flushParagraph();
-        const level = HEADINGS[node.name];
-        const text2 = renderInline(node.children, { lineStart: false }).replace(/\n/g, " ").trim();
-        if (text2 !== "") out.push("#".repeat(level) + " " + text2, "");
-        break;
-      }
-      case "blockquote": {
-        flushParagraph();
-        const nested = [];
-        renderBlocks(node.children, nested, listDepth);
-        const body = nested.join("\n").replace(/\n{2,}/g, "\n\n").trimEnd();
-        if (body !== "") {
-          for (const line of body.split("\n")) out.push(line === "" ? ">" : "> " + line);
-          out.push("");
-        }
-        break;
-      }
-      case "pre": {
-        flushParagraph();
-        const codeNode = node.children.find((child) => child.kind === "element" && child.name === "code");
-        const language = /language-([\w-]+)/.exec(codeNode?.attrs?.class ?? node.attrs?.class ?? "")?.[1] ?? "";
-        const text2 = codeNode ? nodeText(codeNode) : nodeText(node);
-        const fence = "```";
-        out.push(`${fence}${language}`, text2.replace(/\n+$/, ""), fence, "");
-        break;
-      }
-      case "ul":
-      case "ol": {
-        flushParagraph();
-        renderList(node, out, listDepth);
-        break;
-      }
-      case "table": {
-        flushParagraph();
-        renderTable(node, out);
-        break;
-      }
-      case "details": {
-        flushParagraph();
-        renderBlocks(node.children, out, listDepth);
-        break;
-      }
-      case "summary": {
-        flushParagraph();
-        const text2 = renderInline(node.children, { lineStart: false }).trim();
-        if (text2 !== "") out.push(`**${text2}**`, "");
-        break;
-      }
-      default: {
-        flushParagraph();
-        renderBlocks(node.children, out, listDepth);
-      }
-    }
-  }
-  flushParagraph();
-}
-function indentFor(depth) {
-  return "  ".repeat(depth);
-}
-function renderList(node, out, depth) {
-  const ordered = node.name === "ol";
-  let index = Number(node.attrs?.start ?? 1) || 1;
-  for (const child of node.children) {
-    if (child.kind !== "element" || child.name !== "li") continue;
-    const nested = [];
-    const inlineParts = [];
-    const blockParts = [];
-    for (const part of child.children) {
-      if (part.kind === "element" && (part.name === "ul" || part.name === "ol" || part.name === "table" || part.name === "blockquote" || part.name === "pre")) {
-        blockParts.push(part);
-      } else if (part.kind === "element" && part.name === "p") {
-        const inner = renderInline(part.children, { lineStart: false }).trim();
-        if (inner !== "") inlineParts.push(inner);
-      } else {
-        inlineParts.push(part);
-      }
-    }
-    const marker = ordered ? `${index}. ` : "- ";
-    const head = renderInline(inlineParts, { lineStart: false }).replace(/\n+/g, " ").trim();
-    out.push(indentFor(depth) + marker + (head !== "" ? head : ""));
-    for (const part of blockParts) {
-      if (part.name === "ul" || part.name === "ol") renderList(part, out, depth + 1);
-      else if (part.name === "table") renderTable(part, out, depth + 1);
-      else if (part.name === "blockquote") {
-        const nested2 = [];
-        renderBlocks([part], nested2, depth + 1);
-        for (const line of nested2.join("\n").trimEnd().split("\n")) {
-          out.push(indentFor(depth + 1) + (line === "" ? ">" : line.replace(/^> ?/, "> ")));
-        }
-      } else if (part.name === "pre") {
-        const text2 = nodeText(part);
-        out.push(indentFor(depth + 1) + "```", ...text2.replace(/\n+$/, "").split("\n").map((line) => indentFor(depth + 1) + line), indentFor(depth + 1) + "```");
-      }
-    }
-    if (ordered) index += 1;
-  }
-  if (depth === 0) out.push("");
-}
-function renderTable(node, out, depth = 0) {
-  const rows = [];
-  const collect = (tr) => {
-    const cells = [];
-    for (const cell of tr.children) {
-      if (cell.kind !== "element" || cell.name !== "td" && cell.name !== "th") continue;
-      cells.push(escapeCell(renderInline(cell.children, { lineStart: false }).replace(/\n+/g, " ").trim()));
-    }
-    if (cells.length > 0) rows.push({ header: false, cells });
-  };
-  const walk = (children) => {
-    for (const child of children) {
-      if (child.kind !== "element") continue;
-      if (child.name === "tr") {
-        if (child.children.some((cell) => cell.kind === "element" && cell.name === "th")) {
-          const cells = [];
-          for (const cell of child.children) {
-            if (cell.kind !== "element" || cell.name !== "td" && cell.name !== "th") continue;
-            cells.push(escapeCell(renderInline(cell.children, { lineStart: false }).replace(/\n+/g, " ").trim()));
-          }
-          if (cells.length > 0) rows.unshift({ header: true, cells });
-        } else collect(child);
-      } else walk(child.children);
-    }
-  };
-  walk(node.children);
-  if (rows.length === 0) return;
-  const width = Math.max(...rows.map((row) => row.cells.length));
-  const pad = (row) => {
-    const cells = [...row.cells];
-    while (cells.length < width) cells.push("");
-    return cells;
-  };
-  const first = rows[0];
-  const prefix = indentFor(depth);
-  out.push(prefix + "| " + pad(first).join(" | ") + " |");
-  out.push(prefix + "| " + Array.from({ length: width }, () => "---").join(" | ") + " |");
-  for (const row of rows.slice(first.header ? 1 : 0)) {
-    out.push(prefix + "| " + pad(row).join(" | ") + " |");
-  }
-  out.push("");
-}
-function htmlToMarkdown(html, { maxLength = 4e5 } = {}) {
-  const tree = parse(tokenize(String(html ?? "")));
-  const out = [];
-  renderBlocks(tree.children, out);
-  let markdown = out.join("\n").replace(/\n{3,}/g, "\n\n").replace(/[ \t]+$/gm, "").trim();
-  if (markdown.length > maxLength) markdown = markdown.slice(0, maxLength).trimEnd() + "\n\n\u2026(\u5185\u5BB9\u8FC7\u957F\u5DF2\u622A\u65AD)";
-  return markdown;
-}
-
-// src/host/workspace-inbox.js
-init_sanitize();
-
-// src/host/inbox.js
-init_esm();
-import { createHash as createHash2 } from "node:crypto";
-import { mkdir as mkdir4, readFile as readFile4, rm as rm5, stat as stat3, writeFile as writeFile4 } from "node:fs/promises";
-import path from "node:path";
-
-// src/host/guarded-fetch.js
-var import_ip_address = __toESM(require_ip_address(), 1);
-var import_undici = __toESM(require_undici(), 1);
-import net from "node:net";
-import tls from "node:tls";
-import zlib2 from "node:zlib";
-var defaultDnsResolver = {
-  async resolve(host) {
-    const { lookup } = await import("node:dns/promises");
-    const results = await lookup(host, { all: true });
-    return results.map((r) => r.address);
-  }
-};
-var SecurityRejectionError = class extends Error {
-  constructor(message, details) {
-    super(message);
-    this.name = "SecurityRejectionError";
-    this.securityRejection = true;
-    this.details = details;
-  }
-};
-var FetchFailureError = class extends Error {
-  constructor(code, message) {
-    super(message);
-    this.name = "FetchFailureError";
-    this.code = code;
-  }
-};
-var V4_CIDRS = [
-  "0.0.0.0/8",
-  "10.0.0.0/8",
-  "100.64.0.0/10",
-  "127.0.0.0/8",
-  "169.254.0.0/16",
-  "172.16.0.0/12",
-  "192.0.0.0/24",
-  "192.0.2.0/24",
-  "192.168.0.0/16",
-  "198.18.0.0/15",
-  "198.51.100.0/24",
-  "203.0.113.0/24",
-  "224.0.0.0/4",
-  "240.0.0.0/4"
-];
-var V6_CIDRS = [
-  "::/128",
-  "::1/128",
-  "fe80::/10",
-  "fc00::/7",
-  "ff00::/8",
-  "2001:db8::/32",
-  "2001::/32",
-  "2001:2::/48",
-  "64:ff9b::/96",
-  "::ffff:0:0/96",
-  "2002::/16"
-];
-function v4BigInt(addr) {
-  const parts = addr.parsedAddress.map((p) => BigInt(Number(p)));
-  return parts[0] << 24n | parts[1] << 16n | parts[2] << 8n | parts[3];
-}
-function v6BigInt(addr) {
-  let value = 0n;
-  for (const group of addr.parsedAddress) {
-    value = value << 16n | BigInt(parseInt(group, 16));
-  }
-  return value;
-}
-function v4Range(cidr) {
-  const [base, prefixStr] = cidr.split("/");
-  const prefix = BigInt(prefixStr);
-  const start = v4BigInt(new import_ip_address.Address4(base));
-  const size = 1n << 32n - prefix;
-  return { start, end: start + size - 1n };
-}
-function v6Range(cidr) {
-  const [base, prefixStr] = cidr.split("/");
-  const prefix = BigInt(prefixStr);
-  const start = v6BigInt(new import_ip_address.Address6(base));
-  const size = 1n << 128n - prefix;
-  return { start, end: start + size - 1n };
-}
-var V4_RANGES = V4_CIDRS.map(v4Range);
-var V6_RANGES = V6_CIDRS.map(v6Range);
-function inRanges(value, ranges) {
-  return ranges.some((r) => value >= r.start && value <= r.end);
-}
-function isPublicIp(ip) {
-  const trimmed = ip.trim();
-  let a4 = null;
-  try {
-    a4 = new import_ip_address.Address4(trimmed);
-  } catch {
-    a4 = null;
-  }
-  if (a4) return !inRanges(v4BigInt(a4), V4_RANGES);
-  let a6;
-  try {
-    a6 = new import_ip_address.Address6(trimmed);
-  } catch {
-    return false;
-  }
-  return !inRanges(v6BigInt(a6), V6_RANGES);
-}
-function isIpLiteral(host) {
-  try {
-    new import_ip_address.Address4(host);
-    return true;
-  } catch {
-  }
-  try {
-    new import_ip_address.Address6(host);
-    return true;
-  } catch {
-    return false;
-  }
-}
-var FAKE_PROXY_V4 = (() => {
-  const [base, prefixStr] = "198.18.0.0/15".split("/");
-  const prefix = BigInt(prefixStr);
-  const parts = base.split(".").map((p) => BigInt(Number(p)));
-  const start = parts[0] << 24n | parts[1] << 16n | parts[2] << 8n | parts[3];
-  return { start, end: start + (1n << 32n - prefix) - 1n };
-})();
-function v4Value(ip) {
-  const parts = ip.trim().split(".").map((p) => BigInt(Number(p)));
-  return parts[0] << 24n | parts[1] << 16n | parts[2] << 8n | parts[3];
-}
-function isFakeProxyIp(ip) {
-  try {
-    const value = v4Value(ip);
-    return value >= FAKE_PROXY_V4.start && value <= FAKE_PROXY_V4.end;
-  } catch {
-    return false;
-  }
-}
-async function getSystemProxyUrl() {
-  const fromEnv = process.env.HTTPS_PROXY ?? process.env.https_proxy ?? process.env.HTTP_PROXY ?? process.env.http_proxy;
-  if (typeof fromEnv === "string" && /^https?:\/\//i.test(fromEnv)) return fromEnv;
-  try {
-    const { execFile } = await import("node:child_process");
-    const stdout = await new Promise((resolve2, reject) => {
-      execFile("scutil", ["--proxy"], { timeout: 2e3 }, (error, out) => error ? reject(error) : resolve2(String(out ?? "")));
-    });
-    const https = /HTTPSEnable\s*:\s*1/.test(stdout);
-    const http = /HTTPEnable\s*:\s*1/.test(stdout);
-    const scheme = https ? "HTTPS" : http ? "HTTP" : null;
-    if (scheme === null) return null;
-    const host = new RegExp(scheme + "Proxy\\s*:\\s*(\\S+)").exec(stdout)?.[1];
-    const port = new RegExp(scheme + "Port\\s*:\\s*(\\d+)").exec(stdout)?.[1];
-    if (!host || !port) return null;
-    return "http://" + host + ":" + port;
-  } catch {
-    return null;
-  }
-}
-var strictPortGate = (port) => {
-  if (port === null) return true;
-  return port === 80 || port === 443;
-};
-async function assertPublicHttpUrl(raw, resolver = defaultDnsResolver, ipPolicy = isPublicIp, portGate = strictPortGate, allowFakeProxy = true) {
-  let url;
-  try {
-    url = new URL(raw);
-  } catch {
-    throw new SecurityRejectionError(`\u65E0\u6CD5\u89E3\u6790\u7684 URL\uFF1A${raw.slice(0, 120)}`);
-  }
-  if (url.protocol !== "http:" && url.protocol !== "https:") {
-    throw new SecurityRejectionError(`\u4E0D\u5141\u8BB8\u7684\u534F\u8BAE\uFF1A${url.protocol.replace(":", "")}\uFF08\u4EC5 http/https\uFF09`);
-  }
-  const port = url.port === "" ? null : Number(url.port);
-  if (!portGate(port)) {
-    throw new SecurityRejectionError(`\u4E0D\u5141\u8BB8\u7684\u7AEF\u53E3\uFF1A${url.port || "(\u9ED8\u8BA4)"}\uFF08\u4EC5 80/443\uFF09`);
-  }
-  if (url.username || url.password) {
-    throw new SecurityRejectionError("\u4E0D\u5141\u8BB8\u643A\u5E26\u7528\u6237\u540D/\u5BC6\u7801\u7684 URL");
-  }
-  const host = url.hostname.replace(/^\[|\]$/g, "");
-  if (isIpLiteral(host)) {
-    if (!ipPolicy(host)) throw new SecurityRejectionError(`\u76EE\u6807\u4E3B\u673A\u662F\u5185\u7F51/\u4FDD\u7559\u5730\u5740\uFF1A${host}`);
-    return { url, ips: [host] };
-  }
-  const hostLower = host.toLowerCase();
-  if (hostLower === "localhost" || hostLower.endsWith(".localhost") || hostLower.endsWith(".local") || hostLower.endsWith(".internal")) {
-    throw new SecurityRejectionError(`\u4E0D\u5141\u8BB8\u7684\u672C\u5730\u57DF\u540D\uFF1A${host}`);
-  }
-  let resolved;
-  try {
-    resolved = await resolver.resolve(host);
-  } catch {
-    resolved = [];
-  }
-  if (resolved.length === 0 && !allowFakeProxy) {
-    throw new SecurityRejectionError(`\u57DF\u540D\u89E3\u6790\u5931\u8D25\uFF1A${host}`);
-  }
-  const fakeOnly = resolved.length > 0 && resolved.every((ip) => isFakeProxyIp(ip));
-  if (resolved.length === 0 && allowFakeProxy) {
-    return { url, ips: [], proxied: true };
-  }
-  const bad = resolved.find((ip) => !isFakeProxyIp(ip) && !ipPolicy(ip));
-  if (bad) {
-    throw new SecurityRejectionError(`\u57DF\u540D\u89E3\u6790\u5230\u5185\u7F51/\u4FDD\u7559\u5730\u5740\uFF1A${host} \u2192 ${bad}`);
-  }
-  return { url, ips: fakeOnly ? [] : resolved, proxied: fakeOnly };
-}
-var REDIRECT_CODES = /* @__PURE__ */ new Set([301, 302, 303, 307, 308]);
-var REDIRECT_DOWNGRADES = /* @__PURE__ */ new Set([301, 302, 303]);
-var SAFE_CROSS_ORIGIN_HEADERS = /* @__PURE__ */ new Set(["accept", "accept-language"]);
-function keepSafeHeaders(headers) {
-  const kept = {};
-  for (const [name2, value] of Object.entries(headers)) {
-    if (SAFE_CROSS_ORIGIN_HEADERS.has(name2.toLowerCase())) kept[name2] = value;
-  }
-  return kept;
-}
-function tunnelConnector(proxyUrl, connectTimeoutMs) {
-  const proxy = new URL(proxyUrl);
-  const proxyHost = proxy.hostname.replace(/^\[|\]$/g, "");
-  const proxyPort = Number(proxy.port) || 80;
-  return (options, callback) => {
-    const port = Number(options.port) || (options.protocol === "https:" ? 443 : 80);
-    let settled = false;
-    const done = (err2, socket2) => {
-      if (settled) return;
-      settled = true;
-      if (err2) callback(err2, null);
-      else callback(null, socket2 ?? new net.Socket());
-    };
-    const fail = (code, message) => {
-      socket.destroy();
-      done(new FetchFailureError(code, message));
-    };
-    const socket = net.connect({ host: proxyHost, port: proxyPort });
-    socket.setTimeout(connectTimeoutMs);
-    socket.once("timeout", () => fail("FETCH_CONNECT_TIMEOUT", `\u4EE3\u7406\u8FDE\u63A5\u8D85\u65F6\uFF1A${proxyHost}:${proxyPort}`));
-    socket.once("error", (err2) => fail("FETCH_NETWORK", `\u4EE3\u7406\u8FDE\u63A5\u5931\u8D25\uFF1A${err2.message}`));
-    socket.once("connect", () => {
-      socket.setTimeout(connectTimeoutMs);
-      socket.write(`CONNECT ${options.hostname}:${port} HTTP/1.1\r
-Host: ${options.hostname}:${port}\r
-\r
-`);
-      let buffer = "";
-      const onData = (chunk) => {
-        buffer += chunk.toString("latin1");
-        const end = buffer.indexOf("\r\n\r\n");
-        if (end === -1) {
-          if (buffer.length > 8192) {
-            socket.removeListener("data", onData);
-            fail("FETCH_NETWORK", "\u4EE3\u7406 CONNECT \u54CD\u5E94\u5F02\u5E38");
-          }
-          return;
-        }
-        socket.removeListener("data", onData);
-        const statusLine = buffer.slice(0, buffer.indexOf("\r\n"));
-        if (!/\s2\d\d\s/.test(statusLine)) {
-          socket.destroy();
-          done(new FetchFailureError("FETCH_NETWORK", `\u4EE3\u7406\u62D2\u7EDD CONNECT\uFF1A${statusLine}`), null);
-          return;
-        }
-        socket.setTimeout(0);
-        if (options.protocol === "https:") {
-          const tlsSocket = tls.connect({ socket, servername: options.hostname, rejectUnauthorized: true, ALPNProtocols: ["http/1.1"] });
-          tlsSocket.once("secureConnect", () => done(null, tlsSocket));
-          tlsSocket.once("error", (err2) => done(new FetchFailureError("FETCH_NETWORK", `TLS \u63E1\u624B\u5931\u8D25\uFF1A${err2.message}`), null));
-        } else {
-          done(null, socket);
-        }
-      };
-      socket.on("data", onData);
-    });
-  };
-}
-function pinnedConnector(ip, connectTimeoutMs) {
-  return (options, callback) => {
-    const port = Number(options.port) || (options.protocol === "https:" ? 443 : 80);
-    let settled = false;
-    const done = (err2, socket2) => {
-      if (settled) return;
-      settled = true;
-      if (err2) callback(err2, null);
-      else callback(null, socket2 ?? new net.Socket());
-    };
-    const socket = options.protocol === "https:" ? tls.connect({ host: ip, port, servername: options.hostname, rejectUnauthorized: true, ALPNProtocols: ["http/1.1"] }) : net.connect({ host: ip, port });
-    socket.setTimeout(connectTimeoutMs);
-    socket.once("timeout", () => {
-      socket.destroy();
-      done(new FetchFailureError("FETCH_CONNECT_TIMEOUT", `\u8FDE\u63A5\u8D85\u65F6\uFF1A${options.hostname} (${ip})`));
-    });
-    socket.once("error", (err2) => done(new FetchFailureError("FETCH_NETWORK", `\u8FDE\u63A5\u5931\u8D25\uFF1A${err2.message}`)));
-    socket.once("connect", () => {
-      socket.setTimeout(0);
-      done(null, socket);
-    });
-  };
-}
-function decodeStream(body, encoding) {
-  switch (encoding.toLowerCase()) {
-    case "gzip":
-      return body.pipe(zlib2.createGunzip());
-    case "deflate":
-      return body.pipe(zlib2.createInflate());
-    case "br":
-      return body.pipe(zlib2.createBrotliDecompress());
-    default:
-      return body;
-  }
-}
-async function readBodyWithLimit(body, encoding, maxBodyBytes) {
-  const stream = decodeStream(body, encoding);
-  const chunks = [];
-  let total = 0;
-  let exceeded = false;
-  try {
-    for await (const chunk of stream) {
-      const buf = Buffer.from(chunk);
-      total += buf.length;
-      if (total > maxBodyBytes) {
-        exceeded = true;
-        break;
-      }
-      chunks.push(buf);
-    }
-  } catch (e) {
-    throw new FetchFailureError("FETCH_NETWORK", `\u54CD\u5E94\u4F53\u8BFB\u53D6\u5931\u8D25\uFF1A${e.message}`);
-  }
-  if (exceeded) {
-    stream.destroy();
-    throw new FetchFailureError("FETCH_BODY_LIMIT", `\u54CD\u5E94\u4F53\u8D85\u8FC7\u4E0A\u9650\uFF08\u89E3\u538B\u540E > ${maxBodyBytes} \u5B57\u8282\uFF09\uFF0C\u5DF2\u4E2D\u65AD`);
-  }
-  return Buffer.concat(chunks);
-}
-function createGuardedFetch(deps = {}) {
-  const resolver = deps.resolver ?? defaultDnsResolver;
-  const ipPolicy = deps.ipPolicy ?? isPublicIp;
-  const portGate = deps.portGate ?? strictPortGate;
-  const onDial = deps.onDial;
-  const userAgent = deps.userAgent ?? (() => "Droplets-DSH");
-  return {
-    async fetch(raw, opts = {}) {
-      const maxRedirects = opts.maxRedirects ?? 6;
-      const connectTimeoutMs = opts.connectTimeoutMs ?? 2e4;
-      const totalTimeoutMs = opts.totalTimeoutMs ?? 6e4;
-      const maxBodyBytes = opts.maxBodyBytes ?? 50 * 1024 * 1024;
-      let timedOut = false;
-      const controller = new AbortController();
-      let activeAgent = null;
-      const hardAbort = (reason) => {
-        if (reason !== void 0) controller.abort(reason);
-        else controller.abort();
-        void activeAgent?.destroy().catch(() => void 0);
-      };
-      if (opts.signal?.aborted) hardAbort(opts.signal.reason);
-      else opts.signal?.addEventListener("abort", () => hardAbort(opts.signal?.reason), { once: true });
-      const timer = setTimeout(() => {
-        timedOut = true;
-        hardAbort();
-      }, totalTimeoutMs);
-      let current = raw;
-      let currentMethod = opts.method ?? "GET";
-      let currentBody;
-      let userHeaders = { ...opts.headers };
-      try {
-        for (let hop = 0; ; hop += 1) {
-          const asserted = await assertPublicHttpUrl(current, resolver, ipPolicy, portGate);
-          const ip = asserted.ips[0];
-          if (ip) onDial?.(ip);
-          let agent;
-          if (asserted.proxied) {
-            const proxyUrl = deps.systemProxy === void 0 ? await getSystemProxyUrl() : await deps.systemProxy();
-            if (!proxyUrl) {
-              if (ip === void 0) {
-                throw new FetchFailureError("FETCH_FAKEIP_NO_PROXY", "\u672C\u5730 DNS \u8FD4\u56DE fake-IP(\u4EE3\u7406\u6A21\u5F0F)\u4F46\u672A\u627E\u5230\u53EF\u7528\u7684 http(s) \u7CFB\u7EDF\u4EE3\u7406");
-              }
-              agent = new import_undici.Agent({ connect: pinnedConnector(ip, connectTimeoutMs) });
-            } else {
-              agent = new import_undici.Agent({ connect: tunnelConnector(proxyUrl, connectTimeoutMs) });
-            }
-          } else {
-            agent = new import_undici.Agent({ connect: pinnedConnector(ip, connectTimeoutMs) });
-          }
-          activeAgent = agent;
-          let response;
-          try {
-            response = await (0, import_undici.request)(asserted.url, {
-              method: currentMethod,
-              body: currentBody,
-              dispatcher: agent,
-              headers: {
-                "accept-encoding": "gzip, deflate, br",
-                "user-agent": userAgent(),
-                accept: opts.accept ?? "*/*",
-                ...userHeaders
-              },
-              signal: controller.signal
-            });
-          } catch (e) {
-            if (timedOut) {
-              throw new FetchFailureError("FETCH_TIMEOUT", `\u603B\u8D85\u65F6\uFF08${totalTimeoutMs}ms\uFF09\uFF1A${asserted.url.hostname}`);
-            }
-            if (e instanceof SecurityRejectionError || e instanceof FetchFailureError) throw e;
-            const code = e?.code ?? "";
-            if (/UNABLE_TO_VERIFY|CERT|TLS|ECONNREFUSED|ECONNRESET|EHOSTUNREACH|CONNECT_TIMEOUT|ECONNABORTED/.test(`${code} ${e.message}`)) {
-              throw new FetchFailureError("FETCH_NETWORK", `\u8BF7\u6C42\u5931\u8D25\uFF1A${code} ${e.message}`);
-            }
-            throw e;
-          }
-          const status = response.statusCode;
-          const location = response.headers["location"];
-          if (REDIRECT_CODES.has(status) && typeof location === "string") {
-            await response.body.dump().catch(() => {
-            });
-            await agent.close().catch(() => {
-            });
-            activeAgent = null;
-            if (hop >= maxRedirects) {
-              throw new FetchFailureError("FETCH_TOO_MANY_REDIRECTS", `\u91CD\u5B9A\u5411\u8D85\u8FC7 ${maxRedirects} \u8DF3\u4E0A\u9650`);
-            }
-            const next = new URL(location, asserted.url);
-            const crossOrigin = next.origin !== asserted.url.origin;
-            if (crossOrigin) {
-              if (!REDIRECT_DOWNGRADES.has(status)) {
-                throw new SecurityRejectionError(`\u8DE8\u57DF\u91CD\u5B9A\u5411\u4E0D\u5141\u8BB8\u91CD\u53D1\u8BF7\u6C42\u6B63\u6587\uFF08${status}\uFF09\uFF1A${asserted.url.origin} \u2192 ${next.origin}`);
-              }
-              userHeaders = keepSafeHeaders(userHeaders);
-            }
-            if (REDIRECT_DOWNGRADES.has(status)) {
-              currentMethod = "GET";
-              currentBody = void 0;
-            }
-            current = next.toString();
-            continue;
-          }
-          try {
-            const encRaw = response.headers["content-encoding"];
-            const encoding = (Array.isArray(encRaw) ? encRaw[0] ?? "" : encRaw ?? "").trim();
-            const body = await readBodyWithLimit(response.body, encoding, maxBodyBytes);
-            const headers = {};
-            for (const [k, v] of Object.entries(response.headers)) {
-              headers[k] = Array.isArray(v) ? v.join(", ") : String(v);
-            }
-            return { status, headers, body, finalUrl: asserted.url.toString() };
-          } finally {
-            await agent.close().catch(() => {
-            });
-          }
-        }
-      } finally {
-        clearTimeout(timer);
-      }
-    }
-  };
-}
-var guardedFetch = createGuardedFetch();
-
-// src/host/inbox.js
-init_sanitize();
 
 // src/host/feeds.js
 import { createHash } from "node:crypto";
@@ -137696,7 +136449,7 @@ var NAMED = Object.freeze({
   NewLine: "\n"
 });
 var ENTITY_RE = /&(?:#[xX]0*([0-9a-fA-F]{1,6});?|#0*([0-9]{1,7});?|([a-zA-Z][a-zA-Z0-9]{1,15});)/g;
-function decodeEntities2(input) {
+function decodeEntities(input) {
   if (input.indexOf("&") === -1) return input;
   return input.replace(ENTITY_RE, (match, hex, dec, name2) => {
     if (name2 !== void 0) {
@@ -137767,7 +136520,7 @@ function normalise(context) {
 }
 function decodedCopy(value, list) {
   if (!list.decodeEntities) return null;
-  const decoded = decodeEntities2(value);
+  const decoded = decodeEntities(value);
   return decoded === value ? null : decoded;
 }
 function matchList(value, list) {
@@ -138625,7 +137378,7 @@ var PARSER = new XMLParser({
   allowBooleanAttributes: true,
   stopNodes: ["*.__cdata"]
 });
-function decodeEntities3(text2) {
+function decodeEntities2(text2) {
   if (!text2.includes("&")) return text2;
   return text2.replace(/&(#[0-9]{1,7}|#x[0-9a-fA-F]{1,6}|amp|lt|gt|quot|apos);/g, (raw, body) => {
     if (body === "amp") return "&";
@@ -138756,13 +137509,13 @@ function find(node, tag) {
 }
 function textOf(node) {
   if (!node) return "";
-  if (node.type === "text") return decodeEntities3(node.text ?? "");
-  return decodeEntities3(node.text ?? "");
+  if (node.type === "text") return decodeEntities2(node.text ?? "");
+  return decodeEntities2(node.text ?? "");
 }
 function attrOf(node, name2) {
   if (!node || node.type !== "element") return void 0;
   const value = node.attrs[name2];
-  return typeof value === "string" ? decodeEntities3(value) : void 0;
+  return typeof value === "string" ? decodeEntities2(value) : void 0;
 }
 
 // src/host/feeds.js
@@ -139048,7 +137801,1334 @@ var FEED_LIMITS = {
   maxBodyChars: MAX_BODY_CHARS
 };
 
+// src/host/workspace-store.js
+var SIDECAR = ".droplets-dsh";
+function defaultsSidecar() {
+  return {
+    version: 1,
+    settings: {
+      showImages: true,
+      refreshMinutes: 60,
+      refreshOnStart: true,
+      hoverPreview: false,
+      cacheDays: 60,
+      refreshWorkers: 3,
+      fetchTimeoutSec: 20
+    },
+    favorites: {},
+    inbox: [],
+    vaultCache: null,
+    companionContexts: {}
+  };
+}
+async function loadSqlite() {
+  const { DatabaseSync } = await import("node:sqlite");
+  return DatabaseSync;
+}
+var WorkspaceStore = class {
+  #hashToFeedId = null;
+  // lazy feed:<hash> -> native feed id map
+  constructor(logger, root, maxBodies = 300) {
+    this.logger = logger;
+    this.root = root;
+    this.dir = root;
+    this.appDbPath = join2(root, "state", "app.sqlite");
+    this.indexDbPath = join2(root, "state", "index.sqlite");
+    this.sidecarDir = join2(root, SIDECAR);
+    this.path = join2(this.sidecarDir, "state.json");
+    this.bodies = new BodyStore(join2(this.sidecarDir, "bodies.json"), maxBodies);
+    this.data = { ...defaultsSidecar(), subscriptions: [], states: {}, read: {} };
+    this.saveTimer = void 0;
+    this.saving = Promise.resolve();
+    this.lastKnownMtime = 0;
+    this.appDb = null;
+    this.indexDb = null;
+    this.persistedFeed = /* @__PURE__ */ new Map();
+    this.persistedFeeds = /* @__PURE__ */ new Map();
+    this.persistedStates = /* @__PURE__ */ new Map();
+  }
+  setMaxBodies(maxBodies) {
+    if (Number.isFinite(maxBodies) && maxBodies >= 10) this.bodies.maxBodies = Math.floor(maxBodies);
+  }
+  async cleanStaleTemps() {
+    try {
+      const { readdir: readdir6 } = await import("node:fs/promises");
+      for (const name2 of await readdir6(this.sidecarDir)) {
+        if (!name2.endsWith(".tmp")) continue;
+        const full = join2(this.sidecarDir, name2);
+        const info3 = await stat2(full).catch(() => null);
+        if (info3 && info3.mtimeMs < Date.now() - 10 * 60 * 1e3) await rm4(full, { force: true });
+      }
+    } catch {
+    }
+  }
+  async openDatabases() {
+    const DatabaseSync = await loadSqlite();
+    if (!this.appDb) {
+      this.appDb = new DatabaseSync(this.appDbPath);
+      this.appDb.exec("PRAGMA busy_timeout = 5000");
+    }
+    if (!this.indexDb) {
+      this.indexDb = new DatabaseSync(this.indexDbPath);
+      this.indexDb.exec("PRAGMA busy_timeout = 5000");
+    }
+  }
+  closeDatabases() {
+    try {
+      this.appDb?.close();
+    } catch {
+    }
+    try {
+      this.indexDb?.close();
+    } catch {
+    }
+    this.appDb = null;
+    this.indexDb = null;
+  }
+  /** Feed row -> the subscription shape the rest of the plugin expects. */
+  #toSubscription(row, entries) {
+    return {
+      id: row.id,
+      url: row.url,
+      name: row.title,
+      group: row.group_name || void 0,
+      enabled: row.enabled !== 0,
+      siteUrl: row.site_url || void 0,
+      refreshStrategy: row.refresh_strategy || "follow",
+      showUnreadBadge: row.show_unread_badge !== 0,
+      includeInAll: row.include_in_all !== 0,
+      note: row.note || void 0,
+      createdAt: row.created_at ? Math.round(row.created_at * 1e3) : void 0,
+      lastFetchedAt: row.last_fetch_at ? Math.round(row.last_fetch_at * 1e3) : void 0,
+      lastError: row.last_error || void 0,
+      entries
+    };
+  }
+  /** rss_item row -> the entry shape the reader/sorting code uses. */
+  #toEntry(feedId, row) {
+    const html = row.content_html || row.content || row.summary || "";
+    return {
+      key: feedId + "|" + row.item_key,
+      guid: row.item_key,
+      title: row.title,
+      publishedAt: row.published_at || new Date((row.fetched_at ?? 0) * 1e3).toISOString(),
+      url: row.link || "",
+      summary: row.summary || "",
+      html,
+      truncated: false
+    };
+  }
+  async load() {
+    await this.openDatabases();
+    await mkdir3(this.sidecarDir, { recursive: true });
+    const sidecar = await readFile3(this.path, "utf8").then((raw) => JSON.parse(raw)).catch(() => null);
+    const base = defaultsSidecar();
+    this.data = {
+      ...base,
+      ...sidecar ?? {},
+      settings: { ...base.settings, ...sidecar?.settings ?? {} },
+      states: {},
+      read: {}
+    };
+    if (!Array.isArray(this.data.inbox)) this.data.inbox = [];
+    if (!this.data.favorites || typeof this.data.favorites !== "object") this.data.favorites = {};
+    if (!this.data.companionContexts || typeof this.data.companionContexts !== "object") this.data.companionContexts = {};
+    this.#dedupeLegacyItemRows();
+    this.#migrateLegacyStateRows();
+    const feedRows = this.appDb.prepare(
+      "SELECT id, title, url, group_name, enabled, created_at, last_fetch_at, last_error, site_url, refresh_strategy, show_unread_badge, include_in_all, note, consecutive_failures, last_success_at FROM feeds ORDER BY created_at ASC"
+    ).all();
+    const itemsByFeed = /* @__PURE__ */ new Map();
+    const itemRows = this.indexDb.prepare(
+      "SELECT source_id, item_key, title, link, summary, content, content_html, published_at, fetched_at FROM rss_item ORDER BY COALESCE(published_at, '') DESC, fetched_at DESC"
+    ).all();
+    for (const row of itemRows) {
+      const list = itemsByFeed.get(row.source_id) ?? [];
+      list.push(this.#toEntry(row.source_id, row));
+      itemsByFeed.set(row.source_id, list);
+    }
+    this.data.subscriptions = feedRows.map((row) => this.#toSubscription(row, itemsByFeed.get(row.id) ?? []));
+    for (const sub of this.data.subscriptions) {
+      this.persistedFeed.set(sub.id, sub.entries.length);
+      this.persistedFeeds.set(sub.id, this.#feedSignature(sub));
+    }
+    const stateRows = this.appDb.prepare("SELECT source_id, item_key, state FROM rss_item_state").all();
+    for (const row of stateRows) {
+      this.data.states[row.source_id + "|" + row.item_key] = row.state;
+      this.persistedStates.set(row.source_id + "|" + row.item_key, row.state);
+    }
+    await this.cleanStaleTemps();
+  }
+  #feedSignature(sub) {
+    return [sub.name, sub.url, sub.group ?? "", sub.enabled === false ? 0 : 1, sub.note ?? "", sub.siteUrl ?? "", sub.refreshStrategy ?? "follow"].join("\0");
+  }
+  /**
+   * Drop plugin-key-namespace rows leaked into rss_item: flush once wrote
+   * item_key = entry.guid ?? entry.key, so guid-less feeds landed their
+   * whole `feed:<32hex>|<hash>` plugin key as item_key — every refreshed
+   * article existed twice (the native guid/URL-keyed row plus this copy,
+   * all falsely unread). Deleted only when a same-feed same-title native
+   * row exists; a lone plugin-keyed row is kept (it may be the only copy).
+   */
+  #dedupeLegacyItemRows() {
+    try {
+      const candidates = this.indexDb.prepare(`SELECT a.rowid AS rowid, a.item_key AS item_key FROM rss_item a
+          WHERE a.item_key LIKE 'feed:%' AND EXISTS (
+            SELECT 1 FROM rss_item b
+            WHERE b.source_id = a.source_id AND b.title = a.title AND b.rowid != a.rowid
+              AND b.item_key NOT LIKE 'feed:%'
+          )`).all().filter((row) => /^feed:[0-9a-f]{32}\|/.test(row.item_key));
+      if (candidates.length === 0) return;
+      const del = this.indexDb.prepare("DELETE FROM rss_item WHERE rowid = ?");
+      this.indexDb.exec("BEGIN");
+      try {
+        for (const row of candidates) del.run(row.rowid);
+      } finally {
+        this.indexDb.exec("COMMIT");
+      }
+      this.logger?.info?.("droplets: removed %d plugin-keyed duplicate item rows", candidates.length);
+    } catch (error) {
+      this.logger?.warn?.("droplets: legacy item dedupe failed: %s", String(error));
+    }
+  }
+  /**
+   * Read marks written under feed:<hash> source ids never matched a live
+   * feed (marks silently reverted on every reload). Best-effort migration
+   * onto the native keying — the plugin wrote item_key = entry.guid, and
+   * native rows key by URL, so marks whose guid was a URL migrate cleanly;
+   * the rest are unmatchable and deleted (they were functionally dead
+   * anyway). Runs BEFORE the state SELECT so the loaded view is clean.
+   */
+  #migrateLegacyStateRows() {
+    try {
+      const orphans = this.appDb.prepare("SELECT source_id, item_key, state FROM rss_item_state WHERE source_id LIKE 'feed:%'").all();
+      if (orphans.length === 0) return;
+      const migrate = this.appDb.prepare(
+        `INSERT INTO rss_item_state (source_id, item_key, state, updated_at)
+         VALUES (?, ?, ?, ?)
+         ON CONFLICT(source_id, item_key) DO NOTHING`
+      );
+      this.appDb.exec("BEGIN");
+      try {
+        let migrated = 0;
+        for (const row of orphans) {
+          if (!/^(https?:\/\/|www\.)/i.test(row.item_key)) continue;
+          const nativeId = this.#nativeSourceOfFeedHash(row.source_id);
+          if (!nativeId) continue;
+          migrate.run(nativeId, row.item_key, row.state, Date.now() / 1e3);
+          migrated += 1;
+        }
+        this.appDb.prepare("DELETE FROM rss_item_state WHERE source_id LIKE 'feed:%'").run();
+        if (orphans.length > 0) {
+          this.logger?.info?.("droplets: migrated %d/%d legacy read marks onto native ids", migrated, orphans.length);
+        }
+      } finally {
+        this.appDb.exec("COMMIT");
+      }
+    } catch (error) {
+      this.logger?.warn?.("droplets: legacy state migration failed: %s", String(error));
+    }
+  }
+  /** Reverse-lookup: which live feed id does a feed:<hash> id stand for? */
+  #nativeSourceOfFeedHash(feedHashId) {
+    if (this.#hashToFeedId === null) {
+      this.#hashToFeedId = /* @__PURE__ */ new Map();
+      const rows = this.appDb.prepare("SELECT id, url FROM feeds").all();
+      for (const row of rows) this.#hashToFeedId.set(`feed:${hashKey(row.url)}`, row.id);
+    }
+    return this.#hashToFeedId.get(feedHashId);
+  }
+  touch() {
+    if (this.saveTimer !== void 0) return;
+    this.saveTimer = setTimeout(() => {
+      this.saveTimer = void 0;
+      void this.flush().catch(() => {
+      });
+    }, 500);
+  }
+  async loadEntries(feedId) {
+    return this.data.subscriptions.find((sub) => sub.id === feedId)?.entries;
+  }
+  async saveEntries(feedId, entries) {
+    const sub = this.data.subscriptions.find((item) => item.id === feedId);
+    if (sub) sub.entries = entries;
+  }
+  /** Persist the in-memory view back into the Droplets tables (transactional). */
+  async flush() {
+    this.saving = this.saving.catch(() => {
+    }).then(async () => {
+      try {
+        await this.openDatabases();
+        await mkdir3(this.sidecarDir, { recursive: true });
+        const liveIds = new Set(this.data.subscriptions.map((sub) => sub.id));
+        const upsertFeed = this.appDb.prepare(
+          `INSERT INTO feeds (id, title, url, group_name, enabled, created_at, last_fetch_at, last_error, site_url, refresh_strategy, show_unread_badge, include_in_all, note)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT(id) DO UPDATE SET title=excluded.title, url=excluded.url, group_name=excluded.group_name,
+             enabled=excluded.enabled, last_fetch_at=excluded.last_fetch_at, last_error=excluded.last_error,
+             site_url=excluded.site_url, refresh_strategy=excluded.refresh_strategy,
+             show_unread_badge=excluded.show_unread_badge, include_in_all=excluded.include_in_all, note=excluded.note`
+        );
+        const upsertItem = this.indexDb.prepare(
+          `INSERT INTO rss_item (source_id, item_key, title, link, summary, content, content_html, published_at, source_title, fetched_at, item_hash)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT(source_id, item_key) DO UPDATE SET title=excluded.title, link=excluded.link,
+             summary=excluded.summary, content=excluded.content, content_html=excluded.content_html,
+             published_at=excluded.published_at, source_title=excluded.source_title`
+        );
+        const upsertState = this.appDb.prepare(
+          "INSERT INTO rss_item_state (source_id, item_key, state, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(source_id, item_key) DO UPDATE SET state=excluded.state, updated_at=excluded.updated_at"
+        );
+        const deleteState = this.appDb.prepare("DELETE FROM rss_item_state WHERE source_id = ? AND item_key = ?");
+        this.appDb.exec("BEGIN");
+        try {
+          for (const sub of this.data.subscriptions) {
+            const signature = this.#feedSignature(sub);
+            if (this.persistedFeeds.get(sub.id) !== signature) {
+              upsertFeed.run(
+                sub.id,
+                sub.name ?? "",
+                sub.url ?? "",
+                sub.group ?? "",
+                sub.enabled === false ? 0 : 1,
+                (sub.createdAt ?? Date.now()) / 1e3,
+                sub.lastFetchedAt ? sub.lastFetchedAt / 1e3 : null,
+                sub.lastError ?? null,
+                sub.siteUrl ?? "",
+                sub.refreshStrategy ?? "follow",
+                sub.showUnreadBadge === false ? 0 : 1,
+                sub.includeInAll === false ? 0 : 1,
+                sub.note ?? ""
+              );
+              this.persistedFeeds.set(sub.id, signature);
+            }
+          }
+          for (const [key, state] of Object.entries(this.data.states)) {
+            if (this.persistedStates.get(key) === state) continue;
+            const split = key.indexOf("|");
+            if (split === -1) continue;
+            upsertState.run(key.slice(0, split), key.slice(split + 1), state, Date.now() / 1e3);
+            this.persistedStates.set(key, state);
+          }
+        } finally {
+          this.appDb.exec("COMMIT");
+        }
+        const seenStates = new Set(Object.keys(this.data.states));
+        this.appDb.exec("BEGIN");
+        try {
+          for (const key of [...this.persistedStates.keys()]) {
+            if (seenStates.has(key)) continue;
+            const split = key.indexOf("|");
+            if (split === -1) continue;
+            deleteState.run(key.slice(0, split), key.slice(split + 1));
+            this.persistedStates.delete(key);
+          }
+        } finally {
+          this.appDb.exec("COMMIT");
+        }
+        this.indexDb.exec("BEGIN");
+        try {
+          for (const sub of this.data.subscriptions) {
+            const entries = sub.entries ?? [];
+            if (this.persistedFeed.get(sub.id) === entries.length) continue;
+            const now = Date.now() / 1e3;
+            for (const entry of entries) {
+              upsertItem.run(
+                sub.id,
+                entry.guid ?? entry.key,
+                entry.title ?? "",
+                entry.url ?? "",
+                entry.summary ?? "",
+                "",
+                entry.html ?? "",
+                entry.publishedAt ?? null,
+                sub.name ?? "",
+                now,
+                null
+              );
+            }
+            this.persistedFeed.set(sub.id, entries.length);
+          }
+        } finally {
+          this.indexDb.exec("COMMIT");
+        }
+        const removed = [...this.persistedFeeds.keys()].filter((id) => !liveIds.has(id));
+        if (removed.length > 0) {
+          const deleteFeed = this.appDb.prepare("DELETE FROM feeds WHERE id = ?");
+          const deleteItems = this.indexDb.prepare("DELETE FROM rss_item WHERE source_id = ?");
+          const deleteFeedStates = this.appDb.prepare("DELETE FROM rss_item_state WHERE source_id = ?");
+          this.appDb.exec("BEGIN");
+          try {
+            for (const id of removed) {
+              deleteFeedStates.run(id);
+              deleteFeed.run(id);
+              this.persistedFeeds.delete(id);
+            }
+          } finally {
+            this.appDb.exec("COMMIT");
+          }
+          this.indexDb.exec("BEGIN");
+          try {
+            for (const id of removed) deleteItems.run(id);
+          } finally {
+            this.indexDb.exec("COMMIT");
+          }
+        }
+        const sidecar = {
+          version: 1,
+          settings: this.data.settings,
+          favorites: this.data.favorites,
+          inbox: this.data.inbox,
+          vaultCache: this.data.vaultCache ?? null,
+          companionContexts: this.data.companionContexts
+        };
+        const temp = `${this.path}.${process.pid}.tmp`;
+        try {
+          await writeFile3(temp, JSON.stringify(sidecar), { encoding: "utf8", mode: 384 });
+          await rename3(temp, this.path);
+        } catch (error) {
+          await rm4(temp, { force: true }).catch(() => {
+          });
+          throw error;
+        }
+        this.lastKnownMtime = (await stat2(this.path)).mtimeMs;
+      } catch (error) {
+        this.logger?.warn?.("droplets: failed to save workspace data: %s", String(error));
+        throw error;
+      }
+    });
+    return this.saving;
+  }
+  /** Release the SQLite handles (the service calls this on shutdown). */
+  async dispose() {
+    if (this.saveTimer !== void 0) {
+      clearTimeout(this.saveTimer);
+      this.saveTimer = void 0;
+    }
+    await this.saving.catch(() => {
+    });
+    this.closeDatabases();
+  }
+  async stats() {
+    const feeds = this.data.subscriptions.length;
+    const items = this.data.subscriptions.reduce((sum, sub) => sum + (sub.entries?.length ?? 0), 0);
+    const appInfo = await stat2(this.appDbPath).catch(() => null);
+    const indexInfo = await stat2(this.indexDbPath).catch(() => null);
+    return {
+      feeds,
+      items,
+      appDbBytes: appInfo?.size ?? 0,
+      indexDbBytes: indexInfo?.size ?? 0
+    };
+  }
+};
+
+// src/host/workspace-inbox.js
+import { createHash as createHash3, randomUUID } from "node:crypto";
+import { copyFile, mkdir as mkdir5, readdir as readdir2, readFile as readFile5, rename as rename4, rm as rm6, rmdir, stat as stat4, writeFile as writeFile5 } from "node:fs/promises";
+import { dirname as dirname4, join as join3 } from "node:path";
+
+// src/host/extract.js
+init_sanitize();
+function metaContent(html, name2) {
+  const patterns = [
+    new RegExp(`<meta[^>]+(?:name|property)=["']${name2}["'][^>]*content=["']([^"']*)["']`, "i"),
+    new RegExp(`<meta[^>]+content=["']([^"']*)["'][^>]*(?:name|property)=["']${name2}["']`, "i")
+  ];
+  for (const pattern of patterns) {
+    const match = pattern.exec(html);
+    if (match) return decodeHtmlEntities(match[1]).trim();
+  }
+  return void 0;
+}
+function titleOf(html, fallback) {
+  const titled = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html);
+  const cleaned = titled ? decodeHtmlEntities(titled[1]).replace(/\s+/g, " ").trim() : "";
+  if (cleaned !== "") return cleaned;
+  return metaContent(html, "og:title") ?? metaContent(html, "twitter:title") ?? fallback;
+}
+function mainRegion(html) {
+  const candidates = [];
+  const block = /<(main|article)[^>]*>([\s\S]*?)<\/\1>/gi;
+  let match;
+  while ((match = block.exec(html)) !== null) {
+    const text2 = match[2].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    if (text2.length > 200) candidates.push({ html: match[2], score: text2.length });
+  }
+  if (candidates.length === 0) return html;
+  candidates.sort((a, b) => b.score - a.score);
+  return candidates[0].html;
+}
+function extractArticle(html, baseUrl) {
+  const withoutScripts = html.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<noscript[\s\S]*?<\/noscript>/gi, " ").replace(/<!--[\s\S]*?-->/g, " ");
+  const title = titleOf(withoutScripts, baseUrl ?? "Untitled");
+  const description = metaContent(withoutScripts, "description") ?? metaContent(withoutScripts, "og:description");
+  const region = mainRegion(withoutScripts);
+  const safe = sanitizeHtml(region, { baseUrl, maxLength: 3e5 });
+  return { title, description, html: safe, text: "" };
+}
+
+// src/host/html-to-md.js
+var BLOCK_TAGS = /* @__PURE__ */ new Set([
+  "p",
+  "div",
+  "section",
+  "article",
+  "header",
+  "footer",
+  "nav",
+  "aside",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "ul",
+  "ol",
+  "li",
+  "blockquote",
+  "pre",
+  "hr",
+  "br",
+  "table",
+  "thead",
+  "tbody",
+  "tfoot",
+  "tr",
+  "figure",
+  "figcaption",
+  "details",
+  "summary",
+  "address",
+  "main",
+  "form",
+  "fieldset"
+]);
+var HEADINGS = { h1: 1, h2: 2, h3: 3, h4: 4, h5: 5, h6: 6 };
+function decodeEntities3(text2) {
+  return text2.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&nbsp;/g, " ").replace(/&hellip;/g, "\u2026").replace(/&mdash;/g, "\u2014").replace(/&ndash;/g, "\u2013").replace(/&ldquo;/g, "\u201C").replace(/&rdquo;/g, "\u201D").replace(/&lsquo;/g, "\u2018").replace(/&rsquo;/g, "\u2019").replace(/&#(\d{1,7});/g, (_, code) => {
+    const point = Number(code);
+    return point > 0 && point <= 1114111 ? safeCodePoint(point) : _.slice(1, -1);
+  });
+}
+function safeCodePoint(point) {
+  try {
+    return String.fromCodePoint(point);
+  } catch {
+    return "";
+  }
+}
+function escapeText2(text2, atLineStart = false) {
+  let out = text2.replace(/([\\`*_\[\]~])/g, "\\$1");
+  if (atLineStart) {
+    out = out.replace(/^([ \t]*)([#>+-])/, "$1\\$2").replace(/^([ \t]*)(\d+)\./, "$1$2\\.");
+  }
+  return out;
+}
+function escapeCell(text2) {
+  return escapeText2(text2).replace(/\|/g, "\\|");
+}
+function tokenize(html) {
+  const tokens = [];
+  const pattern = /<!--[\s\S]*?-->|<\/?([a-zA-Z][a-zA-Z0-9]*)((?:[^>"']|"[^"]*"|'[^']*')*)>|([^<]+)/g;
+  let match;
+  while ((match = pattern.exec(html)) !== null) {
+    if (match[3] !== void 0) {
+      if (match[3] !== "") tokens.push({ kind: "text", text: match[3] });
+      continue;
+    }
+    if (match[0].startsWith("<!--")) continue;
+    const name2 = match[1].toLowerCase();
+    const closing = match[0][1] === "/";
+    const attrs = {};
+    const attrPattern = /([a-zA-Z-]+)\s*=\s*("([^"]*)"|'([^']*)')/g;
+    let attr;
+    while ((attr = attrPattern.exec(match[2] ?? "")) !== null) {
+      attrs[attr[1].toLowerCase()] = decodeEntities3(attr[3] ?? attr[4] ?? "");
+    }
+    tokens.push({ kind: "tag", name: name2, closing, attrs, selfClosing: /\/>$/.test(match[0]) });
+  }
+  return tokens;
+}
+function parse(tokens) {
+  const root = { kind: "element", name: "#root", children: [] };
+  const stack = [root];
+  for (const token of tokens) {
+    const top = stack[stack.length - 1];
+    if (token.kind === "text") {
+      top.children.push({ kind: "text", text: token.text });
+      continue;
+    }
+    if (token.closing) {
+      for (let index = stack.length - 1; index >= 1; index -= 1) {
+        if (stack[index].name === token.name) {
+          stack.length = index;
+          break;
+        }
+      }
+      continue;
+    }
+    const node = {
+      kind: "element",
+      name: token.name,
+      attrs: token.attrs,
+      children: [],
+      selfClosing: token.selfClosing || token.name === "br" || token.name === "hr" || token.name === "img"
+    };
+    top.children.push(node);
+    if (!node.selfClosing) stack.push(node);
+  }
+  return root;
+}
+function nodeText(node) {
+  if (node.kind === "text") return decodeEntities3(node.text);
+  return (node.children ?? []).map(nodeText).join("");
+}
+function renderInline(nodes, state) {
+  state = state ?? { lineStart: true };
+  const parts = [];
+  for (const node of nodes) {
+    if (node.kind === "text") {
+      const flat = decodeEntities3(node.text).replace(/\s*\n\s*/g, " ");
+      parts.push(escapeText2(flat, state.lineStart));
+      if (flat.trim() !== "") state.lineStart = false;
+      continue;
+    }
+    const inner = () => renderInline(node.children, state);
+    switch (node.name) {
+      case "br":
+        parts.push("\n");
+        state.lineStart = true;
+        break;
+      case "strong":
+      case "b": {
+        const text2 = inner().trim();
+        if (text2 !== "") parts.push(`**${text2}**`);
+        break;
+      }
+      case "em":
+      case "i": {
+        const text2 = inner().trim();
+        if (text2 !== "") parts.push(`*${text2}*`);
+        break;
+      }
+      case "del":
+      case "s": {
+        const text2 = inner().trim();
+        if (text2 !== "") parts.push(`~~${text2}~~`);
+        break;
+      }
+      case "code":
+      case "kbd":
+      case "samp": {
+        const text2 = nodeText(node);
+        if (text2 !== "") parts.push(text2.includes("`") ? "`` " + text2 + " ``" : `\`${text2}\``);
+        break;
+      }
+      case "a": {
+        const href = String(node.attrs.href ?? "");
+        const text2 = inner().trim() || href;
+        if (href.startsWith("#")) parts.push(text2);
+        else if (href !== "") parts.push(`[${text2}](${href})`);
+        else parts.push(text2);
+        break;
+      }
+      case "img": {
+        const src = String(node.attrs.src ?? "");
+        const alt = String(node.attrs.alt ?? "");
+        if (src !== "") parts.push(`![${alt}](${src})`);
+        break;
+      }
+      case "sup":
+        parts.push(`^${inner()}^`);
+        break;
+      case "sub":
+        parts.push(`~${inner()}~`);
+        break;
+      case "mark":
+        parts.push(`==${inner()}==`);
+        break;
+      default:
+        parts.push(inner());
+    }
+  }
+  return parts.join("");
+}
+function renderBlocks(nodes, out, listDepth = 0) {
+  const buffer = [];
+  const flushParagraph = () => {
+    const text2 = renderInline(buffer).replace(/[ \t]+\n/g, "\n").trim();
+    buffer.length = 0;
+    if (text2 !== "") out.push(text2, "");
+  };
+  for (const node of nodes) {
+    if (node.kind === "text") {
+      const decoded = decodeEntities3(node.text);
+      if (decoded.trim() !== "") buffer.push(node);
+      else if (buffer.length > 0 && decoded.includes("\n")) buffer.push({ kind: "text", text: " " });
+      continue;
+    }
+    const inlineOnly = !BLOCK_TAGS.has(node.name);
+    if (inlineOnly) {
+      buffer.push(node);
+      continue;
+    }
+    switch (node.name) {
+      case "br": {
+        buffer.push({ kind: "text", text: "\n" });
+        break;
+      }
+      case "hr": {
+        flushParagraph();
+        out.push("---", "");
+        break;
+      }
+      case "p":
+      case "div":
+      case "section":
+      case "article":
+      case "main":
+      case "header":
+      case "footer":
+      case "nav":
+      case "aside":
+      case "figure":
+      case "address":
+      case "fieldset": {
+        flushParagraph();
+        const nested = [];
+        renderBlocks(node.children, nested, listDepth);
+        if (nested.length > 0) out.push(...nested);
+        break;
+      }
+      case "figcaption": {
+        flushParagraph();
+        const text2 = renderInline(node.children, { lineStart: false }).trim();
+        if (text2 !== "") out.push(`*${text2}*`, "");
+        break;
+      }
+      case "h1":
+      case "h2":
+      case "h3":
+      case "h4":
+      case "h5":
+      case "h6": {
+        flushParagraph();
+        const level = HEADINGS[node.name];
+        const text2 = renderInline(node.children, { lineStart: false }).replace(/\n/g, " ").trim();
+        if (text2 !== "") out.push("#".repeat(level) + " " + text2, "");
+        break;
+      }
+      case "blockquote": {
+        flushParagraph();
+        const nested = [];
+        renderBlocks(node.children, nested, listDepth);
+        const body = nested.join("\n").replace(/\n{2,}/g, "\n\n").trimEnd();
+        if (body !== "") {
+          for (const line of body.split("\n")) out.push(line === "" ? ">" : "> " + line);
+          out.push("");
+        }
+        break;
+      }
+      case "pre": {
+        flushParagraph();
+        const codeNode = node.children.find((child) => child.kind === "element" && child.name === "code");
+        const language = /language-([\w-]+)/.exec(codeNode?.attrs?.class ?? node.attrs?.class ?? "")?.[1] ?? "";
+        const text2 = codeNode ? nodeText(codeNode) : nodeText(node);
+        const fence = "```";
+        out.push(`${fence}${language}`, text2.replace(/\n+$/, ""), fence, "");
+        break;
+      }
+      case "ul":
+      case "ol": {
+        flushParagraph();
+        renderList(node, out, listDepth);
+        break;
+      }
+      case "table": {
+        flushParagraph();
+        renderTable(node, out);
+        break;
+      }
+      case "details": {
+        flushParagraph();
+        renderBlocks(node.children, out, listDepth);
+        break;
+      }
+      case "summary": {
+        flushParagraph();
+        const text2 = renderInline(node.children, { lineStart: false }).trim();
+        if (text2 !== "") out.push(`**${text2}**`, "");
+        break;
+      }
+      default: {
+        flushParagraph();
+        renderBlocks(node.children, out, listDepth);
+      }
+    }
+  }
+  flushParagraph();
+}
+function indentFor(depth) {
+  return "  ".repeat(depth);
+}
+function renderList(node, out, depth) {
+  const ordered = node.name === "ol";
+  let index = Number(node.attrs?.start ?? 1) || 1;
+  for (const child of node.children) {
+    if (child.kind !== "element" || child.name !== "li") continue;
+    const nested = [];
+    const inlineParts = [];
+    const blockParts = [];
+    for (const part of child.children) {
+      if (part.kind === "element" && (part.name === "ul" || part.name === "ol" || part.name === "table" || part.name === "blockquote" || part.name === "pre")) {
+        blockParts.push(part);
+      } else if (part.kind === "element" && part.name === "p") {
+        const inner = renderInline(part.children, { lineStart: false }).trim();
+        if (inner !== "") inlineParts.push(inner);
+      } else {
+        inlineParts.push(part);
+      }
+    }
+    const marker = ordered ? `${index}. ` : "- ";
+    const head = renderInline(inlineParts, { lineStart: false }).replace(/\n+/g, " ").trim();
+    out.push(indentFor(depth) + marker + (head !== "" ? head : ""));
+    for (const part of blockParts) {
+      if (part.name === "ul" || part.name === "ol") renderList(part, out, depth + 1);
+      else if (part.name === "table") renderTable(part, out, depth + 1);
+      else if (part.name === "blockquote") {
+        const nested2 = [];
+        renderBlocks([part], nested2, depth + 1);
+        for (const line of nested2.join("\n").trimEnd().split("\n")) {
+          out.push(indentFor(depth + 1) + (line === "" ? ">" : line.replace(/^> ?/, "> ")));
+        }
+      } else if (part.name === "pre") {
+        const text2 = nodeText(part);
+        out.push(indentFor(depth + 1) + "```", ...text2.replace(/\n+$/, "").split("\n").map((line) => indentFor(depth + 1) + line), indentFor(depth + 1) + "```");
+      }
+    }
+    if (ordered) index += 1;
+  }
+  if (depth === 0) out.push("");
+}
+function renderTable(node, out, depth = 0) {
+  const rows = [];
+  const collect = (tr) => {
+    const cells = [];
+    for (const cell of tr.children) {
+      if (cell.kind !== "element" || cell.name !== "td" && cell.name !== "th") continue;
+      cells.push(escapeCell(renderInline(cell.children, { lineStart: false }).replace(/\n+/g, " ").trim()));
+    }
+    if (cells.length > 0) rows.push({ header: false, cells });
+  };
+  const walk = (children) => {
+    for (const child of children) {
+      if (child.kind !== "element") continue;
+      if (child.name === "tr") {
+        if (child.children.some((cell) => cell.kind === "element" && cell.name === "th")) {
+          const cells = [];
+          for (const cell of child.children) {
+            if (cell.kind !== "element" || cell.name !== "td" && cell.name !== "th") continue;
+            cells.push(escapeCell(renderInline(cell.children, { lineStart: false }).replace(/\n+/g, " ").trim()));
+          }
+          if (cells.length > 0) rows.unshift({ header: true, cells });
+        } else collect(child);
+      } else walk(child.children);
+    }
+  };
+  walk(node.children);
+  if (rows.length === 0) return;
+  const width = Math.max(...rows.map((row) => row.cells.length));
+  const pad = (row) => {
+    const cells = [...row.cells];
+    while (cells.length < width) cells.push("");
+    return cells;
+  };
+  const first = rows[0];
+  const prefix = indentFor(depth);
+  out.push(prefix + "| " + pad(first).join(" | ") + " |");
+  out.push(prefix + "| " + Array.from({ length: width }, () => "---").join(" | ") + " |");
+  for (const row of rows.slice(first.header ? 1 : 0)) {
+    out.push(prefix + "| " + pad(row).join(" | ") + " |");
+  }
+  out.push("");
+}
+function htmlToMarkdown(html, { maxLength = 4e5 } = {}) {
+  const tree = parse(tokenize(String(html ?? "")));
+  const out = [];
+  renderBlocks(tree.children, out);
+  let markdown = out.join("\n").replace(/\n{3,}/g, "\n\n").replace(/[ \t]+$/gm, "").trim();
+  if (markdown.length > maxLength) markdown = markdown.slice(0, maxLength).trimEnd() + "\n\n\u2026(\u5185\u5BB9\u8FC7\u957F\u5DF2\u622A\u65AD)";
+  return markdown;
+}
+
+// src/host/workspace-inbox.js
+init_sanitize();
+
 // src/host/inbox.js
+init_esm();
+import { createHash as createHash2 } from "node:crypto";
+import { mkdir as mkdir4, readFile as readFile4, rm as rm5, stat as stat3, writeFile as writeFile4 } from "node:fs/promises";
+import path from "node:path";
+
+// src/host/guarded-fetch.js
+var import_ip_address = __toESM(require_ip_address(), 1);
+var import_undici = __toESM(require_undici(), 1);
+import net from "node:net";
+import tls from "node:tls";
+import zlib2 from "node:zlib";
+var defaultDnsResolver = {
+  async resolve(host) {
+    const { lookup } = await import("node:dns/promises");
+    const results = await lookup(host, { all: true });
+    return results.map((r) => r.address);
+  }
+};
+var SecurityRejectionError = class extends Error {
+  constructor(message, details) {
+    super(message);
+    this.name = "SecurityRejectionError";
+    this.securityRejection = true;
+    this.details = details;
+  }
+};
+var FetchFailureError = class extends Error {
+  constructor(code, message) {
+    super(message);
+    this.name = "FetchFailureError";
+    this.code = code;
+  }
+};
+var V4_CIDRS = [
+  "0.0.0.0/8",
+  "10.0.0.0/8",
+  "100.64.0.0/10",
+  "127.0.0.0/8",
+  "169.254.0.0/16",
+  "172.16.0.0/12",
+  "192.0.0.0/24",
+  "192.0.2.0/24",
+  "192.168.0.0/16",
+  "198.18.0.0/15",
+  "198.51.100.0/24",
+  "203.0.113.0/24",
+  "224.0.0.0/4",
+  "240.0.0.0/4"
+];
+var V6_CIDRS = [
+  "::/128",
+  "::1/128",
+  "fe80::/10",
+  "fc00::/7",
+  "ff00::/8",
+  "2001:db8::/32",
+  "2001::/32",
+  "2001:2::/48",
+  "64:ff9b::/96",
+  "::ffff:0:0/96",
+  "2002::/16"
+];
+function v4BigInt(addr) {
+  const parts = addr.parsedAddress.map((p) => BigInt(Number(p)));
+  return parts[0] << 24n | parts[1] << 16n | parts[2] << 8n | parts[3];
+}
+function v6BigInt(addr) {
+  let value = 0n;
+  for (const group of addr.parsedAddress) {
+    value = value << 16n | BigInt(parseInt(group, 16));
+  }
+  return value;
+}
+function v4Range(cidr) {
+  const [base, prefixStr] = cidr.split("/");
+  const prefix = BigInt(prefixStr);
+  const start = v4BigInt(new import_ip_address.Address4(base));
+  const size = 1n << 32n - prefix;
+  return { start, end: start + size - 1n };
+}
+function v6Range(cidr) {
+  const [base, prefixStr] = cidr.split("/");
+  const prefix = BigInt(prefixStr);
+  const start = v6BigInt(new import_ip_address.Address6(base));
+  const size = 1n << 128n - prefix;
+  return { start, end: start + size - 1n };
+}
+var V4_RANGES = V4_CIDRS.map(v4Range);
+var V6_RANGES = V6_CIDRS.map(v6Range);
+function inRanges(value, ranges) {
+  return ranges.some((r) => value >= r.start && value <= r.end);
+}
+function isPublicIp(ip) {
+  const trimmed = ip.trim();
+  let a4 = null;
+  try {
+    a4 = new import_ip_address.Address4(trimmed);
+  } catch {
+    a4 = null;
+  }
+  if (a4) return !inRanges(v4BigInt(a4), V4_RANGES);
+  let a6;
+  try {
+    a6 = new import_ip_address.Address6(trimmed);
+  } catch {
+    return false;
+  }
+  return !inRanges(v6BigInt(a6), V6_RANGES);
+}
+function isIpLiteral(host) {
+  try {
+    new import_ip_address.Address4(host);
+    return true;
+  } catch {
+  }
+  try {
+    new import_ip_address.Address6(host);
+    return true;
+  } catch {
+    return false;
+  }
+}
+var FAKE_PROXY_V4 = (() => {
+  const [base, prefixStr] = "198.18.0.0/15".split("/");
+  const prefix = BigInt(prefixStr);
+  const parts = base.split(".").map((p) => BigInt(Number(p)));
+  const start = parts[0] << 24n | parts[1] << 16n | parts[2] << 8n | parts[3];
+  return { start, end: start + (1n << 32n - prefix) - 1n };
+})();
+function v4Value(ip) {
+  const parts = ip.trim().split(".").map((p) => BigInt(Number(p)));
+  return parts[0] << 24n | parts[1] << 16n | parts[2] << 8n | parts[3];
+}
+function isFakeProxyIp(ip) {
+  try {
+    const value = v4Value(ip);
+    return value >= FAKE_PROXY_V4.start && value <= FAKE_PROXY_V4.end;
+  } catch {
+    return false;
+  }
+}
+async function getSystemProxyUrl() {
+  const fromEnv = process.env.HTTPS_PROXY ?? process.env.https_proxy ?? process.env.HTTP_PROXY ?? process.env.http_proxy;
+  if (typeof fromEnv === "string" && /^https?:\/\//i.test(fromEnv)) return fromEnv;
+  try {
+    const { execFile } = await import("node:child_process");
+    const stdout = await new Promise((resolve2, reject) => {
+      execFile("scutil", ["--proxy"], { timeout: 2e3 }, (error, out) => error ? reject(error) : resolve2(String(out ?? "")));
+    });
+    const https = /HTTPSEnable\s*:\s*1/.test(stdout);
+    const http = /HTTPEnable\s*:\s*1/.test(stdout);
+    const scheme = https ? "HTTPS" : http ? "HTTP" : null;
+    if (scheme === null) return null;
+    const host = new RegExp(scheme + "Proxy\\s*:\\s*(\\S+)").exec(stdout)?.[1];
+    const port = new RegExp(scheme + "Port\\s*:\\s*(\\d+)").exec(stdout)?.[1];
+    if (!host || !port) return null;
+    return "http://" + host + ":" + port;
+  } catch {
+    return null;
+  }
+}
+var strictPortGate = (port) => {
+  if (port === null) return true;
+  return port === 80 || port === 443;
+};
+async function assertPublicHttpUrl(raw, resolver = defaultDnsResolver, ipPolicy = isPublicIp, portGate = strictPortGate, allowFakeProxy = true) {
+  let url;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new SecurityRejectionError(`\u65E0\u6CD5\u89E3\u6790\u7684 URL\uFF1A${raw.slice(0, 120)}`);
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new SecurityRejectionError(`\u4E0D\u5141\u8BB8\u7684\u534F\u8BAE\uFF1A${url.protocol.replace(":", "")}\uFF08\u4EC5 http/https\uFF09`);
+  }
+  const port = url.port === "" ? null : Number(url.port);
+  if (!portGate(port)) {
+    throw new SecurityRejectionError(`\u4E0D\u5141\u8BB8\u7684\u7AEF\u53E3\uFF1A${url.port || "(\u9ED8\u8BA4)"}\uFF08\u4EC5 80/443\uFF09`);
+  }
+  if (url.username || url.password) {
+    throw new SecurityRejectionError("\u4E0D\u5141\u8BB8\u643A\u5E26\u7528\u6237\u540D/\u5BC6\u7801\u7684 URL");
+  }
+  const host = url.hostname.replace(/^\[|\]$/g, "");
+  if (isIpLiteral(host)) {
+    if (!ipPolicy(host)) throw new SecurityRejectionError(`\u76EE\u6807\u4E3B\u673A\u662F\u5185\u7F51/\u4FDD\u7559\u5730\u5740\uFF1A${host}`);
+    return { url, ips: [host] };
+  }
+  const hostLower = host.toLowerCase();
+  if (hostLower === "localhost" || hostLower.endsWith(".localhost") || hostLower.endsWith(".local") || hostLower.endsWith(".internal")) {
+    throw new SecurityRejectionError(`\u4E0D\u5141\u8BB8\u7684\u672C\u5730\u57DF\u540D\uFF1A${host}`);
+  }
+  let resolved;
+  try {
+    resolved = await resolver.resolve(host);
+  } catch {
+    resolved = [];
+  }
+  if (resolved.length === 0 && !allowFakeProxy) {
+    throw new SecurityRejectionError(`\u57DF\u540D\u89E3\u6790\u5931\u8D25\uFF1A${host}`);
+  }
+  const fakeOnly = resolved.length > 0 && resolved.every((ip) => isFakeProxyIp(ip));
+  if (resolved.length === 0 && allowFakeProxy) {
+    return { url, ips: [], proxied: true };
+  }
+  const bad = resolved.find((ip) => !isFakeProxyIp(ip) && !ipPolicy(ip));
+  if (bad) {
+    throw new SecurityRejectionError(`\u57DF\u540D\u89E3\u6790\u5230\u5185\u7F51/\u4FDD\u7559\u5730\u5740\uFF1A${host} \u2192 ${bad}`);
+  }
+  return { url, ips: fakeOnly ? [] : resolved, proxied: fakeOnly };
+}
+var REDIRECT_CODES = /* @__PURE__ */ new Set([301, 302, 303, 307, 308]);
+var REDIRECT_DOWNGRADES = /* @__PURE__ */ new Set([301, 302, 303]);
+var SAFE_CROSS_ORIGIN_HEADERS = /* @__PURE__ */ new Set(["accept", "accept-language"]);
+function keepSafeHeaders(headers) {
+  const kept = {};
+  for (const [name2, value] of Object.entries(headers)) {
+    if (SAFE_CROSS_ORIGIN_HEADERS.has(name2.toLowerCase())) kept[name2] = value;
+  }
+  return kept;
+}
+function tunnelConnector(proxyUrl, connectTimeoutMs) {
+  const proxy = new URL(proxyUrl);
+  const proxyHost = proxy.hostname.replace(/^\[|\]$/g, "");
+  const proxyPort = Number(proxy.port) || 80;
+  return (options, callback) => {
+    const port = Number(options.port) || (options.protocol === "https:" ? 443 : 80);
+    let settled = false;
+    const done = (err2, socket2) => {
+      if (settled) return;
+      settled = true;
+      if (err2) callback(err2, null);
+      else callback(null, socket2 ?? new net.Socket());
+    };
+    const fail = (code, message) => {
+      socket.destroy();
+      done(new FetchFailureError(code, message));
+    };
+    const socket = net.connect({ host: proxyHost, port: proxyPort });
+    socket.setTimeout(connectTimeoutMs);
+    socket.once("timeout", () => fail("FETCH_CONNECT_TIMEOUT", `\u4EE3\u7406\u8FDE\u63A5\u8D85\u65F6\uFF1A${proxyHost}:${proxyPort}`));
+    socket.once("error", (err2) => fail("FETCH_NETWORK", `\u4EE3\u7406\u8FDE\u63A5\u5931\u8D25\uFF1A${err2.message}`));
+    socket.once("connect", () => {
+      socket.setTimeout(connectTimeoutMs);
+      socket.write(`CONNECT ${options.hostname}:${port} HTTP/1.1\r
+Host: ${options.hostname}:${port}\r
+\r
+`);
+      let buffer = "";
+      const onData = (chunk) => {
+        buffer += chunk.toString("latin1");
+        const end = buffer.indexOf("\r\n\r\n");
+        if (end === -1) {
+          if (buffer.length > 8192) {
+            socket.removeListener("data", onData);
+            fail("FETCH_NETWORK", "\u4EE3\u7406 CONNECT \u54CD\u5E94\u5F02\u5E38");
+          }
+          return;
+        }
+        socket.removeListener("data", onData);
+        const statusLine = buffer.slice(0, buffer.indexOf("\r\n"));
+        if (!/\s2\d\d\s/.test(statusLine)) {
+          socket.destroy();
+          done(new FetchFailureError("FETCH_NETWORK", `\u4EE3\u7406\u62D2\u7EDD CONNECT\uFF1A${statusLine}`), null);
+          return;
+        }
+        socket.setTimeout(0);
+        if (options.protocol === "https:") {
+          const tlsSocket = tls.connect({ socket, servername: options.hostname, rejectUnauthorized: true, ALPNProtocols: ["http/1.1"] });
+          tlsSocket.once("secureConnect", () => done(null, tlsSocket));
+          tlsSocket.once("error", (err2) => done(new FetchFailureError("FETCH_NETWORK", `TLS \u63E1\u624B\u5931\u8D25\uFF1A${err2.message}`), null));
+        } else {
+          done(null, socket);
+        }
+      };
+      socket.on("data", onData);
+    });
+  };
+}
+function pinnedConnector(ip, connectTimeoutMs) {
+  return (options, callback) => {
+    const port = Number(options.port) || (options.protocol === "https:" ? 443 : 80);
+    let settled = false;
+    const done = (err2, socket2) => {
+      if (settled) return;
+      settled = true;
+      if (err2) callback(err2, null);
+      else callback(null, socket2 ?? new net.Socket());
+    };
+    const socket = options.protocol === "https:" ? tls.connect({ host: ip, port, servername: options.hostname, rejectUnauthorized: true, ALPNProtocols: ["http/1.1"] }) : net.connect({ host: ip, port });
+    socket.setTimeout(connectTimeoutMs);
+    socket.once("timeout", () => {
+      socket.destroy();
+      done(new FetchFailureError("FETCH_CONNECT_TIMEOUT", `\u8FDE\u63A5\u8D85\u65F6\uFF1A${options.hostname} (${ip})`));
+    });
+    socket.once("error", (err2) => done(new FetchFailureError("FETCH_NETWORK", `\u8FDE\u63A5\u5931\u8D25\uFF1A${err2.message}`)));
+    socket.once("connect", () => {
+      socket.setTimeout(0);
+      done(null, socket);
+    });
+  };
+}
+function decodeStream(body, encoding) {
+  switch (encoding.toLowerCase()) {
+    case "gzip":
+      return body.pipe(zlib2.createGunzip());
+    case "deflate":
+      return body.pipe(zlib2.createInflate());
+    case "br":
+      return body.pipe(zlib2.createBrotliDecompress());
+    default:
+      return body;
+  }
+}
+async function readBodyWithLimit(body, encoding, maxBodyBytes) {
+  const stream = decodeStream(body, encoding);
+  const chunks = [];
+  let total = 0;
+  let exceeded = false;
+  try {
+    for await (const chunk of stream) {
+      const buf = Buffer.from(chunk);
+      total += buf.length;
+      if (total > maxBodyBytes) {
+        exceeded = true;
+        break;
+      }
+      chunks.push(buf);
+    }
+  } catch (e) {
+    throw new FetchFailureError("FETCH_NETWORK", `\u54CD\u5E94\u4F53\u8BFB\u53D6\u5931\u8D25\uFF1A${e.message}`);
+  }
+  if (exceeded) {
+    stream.destroy();
+    throw new FetchFailureError("FETCH_BODY_LIMIT", `\u54CD\u5E94\u4F53\u8D85\u8FC7\u4E0A\u9650\uFF08\u89E3\u538B\u540E > ${maxBodyBytes} \u5B57\u8282\uFF09\uFF0C\u5DF2\u4E2D\u65AD`);
+  }
+  return Buffer.concat(chunks);
+}
+function createGuardedFetch(deps = {}) {
+  const resolver = deps.resolver ?? defaultDnsResolver;
+  const ipPolicy = deps.ipPolicy ?? isPublicIp;
+  const portGate = deps.portGate ?? strictPortGate;
+  const onDial = deps.onDial;
+  const userAgent = deps.userAgent ?? (() => "Droplets-DSH");
+  return {
+    async fetch(raw, opts = {}) {
+      const maxRedirects = opts.maxRedirects ?? 6;
+      const connectTimeoutMs = opts.connectTimeoutMs ?? 2e4;
+      const totalTimeoutMs = opts.totalTimeoutMs ?? 6e4;
+      const maxBodyBytes = opts.maxBodyBytes ?? 50 * 1024 * 1024;
+      let timedOut = false;
+      const controller = new AbortController();
+      let activeAgent = null;
+      const hardAbort = (reason) => {
+        if (reason !== void 0) controller.abort(reason);
+        else controller.abort();
+        void activeAgent?.destroy().catch(() => void 0);
+      };
+      if (opts.signal?.aborted) hardAbort(opts.signal.reason);
+      else opts.signal?.addEventListener("abort", () => hardAbort(opts.signal?.reason), { once: true });
+      const timer = setTimeout(() => {
+        timedOut = true;
+        hardAbort();
+      }, totalTimeoutMs);
+      let current = raw;
+      let currentMethod = opts.method ?? "GET";
+      let currentBody;
+      let userHeaders = { ...opts.headers };
+      try {
+        for (let hop = 0; ; hop += 1) {
+          const asserted = await assertPublicHttpUrl(current, resolver, ipPolicy, portGate);
+          const ip = asserted.ips[0];
+          if (ip) onDial?.(ip);
+          let agent;
+          if (asserted.proxied) {
+            const proxyUrl = deps.systemProxy === void 0 ? await getSystemProxyUrl() : await deps.systemProxy();
+            if (!proxyUrl) {
+              if (ip === void 0) {
+                throw new FetchFailureError("FETCH_FAKEIP_NO_PROXY", "\u672C\u5730 DNS \u8FD4\u56DE fake-IP(\u4EE3\u7406\u6A21\u5F0F)\u4F46\u672A\u627E\u5230\u53EF\u7528\u7684 http(s) \u7CFB\u7EDF\u4EE3\u7406");
+              }
+              agent = new import_undici.Agent({ connect: pinnedConnector(ip, connectTimeoutMs) });
+            } else {
+              agent = new import_undici.Agent({ connect: tunnelConnector(proxyUrl, connectTimeoutMs) });
+            }
+          } else {
+            agent = new import_undici.Agent({ connect: pinnedConnector(ip, connectTimeoutMs) });
+          }
+          activeAgent = agent;
+          let response;
+          try {
+            response = await (0, import_undici.request)(asserted.url, {
+              method: currentMethod,
+              body: currentBody,
+              dispatcher: agent,
+              headers: {
+                "accept-encoding": "gzip, deflate, br",
+                "user-agent": userAgent(),
+                accept: opts.accept ?? "*/*",
+                ...userHeaders
+              },
+              signal: controller.signal
+            });
+          } catch (e) {
+            if (timedOut) {
+              throw new FetchFailureError("FETCH_TIMEOUT", `\u603B\u8D85\u65F6\uFF08${totalTimeoutMs}ms\uFF09\uFF1A${asserted.url.hostname}`);
+            }
+            if (e instanceof SecurityRejectionError || e instanceof FetchFailureError) throw e;
+            const code = e?.code ?? "";
+            if (/UNABLE_TO_VERIFY|CERT|TLS|ECONNREFUSED|ECONNRESET|EHOSTUNREACH|CONNECT_TIMEOUT|ECONNABORTED/.test(`${code} ${e.message}`)) {
+              throw new FetchFailureError("FETCH_NETWORK", `\u8BF7\u6C42\u5931\u8D25\uFF1A${code} ${e.message}`);
+            }
+            throw e;
+          }
+          const status = response.statusCode;
+          const location = response.headers["location"];
+          if (REDIRECT_CODES.has(status) && typeof location === "string") {
+            await response.body.dump().catch(() => {
+            });
+            await agent.close().catch(() => {
+            });
+            activeAgent = null;
+            if (hop >= maxRedirects) {
+              throw new FetchFailureError("FETCH_TOO_MANY_REDIRECTS", `\u91CD\u5B9A\u5411\u8D85\u8FC7 ${maxRedirects} \u8DF3\u4E0A\u9650`);
+            }
+            const next = new URL(location, asserted.url);
+            const crossOrigin = next.origin !== asserted.url.origin;
+            if (crossOrigin) {
+              if (!REDIRECT_DOWNGRADES.has(status)) {
+                throw new SecurityRejectionError(`\u8DE8\u57DF\u91CD\u5B9A\u5411\u4E0D\u5141\u8BB8\u91CD\u53D1\u8BF7\u6C42\u6B63\u6587\uFF08${status}\uFF09\uFF1A${asserted.url.origin} \u2192 ${next.origin}`);
+              }
+              userHeaders = keepSafeHeaders(userHeaders);
+            }
+            if (REDIRECT_DOWNGRADES.has(status)) {
+              currentMethod = "GET";
+              currentBody = void 0;
+            }
+            current = next.toString();
+            continue;
+          }
+          try {
+            const encRaw = response.headers["content-encoding"];
+            const encoding = (Array.isArray(encRaw) ? encRaw[0] ?? "" : encRaw ?? "").trim();
+            const body = await readBodyWithLimit(response.body, encoding, maxBodyBytes);
+            const headers = {};
+            for (const [k, v] of Object.entries(response.headers)) {
+              headers[k] = Array.isArray(v) ? v.join(", ") : String(v);
+            }
+            return { status, headers, body, finalUrl: asserted.url.toString() };
+          } finally {
+            await agent.close().catch(() => {
+            });
+          }
+        }
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+  };
+}
+var guardedFetch = createGuardedFetch();
+
+// src/host/inbox.js
+init_sanitize();
 var INBOX_LIMITS = {
   maxBodyBytes: 50 * 1024 * 1024,
   // abort beyond 50 MB
@@ -141742,8 +141822,9 @@ var DropletsService = class extends TypertRemoteService {
       status = "error";
       lastError = error instanceof Error ? error.message : String(error);
     }
+    const subId = this.sharedWorkspace ? randomUUID3() : subscriptionIdOf(trimmed);
     const sub = {
-      id: subscriptionIdOf(trimmed),
+      id: subId,
       url: trimmed,
       name: displayName || feedTitle || trimmed,
       group: String(group ?? "").trim() || void 0,
@@ -141751,7 +141832,7 @@ var DropletsService = class extends TypertRemoteService {
       lastFetchedAt: feedTitle ? Date.now() : void 0,
       status,
       lastError,
-      entries
+      entries: this.sharedWorkspace ? this.remapToNativeKeys(subId, entries) : entries
     };
     this.store.data.subscriptions.push(sub);
     this.store.touch();
@@ -141819,7 +141900,7 @@ var DropletsService = class extends TypertRemoteService {
       if (this.store.data.subscriptions.length >= FEED_LIMITS.maxSubscriptions) break;
       if (this.store.data.subscriptions.some((sub) => sub.url === stub.url)) continue;
       this.store.data.subscriptions.push({
-        id: subscriptionIdOf(stub.url),
+        id: this.sharedWorkspace ? randomUUID3() : subscriptionIdOf(stub.url),
         url: stub.url,
         name: stub.name ?? stub.url,
         group: stub.group,
@@ -141941,13 +142022,29 @@ var DropletsService = class extends TypertRemoteService {
       this.refreshing = false;
     }
   }
+  /**
+   * Shared-workspace key unification: native rows key items by
+   * <feed-uuid>|<link> while the plugin pipeline keys by
+   * feed:<hash>|<guid-or-link-hash>. Merging both namespaces into one
+   * subscription duplicated every refreshed article (a native row plus a
+   * plugin-keyed copy, all falsely unread) and wrote read marks under ids
+   * that never matched a live feed. Remapping fetched entries onto the
+   * native convention makes refreshes merge 1:1 with loaded rows.
+   */
+  remapToNativeKeys(subId, entries) {
+    return (entries ?? []).map((entry) => {
+      const itemKey = entry.url || entry.guid || String(entry.key ?? "").split("|").pop();
+      return { ...entry, guid: itemKey, key: `${subId}|${itemKey}` };
+    });
+  }
   async refreshSubscription(sub) {
     try {
       const xml = await this.fetchFeedText(sub.url);
       const parsed = parseFeed(xml, sub.url);
       sub.name = sub.name || parsed.title;
       const previous = sub.entries ?? [];
-      const merged = mergeEntries(previous, parsed.entries);
+      const fresh = this.sharedWorkspace ? this.remapToNativeKeys(sub.id, parsed.entries) : parsed.entries;
+      const merged = mergeEntries(previous, fresh);
       const changed = sub.lastError !== void 0 || merged.length !== previous.length || (merged[0]?.key ?? "") !== (previous[0]?.key ?? "");
       sub.lastFetchedAt = Date.now();
       sub.lastAttemptAt = sub.lastFetchedAt;

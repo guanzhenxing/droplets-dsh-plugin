@@ -119,7 +119,7 @@ test('feed renders favicon badges and the translation toggle end-to-end', { skip
       // The reload after a refresh (A) sees one extra entry.
       calls.listItems += 1;
       const items = [mkItem('feed:a|e1', 'English post', '2026-11-01T00:00:00.000Z')];
-      if (calls.listItems > 1) items.push(mkItem('feed:a|e2', 'Second post', '2026-10-15T00:00:00.000Z'));
+      if (calls.listItems > 1) items.push(mkItem('feed:a|e2', 'Fresh arrival', '2026-10-15T00:00:00.000Z'));
       return { items };
     };
     if (name === 'refresh') return async () => { calls.refresh += 1; return { feeds: 1, entries: 1, errors: 0 }; };
@@ -184,6 +184,7 @@ test('feed renders favicon badges and the translation toggle end-to-end', { skip
     const pill = container.querySelector('.dpl-new-pill');
     assert.ok(pill, 'new-entries pill rendered after the refresh reload');
     assert.ok(pill.textContent.includes('新增 1 条'), 'pill counts the entry that arrived with the refresh');
+
     assert.ok(container.innerHTML.includes('Hello original body'), 'current selection survives the reload');
     assert.equal(container.querySelectorAll('.dpl-entry-row').length, 2, 'reloaded list shows both entries');
 
@@ -198,7 +199,7 @@ test('feed renders favicon badges and the translation toggle end-to-end', { skip
     assert.ok(activeRow().textContent.includes('English post'), 'first entry is the selection');
     press('j');
     await settle(60);
-    assert.ok(activeRow().textContent.includes('Second post'), 'j moves the selection down');
+    assert.ok(activeRow().textContent.includes('Fresh arrival'), 'j moves the selection down');
     press('k');
     await settle(60);
     assert.ok(activeRow().textContent.includes('English post'), 'k moves the selection back up');
@@ -237,6 +238,17 @@ test('feed renders favicon badges and the translation toggle end-to-end', { skip
     assert.ok(container.innerHTML.includes('Hello original body'), 'original body restored');
     assert.ok(!container.querySelector('.dpl-translation-notice'), 'translation notice gone');
 
+    // New pill semantics: 新增 counts arrived-but-unread entries — reading
+    // the new entry consumes the count and the pill disappears (the old
+    // "count everything that ever arrived" left a stale hint after reads).
+    // Must run BEFORE the save-as-note section, which switches the panel to
+    // the vault space and unmounts the feed list.
+    const newRow = [...container.querySelectorAll('.dpl-entry-row')].find((row) => row.textContent.includes('Fresh arrival'));
+    assert.ok(newRow, 'fresh-arrival row present for the pill-consumption check');
+    newRow.click();
+    await settle(250);
+    assert.equal(container.querySelector('.dpl-new-pill'), null, 'pill clears once the new entry is read');
+
     // 存为笔记 (cross-space hand-off): the preview exposes the action and
     // invokes saveAsNote; the panel routes the result to the vault space.
     // (Must stay last: the hand-off switches the panel to the vault space.)
@@ -248,6 +260,7 @@ test('feed renders favicon badges and the translation toggle end-to-end', { skip
     assert.ok(saveCall, 'saveAsNote RPC issued');
     assert.equal(saveCall.source, 'feed');
     assert.ok(saveCall.key);
+
   } finally {
     root.unmount();
     container.remove();

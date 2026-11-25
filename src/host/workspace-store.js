@@ -16,6 +16,7 @@
 import { mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { BodyStore } from './body-store.js';
+import { hashKey } from './feeds.js';
 
 const SIDECAR = '.droplets-dsh';
 
@@ -49,6 +50,7 @@ export function isDropletsWorkspace(root) {
 }
 
 export class WorkspaceStore {
+  #hashToFeedId = null; // lazy feed:<hash> -> native feed id map
   constructor(logger, root, maxBodies = 300) {
     this.logger = logger;
     this.root = root;
@@ -158,6 +160,15 @@ export class WorkspaceStore {
     if (!this.data.favorites || typeof this.data.favorites !== 'object') this.data.favorites = {};
     if (!this.data.companionContexts || typeof this.data.companionContexts !== 'object') this.data.companionContexts = {};
 
+    // Legacy pollution cleanup (bug class now fixed at the source): plugin
+    // refreshes once merged feed:<hash>-keyed entries into native rows —
+    // every refreshed article existed twice (one native URL-keyed row plus
+    // one guid-keyed copy, all falsely unread) and read marks landed under
+    // feed: source ids that never matched a live feed, silently reverting
+    // read items on every reload. Idempotent; safe to run on every load.
+    this.#dedupeLegacyItemRows();
+    this.#migrateLegacyStateRows();
+
     const feedRows = this.appDb.prepare(
       'SELECT id, title, url, group_name, enabled, created_at, last_fetch_at, last_error, site_url, refresh_strategy, show_unread_badge, include_in_all, note, consecutive_failures, last_success_at FROM feeds ORDER BY created_at ASC',
     ).all();
@@ -187,6 +198,93 @@ export class WorkspaceStore {
 
   #feedSignature(sub) {
     return [sub.name, sub.url, sub.group ?? '', sub.enabled === false ? 0 : 1, sub.note ?? '', sub.siteUrl ?? '', sub.refreshStrategy ?? 'follow'].join('\u0000');
+  }
+
+  /**
+   * Drop plugin-key-namespace rows leaked into rss_item: flush once wrote
+   * item_key = entry.guid ?? entry.key, so guid-less feeds landed their
+   * whole `feed:<32hex>|<hash>` plugin key as item_key — every refreshed
+   * article existed twice (the native guid/URL-keyed row plus this copy,
+   * all falsely unread). Deleted only when a same-feed same-title native
+   * row exists; a lone plugin-keyed row is kept (it may be the only copy).
+   */
+  #dedupeLegacyItemRows() {
+    try {
+      const candidates = this.indexDb
+        .prepare(`SELECT a.rowid AS rowid, a.item_key AS item_key FROM rss_item a
+          WHERE a.item_key LIKE 'feed:%' AND EXISTS (
+            SELECT 1 FROM rss_item b
+            WHERE b.source_id = a.source_id AND b.title = a.title AND b.rowid != a.rowid
+              AND b.item_key NOT LIKE 'feed:%'
+          )`)
+        .all()
+        // Plugin keys are exactly feed:<32 lowercase hex>|<rest>; a real
+        // feed guid could start with "feed:" but never this shape.
+        .filter((row) => /^feed:[0-9a-f]{32}\|/.test(row.item_key));
+      if (candidates.length === 0) return;
+      const del = this.indexDb.prepare('DELETE FROM rss_item WHERE rowid = ?');
+      this.indexDb.exec('BEGIN');
+      try {
+        for (const row of candidates) del.run(row.rowid);
+      } finally {
+        this.indexDb.exec('COMMIT');
+      }
+      this.logger?.info?.('droplets: removed %d plugin-keyed duplicate item rows', candidates.length);
+    } catch (error) {
+      this.logger?.warn?.('droplets: legacy item dedupe failed: %s', String(error));
+    }
+  }
+
+  /**
+   * Read marks written under feed:<hash> source ids never matched a live
+   * feed (marks silently reverted on every reload). Best-effort migration
+   * onto the native keying — the plugin wrote item_key = entry.guid, and
+   * native rows key by URL, so marks whose guid was a URL migrate cleanly;
+   * the rest are unmatchable and deleted (they were functionally dead
+   * anyway). Runs BEFORE the state SELECT so the loaded view is clean.
+   */
+  #migrateLegacyStateRows() {
+    try {
+      const orphans = this.appDb
+        .prepare("SELECT source_id, item_key, state FROM rss_item_state WHERE source_id LIKE 'feed:%'")
+        .all();
+      if (orphans.length === 0) return;
+      const migrate = this.appDb.prepare(
+        `INSERT INTO rss_item_state (source_id, item_key, state, updated_at)
+         VALUES (?, ?, ?, ?)
+         ON CONFLICT(source_id, item_key) DO NOTHING`,
+      );
+      this.appDb.exec('BEGIN');
+      try {
+        let migrated = 0;
+        for (const row of orphans) {
+          // Native rows key items by URL; only guid-is-URL marks can migrate.
+          if (!/^(https?:\/\/|www\.)/i.test(row.item_key)) continue;
+          const nativeId = this.#nativeSourceOfFeedHash(row.source_id);
+          if (!nativeId) continue;
+          migrate.run(nativeId, row.item_key, row.state, Date.now() / 1000);
+          migrated += 1;
+        }
+        this.appDb.prepare("DELETE FROM rss_item_state WHERE source_id LIKE 'feed:%'").run();
+        if (orphans.length > 0) {
+          this.logger?.info?.('droplets: migrated %d/%d legacy read marks onto native ids', migrated, orphans.length);
+        }
+      } finally {
+        this.appDb.exec('COMMIT');
+      }
+    } catch (error) {
+      this.logger?.warn?.('droplets: legacy state migration failed: %s', String(error));
+    }
+  }
+
+  /** Reverse-lookup: which live feed id does a feed:<hash> id stand for? */
+  #nativeSourceOfFeedHash(feedHashId) {
+    if (this.#hashToFeedId === null) {
+      this.#hashToFeedId = new Map();
+      const rows = this.appDb.prepare('SELECT id, url FROM feeds').all();
+      for (const row of rows) this.#hashToFeedId.set(`feed:${hashKey(row.url)}`, row.id);
+    }
+    return this.#hashToFeedId.get(feedHashId);
   }
 
   touch() {

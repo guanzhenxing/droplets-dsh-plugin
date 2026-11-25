@@ -5359,7 +5359,9 @@ function ItemList(props) {
       return 0;
     }
     let count2 = 0;
-    for (const item of items) if (!baseline.current.keys.has(item.sourceId + ":" + item.key)) count2 += 1;
+    for (const item of items) {
+      if (item.state === "unseen" && !baseline.current.keys.has(item.sourceId + ":" + item.key)) count2 += 1;
+    }
     return count2;
   }, [items, loading, sessionKey, pill]);
   const firstItem = partitioned[0];

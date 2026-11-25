@@ -249,8 +249,13 @@ function ItemList(props) {
       baseline.current = { session: sessionKey, keys: new Set(items.map((item) => item.sourceId + ':' + item.key)) };
       return 0;
     }
+    // 新增 = 本会话期间到达且尚未读的条目：读一条减一，读完归零、胶囊
+    // 自然消失（此前数的是「到达过」的存量，读完仍挂「新增 N 条」，
+    // 用户会问「已经没有了为什么还提示」）。
     let count = 0;
-    for (const item of items) if (!baseline.current.keys.has(item.sourceId + ':' + item.key)) count += 1;
+    for (const item of items) {
+      if (item.state === 'unseen' && !baseline.current.keys.has(item.sourceId + ':' + item.key)) count += 1;
+    }
     return count;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, loading, sessionKey, pill]);

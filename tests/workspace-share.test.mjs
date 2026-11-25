@@ -106,3 +106,80 @@ test('settings live in a sidecar, not in the shared tables', async () => {
     assert.equal(reloaded.data.favorites['abc-feed|item-1'], true);
   } finally { await reloaded.dispose(); }
 });
+
+test('legacy pollution is cleaned on load: duplicate guid-keyed rows dropped, feed: read marks migrated', async () => {
+  const root = await makeWorkspace();
+  const { DatabaseSync } = await import('node:sqlite');
+  const { hashKey } = await import('../src/host/feeds.js');
+  // Seed the pollution class the old bug produced: the same article twice
+  // (native URL-keyed row + plugin guid-keyed copy) and read marks under a
+  // feed:<hash> source id that matches no live feed.
+  const idx = new DatabaseSync(join(root, 'state', 'index.sqlite'));
+  // Real pollution shape: flush wrote the whole plugin key (feed:<32hex>|<hash>)
+  // as item_key for guid-less feeds.
+  const pluginKey = `feed:${hashKey('https://ts.example/feed')}|419e0d941736ff29`;
+  idx.prepare('INSERT INTO rss_item (source_id, item_key, title, link, summary, content, content_html, published_at, source_title, fetched_at) VALUES (?,?,?,?,?,?,?,?,?,?)')
+    .run('abc-feed', pluginKey, 'Announcing TypeScript 7.1', 'https://ts.example/71', 'Dup', 'Body', '<p>Body</p>', '2026-10-20T17:53:06.000Z', 'TypeScript Blog', 1795000100);
+  idx.close();
+  const app = new DatabaseSync(join(root, 'state', 'app.sqlite'));
+  const feedHash = `feed:${hashKey('https://ts.example/feed')}`;
+  app.prepare('INSERT INTO rss_item_state (source_id, item_key, state, updated_at) VALUES (?, ?, ?, ?)')
+    .run(feedHash, 'https://ts.example/70', 'seen', 1795000000); // URL-guid mark → migratable
+  app.prepare('INSERT INTO rss_item_state (source_id, item_key, state, updated_at) VALUES (?, ?, ?, ?)')
+    .run(feedHash, 'urn:uuid:unmatchable', 'skipped', 1795000000); // urn guid → unmatchable
+  app.close();
+
+  const { WorkspaceStore } = await import('../src/host/workspace-store.js');
+  const store = new WorkspaceStore(console, root);
+  await store.load();
+  try {
+    const sub = store.data.subscriptions[0];
+    const titles = sub.entries.map((entry) => entry.title);
+    assert.equal(titles.filter((t) => t === 'Announcing TypeScript 7.1').length, 1, 'guid-keyed duplicate dropped, native row kept');
+    // Migrated read mark now lives under the native id and applies on load.
+    assert.equal(store.data.states['abc-feed|https://ts.example/70'], 'seen', 'URL-guid mark migrated onto the native feed id');
+    assert.equal(store.data.states['abc-feed|item-1'], 'seen', 'native states untouched');
+  } finally { await store.dispose(); }
+
+  const app2 = new DatabaseSync(join(root, 'state', 'app.sqlite'));
+  assert.equal(app2.prepare("SELECT COUNT(*) AS n FROM rss_item_state WHERE source_id LIKE 'feed:%'").get().n, 0, 'orphan feed: rows deleted');
+  assert.equal(app2.prepare('SELECT state FROM rss_item_state WHERE source_id=? AND item_key=?').get('abc-feed', 'https://ts.example/70').state, 'seen', 'migrated row persisted');
+  app2.close();
+  const idx2 = new DatabaseSync(join(root, 'state', 'index.sqlite'));
+  assert.equal(idx2.prepare("SELECT COUNT(*) AS n FROM rss_item WHERE item_key LIKE 'feed:%'").get().n, 0, 'plugin-key-namespace rows removed');
+  idx2.close();
+});
+
+test('shared-mode refresh merges by native keys — no duplicates, read states survive', async () => {
+  const root = await makeWorkspace();
+  const { tempHome, fakeCtx } = await import('./helpers.mjs');
+  const home = tempHome();
+  const ctx = fakeCtx();
+  const { DropletsService } = await import('../src/host/index.js');
+  const service = new DropletsService(ctx, { workspacePath: root });
+  await service.ready;
+  try {
+    assert.ok(service.sharedWorkspace, 'service runs against the shared workspace');
+    const before = await service.listItems({ sourceId: 'abc-feed' });
+    assert.equal(before.items.length, 2);
+    assert.equal(before.items.find((item) => item.key === 'abc-feed|item-1').state, 'seen', 'native read state applies');
+
+    // A refresh serving the same articles under the plugin's own keying
+    // (feed:hash|guid — the exact shape the old bug produced).
+    const { hashKey } = await import('../src/host/feeds.js');
+    const xml = `<?xml version="1.0"?><rss><channel><title>TypeScript Blog</title>
+      <item><title>Announcing TypeScript 7.1</title><guid>item-1</guid><link>https://ts.example/71</link><description>Summary here</description></item>
+      <item><title>Announcing TypeScript 7.0</title><guid>item-2</guid><link>https://ts.example/70</link><description>Older</description></item>
+    </channel></rss>`;
+    service.fetcher = { fetch: async () => ({ status: 200, headers: { 'content-type': 'text/xml' }, body: xml }) };
+    await service.refresh({ channel: 'abc-feed' });
+
+    const after = await service.listItems({ sourceId: 'abc-feed' });
+    assert.equal(after.items.length, 2, 'refresh merges 1:1 by native keys — no phantom copies');
+    const dup71 = after.items.filter((item) => item.title === 'Announcing TypeScript 7.1');
+    assert.equal(dup71.length, 1, 'the refreshed article replaces its native row instead of duplicating');
+    assert.equal(dup71[0].state, 'seen', 'read state survives the refresh (key continuity)');
+    assert.ok(after.items.every((item) => item.key.startsWith('abc-feed|')), 'all keys share the native namespace');
+    void hashKey;
+  } finally { service.shutdown(); await ctx.dispose(); home.cleanup(); }
+});

@@ -637,8 +637,11 @@ export class DropletsService extends TypertRemoteService {
       status = 'error';
       lastError = error instanceof Error ? error.message : String(error);
     }
+    // Shared workspaces key feeds by native UUID ids (and their items by
+    // URL); private storage keeps the feed:<hash> convention.
+    const subId = this.sharedWorkspace ? randomUUID() : subscriptionIdOf(trimmed);
     const sub = {
-      id: subscriptionIdOf(trimmed),
+      id: subId,
       url: trimmed,
       name: displayName || feedTitle || trimmed,
       group: String(group ?? '').trim() || undefined,
@@ -646,7 +649,7 @@ export class DropletsService extends TypertRemoteService {
       lastFetchedAt: feedTitle ? Date.now() : undefined,
       status,
       lastError,
-      entries,
+      entries: this.sharedWorkspace ? this.remapToNativeKeys(subId, entries) : entries,
     };
     this.store.data.subscriptions.push(sub);
     this.store.touch();
@@ -719,7 +722,7 @@ export class DropletsService extends TypertRemoteService {
       if (this.store.data.subscriptions.length >= FEED_LIMITS.maxSubscriptions) break;
       if (this.store.data.subscriptions.some((sub) => sub.url === stub.url)) continue;
       this.store.data.subscriptions.push({
-        id: subscriptionIdOf(stub.url),
+        id: this.sharedWorkspace ? randomUUID() : subscriptionIdOf(stub.url),
         url: stub.url,
         name: stub.name ?? stub.url,
         group: stub.group,
@@ -869,13 +872,30 @@ export class DropletsService extends TypertRemoteService {
     }
   }
 
+  /**
+   * Shared-workspace key unification: native rows key items by
+   * <feed-uuid>|<link> while the plugin pipeline keys by
+   * feed:<hash>|<guid-or-link-hash>. Merging both namespaces into one
+   * subscription duplicated every refreshed article (a native row plus a
+   * plugin-keyed copy, all falsely unread) and wrote read marks under ids
+   * that never matched a live feed. Remapping fetched entries onto the
+   * native convention makes refreshes merge 1:1 with loaded rows.
+   */
+  remapToNativeKeys(subId, entries) {
+    return (entries ?? []).map((entry) => {
+      const itemKey = entry.url || entry.guid || String(entry.key ?? '').split('|').pop();
+      return { ...entry, guid: itemKey, key: `${subId}|${itemKey}` };
+    });
+  }
+
   async refreshSubscription(sub) {
     try {
       const xml = await this.fetchFeedText(sub.url);
       const parsed = parseFeed(xml, sub.url);
       sub.name = sub.name || parsed.title;
       const previous = sub.entries ?? [];
-      const merged = mergeEntries(previous, parsed.entries);
+      const fresh = this.sharedWorkspace ? this.remapToNativeKeys(sub.id, parsed.entries) : parsed.entries;
+      const merged = mergeEntries(previous, fresh);
       const changed = sub.lastError !== undefined
         || merged.length !== previous.length
         || (merged[0]?.key ?? '') !== (previous[0]?.key ?? '');
