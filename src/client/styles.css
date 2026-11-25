@@ -2362,9 +2362,9 @@
 
 /* N: a 3px mode-colored edge on the note pane — read=accent, live=link,
    source=faint — plus the mode name in the crumb button's title. */
-.dpl-vault2-note[data-view='read'] { box-shadow: inset 3px 0 0 var(--dpl-accent); }
-.dpl-vault2-note[data-view='live'] { box-shadow: inset 3px 0 0 var(--dpl-link); }
-.dpl-vault2-note[data-view='source'] { box-shadow: inset 3px 0 0 var(--dpl-faint); }
+/* 模式指示只保留按钮上的文字标签（自解释、零额外视觉噪音）。左缘色条
+   已按用户要求移除——无图例的色语言在实测中只制造困惑（「为什么这里
+   有一条蓝色的线？」），且破坏了与其他模块一致的极简风格。 */
 
 /* 模式按钮文字标签：三视图（阅读/实时/源码）的当前态必须在按钮上直接
    可读，不能只靠左缘色条与 tooltip——色条没有图例时用户只能猜（实测

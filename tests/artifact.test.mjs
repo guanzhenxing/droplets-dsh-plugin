@@ -190,3 +190,13 @@ test('pane control buttons are one family across the three spaces', () => {
   const markupUses = (client.match(/"dpl-pane-btn"/g) || []).length;
   assert.ok(markupUses >= 6, 'all six pane buttons ride the unified class, found ' + markupUses);
 });
+
+test('vault mode indicator is text-only — no colored edge bar', () => {
+  const client = readFileSync(new URL('../client.js', import.meta.url), 'utf8');
+  // 用户明确不需要左缘色条（风格与其他模块不一致、无图例即哑谜）：
+  // 模式的唯一常驻指示 = 按钮上的文字标签。
+  assert.ok(!/inset 3px 0 0 var\(--dpl-(accent|link|faint)\)/.test(client), 'no colored edge bar');
+  assert.ok(client.includes('.dpl-vault2-modetext'), 'mode text label present');
+  // esbuild escapes CJK in string literals: 阅读视图 → \u9605\u8BFB\u89C6\u56FE
+  assert.ok(client.includes('\\u9605\\u8BFB\\u89C6\\u56FE'), 'label carries the mode name');
+});
