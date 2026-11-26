@@ -132959,6 +132959,7 @@ function defaults() {
     companionContexts: {}
   };
 }
+var instanceSeq = 0;
 var DropletsStore = class {
   setMaxBodies(maxBodies) {
     if (Number.isFinite(maxBodies) && maxBodies >= 10) this.bodies.maxBodies = Math.floor(maxBodies);
@@ -132978,6 +132979,8 @@ var DropletsStore = class {
     this.lastKnownMtime = 0;
     this.persistedSignatures = /* @__PURE__ */ new Map();
     this.tempSeq = 0;
+    this.instanceSeq = ++instanceSeq;
+    this.entriesDir = join(this.dir, "entries");
   }
   /** Remove temp files a killed process left behind (atomic writes are
    * tmp+rename; a SIGKILL between them strands the whole document). */
@@ -133000,7 +133003,7 @@ var DropletsStore = class {
   /** Load one feed's entries from its own file. */
   async loadEntries(feedId) {
     try {
-      const raw = await readFile2(join(entriesDir(), entryFileName(feedId)), "utf8");
+      const raw = await readFile2(join(this.entriesDir, entryFileName(feedId)), "utf8");
       const parsed = JSON.parse(raw);
       return Array.isArray(parsed) ? parsed : [];
     } catch {
@@ -133012,15 +133015,15 @@ var DropletsStore = class {
     const signature = entrySignature(entries);
     if (this.persistedSignatures.get(feedId) === signature) return;
     if (signature === "0") {
-      const existing = await stat(join(entriesDir(), entryFileName(feedId))).catch(() => null);
+      const existing = await stat(join(this.entriesDir, entryFileName(feedId))).catch(() => null);
       if (!existing) {
         this.persistedSignatures.set(feedId, signature);
         return;
       }
     }
-    await mkdir2(entriesDir(), { recursive: true });
-    const target = join(entriesDir(), entryFileName(feedId));
-    const temp = `${target}.${process.pid}.${++this.tempSeq}.tmp`;
+    await mkdir2(this.entriesDir, { recursive: true });
+    const target = join(this.entriesDir, entryFileName(feedId));
+    const temp = `${target}.${process.pid}.${this.instanceSeq}.${++this.tempSeq}.tmp`;
     try {
       await writeFile2(temp, JSON.stringify(entries), { encoding: "utf8", mode: 384 });
       await rename2(temp, target);
@@ -133048,7 +133051,7 @@ var DropletsStore = class {
         delete this.data.read[key];
       }
       if (!this.data.companionContexts || typeof this.data.companionContexts !== "object") this.data.companionContexts = {};
-      await mkdir2(entriesDir(), { recursive: true });
+      await mkdir2(this.entriesDir, { recursive: true });
       for (const sub of this.data.subscriptions) {
         const inline = Array.isArray(sub.entries) ? sub.entries : [];
         const stored = await this.loadEntries(sub.id);
@@ -133137,7 +133140,7 @@ var DropletsStore = class {
           if (previous.length > 2) await writeFile2(this.path + ".bak", previous, "utf8");
         } catch {
         }
-        const temp = `${this.path}.${process.pid}.tmp`;
+        const temp = `${this.path}.${process.pid}.${this.instanceSeq}.tmp`;
         try {
           await writeFile2(temp, JSON.stringify(document2), { encoding: "utf8", mode: 384 });
           await rename2(temp, this.path);
@@ -141395,13 +141398,13 @@ var DropletsService = class extends TypertRemoteService {
   // ------------------------------------------------------------------
   // Lifecycle
   // ------------------------------------------------------------------
-  shutdown() {
+  async shutdown() {
     this.stopped = true;
     if (this.tickTimer !== void 0) {
       clearTimeout(this.tickTimer);
       this.tickTimer = void 0;
     }
-    void this.store.dispose().catch((error) => this.ctx.logger?.warn?.(String(error)));
+    await this.store.dispose().catch((error) => this.ctx.logger?.warn?.(String(error)));
   }
   /** Self-managed 60 s tick: unref'd, runs whether or not the panel is open. */
   startTick() {

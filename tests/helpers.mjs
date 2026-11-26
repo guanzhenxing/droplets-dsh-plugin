@@ -35,7 +35,10 @@ export function fakeCtx(logger) {
       return () => {};
     },
     get(name) { return undefined; },
-    async dispose() { for (const dispose of effects.reverse()) { try { dispose?.(); } catch { /* best effort */ } } },
+    // Waits for async disposers (the service's final flush): a test that
+    // cleans up its home right after dispose() must not pull the directory out
+    // from under a flush that is still running.
+    async dispose() { for (const dispose of effects.reverse()) { try { await dispose?.(); } catch { /* best effort */ } } },
     __injections: injections,
   };
 }

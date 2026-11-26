@@ -63,6 +63,9 @@ function defaults() {
   };
 }
 
+/** Per-instance counter: two stores in one process must never derive the same temp path. */
+let instanceSeq = 0;
+
 export class DropletsStore {
   
 
@@ -87,6 +90,11 @@ export class DropletsStore {
     // the feeds whose entries actually changed.
     this.persistedSignatures = new Map();
     this.tempSeq = 0;
+    this.instanceSeq = ++instanceSeq;
+    // Resolve the entries directory once, here: a flush that lands after
+    // DSH_HOME changed (the next test's home) must keep writing into the home
+    // this store was created with, never into whichever home is current.
+    this.entriesDir = join(this.dir, 'entries');
   }
 
   /** Remove temp files a killed process left behind (atomic writes are
@@ -109,7 +117,7 @@ export class DropletsStore {
   /** Load one feed's entries from its own file. */
   async loadEntries(feedId) {
     try {
-      const raw = await readFile(join(entriesDir(), entryFileName(feedId)), 'utf8');
+      const raw = await readFile(join(this.entriesDir, entryFileName(feedId)), 'utf8');
       const parsed = JSON.parse(raw);
       return Array.isArray(parsed) ? parsed : [];
     } catch {
@@ -124,17 +132,17 @@ export class DropletsStore {
     // An empty feed with no file yet needs none; record that so we do not
     // recreate hundreds of empty files on every flush.
     if (signature === '0') {
-      const existing = await stat(join(entriesDir(), entryFileName(feedId))).catch(() => null);
+      const existing = await stat(join(this.entriesDir, entryFileName(feedId))).catch(() => null);
       if (!existing) {
         this.persistedSignatures.set(feedId, signature);
         return;
       }
     }
-    await mkdir(entriesDir(), { recursive: true });
-    const target = join(entriesDir(), entryFileName(feedId));
+    await mkdir(this.entriesDir, { recursive: true });
+    const target = join(this.entriesDir, entryFileName(feedId));
     // Unique per call: two overlapping flushes for the same feed must not
     // share a temp path, or the first rename steals the second's file (ENOENT).
-    const temp = `${target}.${process.pid}.${++this.tempSeq}.tmp`;
+    const temp = `${target}.${process.pid}.${this.instanceSeq}.${++this.tempSeq}.tmp`;
     try {
       await writeFile(temp, JSON.stringify(entries), { encoding: 'utf8', mode: 0o600 });
       await rename(temp, target);
@@ -165,7 +173,7 @@ export class DropletsStore {
       if (!this.data.companionContexts || typeof this.data.companionContexts !== 'object') this.data.companionContexts = {};
       // Hydrate entries from their own files. Legacy documents carried entries
       // inline; those stay in memory and get split out on the next flush.
-      await mkdir(entriesDir(), { recursive: true });
+      await mkdir(this.entriesDir, { recursive: true });
       for (const sub of this.data.subscriptions) {
         const inline = Array.isArray(sub.entries) ? sub.entries : [];
         const stored = await this.loadEntries(sub.id);
@@ -262,7 +270,7 @@ export class DropletsStore {
           const previous = await readFile(this.path, 'utf8');
           if (previous.length > 2) await writeFile(this.path + '.bak', previous, 'utf8');
         } catch { /* first write */ }
-        const temp = `${this.path}.${process.pid}.tmp`;
+        const temp = `${this.path}.${process.pid}.${this.instanceSeq}.tmp`;
         try {
           await writeFile(temp, JSON.stringify(document), { encoding: 'utf8', mode: 0o600 });
           await rename(temp, this.path);

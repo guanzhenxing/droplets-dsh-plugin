@@ -174,13 +174,15 @@ export class DropletsService extends TypertRemoteService {
   // Lifecycle
   // ------------------------------------------------------------------
 
-  shutdown() {
+  async shutdown() {
     this.stopped = true;
     if (this.tickTimer !== undefined) {
       clearTimeout(this.tickTimer);
       this.tickTimer = undefined;
     }
-    void this.store.dispose().catch((error) => this.ctx.logger?.warn?.(String(error)));
+    // Return the final flush so a caller can wait for it before tearing the
+    // home directory down (tests), instead of leaving it running unobserved.
+    await this.store.dispose().catch((error) => this.ctx.logger?.warn?.(String(error)));
   }
 
   /** Self-managed 60 s tick: unref'd, runs whether or not the panel is open. */
