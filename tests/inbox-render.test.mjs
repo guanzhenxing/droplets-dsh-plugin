@@ -65,13 +65,17 @@ async function loadHarness() {
   const client = loaded[0].factory(fakeRequire);
 
   let panelComponent = null;
+  let panelApi = null;
   const remoteNs = new Proxy({}, { get: (t, prop) => async () => ({ ok: true, value: {} }) });
   const childCtx = {
     remote: { droplets: remoteNs },
     slots: {
       inject(slotName, reg) { reg(); },
       register(opts, component) {
-        if (opts && (opts.key === 'droplets' || opts.name === 'main') && component) panelComponent = component;
+        if (opts && (opts.key === 'droplets' || opts.name === 'main') && component) {
+          panelComponent = component;
+          panelApi = opts.inject?.().api;
+        }
         return () => {};
       },
     },
@@ -85,7 +89,7 @@ async function loadHarness() {
     logger: { info() {}, warn() {}, error() {} },
   };
   await client.apply(ctx);
-  return { react, reactDomClient, panelComponent };
+  return { react, reactDomClient, panelComponent, api: panelApi };
 }
 
 const harness = await loadHarness();
@@ -405,4 +409,25 @@ test('inbox I: empty states follow the filter and list errors are visible with r
     root.unmount();
     container.remove();
   }
+});
+
+test('every api method the views call exists on the client api object', async () => {
+  // A view calling an unregistered method only throws at click time
+  // ("api.xxx is not a function"): the four vault copy/reveal actions shipped
+  // broken this way. Check the real object, so the methods spread in from
+  // nativeChatBridge count too.
+  const { readdir, readFile } = await import('node:fs/promises');
+  const used = new Set();
+  const walk = async (dir) => {
+    for (const entry of await readdir(dir, { withFileTypes: true })) {
+      const url = new URL(entry.name + (entry.isDirectory() ? '/' : ''), dir);
+      if (entry.isDirectory()) { await walk(url); continue; }
+      if (!/\.(jsx|js)$/.test(entry.name) || entry.name === 'index.jsx') continue;
+      for (const match of (await readFile(url, 'utf8')).matchAll(/\bapi\.([A-Za-z0-9_]+)\s*\(/g)) used.add(match[1]);
+    }
+  };
+  await walk(new URL('../src/client/', import.meta.url));
+  assert.ok(used.size > 20, 'api usages discovered, found ' + used.size);
+  const missing = [...used].filter((name) => typeof harness.api[name] !== 'function');
+  assert.deepEqual(missing, [], 'these api calls must be registered in src/client/index.jsx');
 });
