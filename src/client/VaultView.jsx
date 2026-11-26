@@ -254,6 +254,9 @@ export function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }
     if (fileIndexCache) setFileIndex(fileIndexCache);
     try {
       const files = await api.vaultIndexFiles();
+      // An unexpected shape (not an array) must not reach render: iterating it
+      // throws and takes the whole panel down. Keep the list we already have.
+      if (!Array.isArray(files)) return;
       fileIndexCache = files;
       setFileIndex(files);
     } catch { /* offline tolerated */ }

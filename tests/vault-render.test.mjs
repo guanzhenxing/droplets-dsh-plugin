@@ -1,8 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { existsSync } from 'node:fs';
-import path from 'node:path';
 import { readFileSync } from 'node:fs';
 
 /**
@@ -12,11 +10,10 @@ import { readFileSync } from 'node:fs';
  * menu / segmented buttons — catching render-time crashes (the 0.5.0
  * white-screen class of bug).
  */
-const DROPLETS_NM = '/Users/jesen/WorkSpace/MyProjects/droplets/apps/desktop/node_modules';
 const bundlePath = new URL('../client.js', import.meta.url).pathname;
 
-test('vault renders tree/tabs/read + native menus + graph', { skip: !existsSync(DROPLETS_NM) }, async () => {
-  const nmRequire = createRequire(path.join(DROPLETS_NM, 'x.js'));
+test('vault renders tree/tabs/read + native menus + graph', async () => {
+  const nmRequire = createRequire(import.meta.url);
   const react = nmRequire('react');
   const reactDomClient = nmRequire('react-dom/client');
   const jsxRuntime = nmRequire('react/jsx-runtime');

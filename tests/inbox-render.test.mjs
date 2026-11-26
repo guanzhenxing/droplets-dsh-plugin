@@ -1,8 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { existsSync, readFileSync } from 'node:fs';
-import path from 'node:path';
+import { readFileSync } from 'node:fs';
 
 /**
  * jsdom render tests for the inbox fixes (fix-inbox): pending fetch
@@ -12,11 +11,10 @@ import path from 'node:path';
  * errors (I). Mounts the real client bundle with one shared React 19 — the
  * same harness feed-render.test.mjs uses.
  */
-const DROPLETS_NM = '/Users/jesen/WorkSpace/MyProjects/droplets/apps/desktop/node_modules';
 const bundlePath = new URL('../client.js', import.meta.url).pathname;
 
 async function loadHarness() {
-  const nmRequire = createRequire(path.join(DROPLETS_NM, 'x.js'));
+  const nmRequire = createRequire(import.meta.url);
   const react = nmRequire('react');
   const reactDomClient = nmRequire('react-dom/client');
   const jsxRuntime = nmRequire('react/jsx-runtime');
@@ -90,7 +88,7 @@ async function loadHarness() {
   return { react, reactDomClient, panelComponent };
 }
 
-const harness = existsSync(DROPLETS_NM) ? await loadHarness() : null;
+const harness = await loadHarness();
 
 const tick = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -148,7 +146,7 @@ async function mountInbox(state) {
   return { container, root };
 }
 
-test('inbox A: pending fetch is visible and the reader auto-refreshes when it lands', { skip: !harness }, async () => {
+test('inbox A: pending fetch is visible and the reader auto-refreshes when it lands', async () => {
   const i1Item = mkItem('i1', { title: '第一篇' });
   const p1Item = mkItem('p1', { title: '抓取中的条目', kind: 'url' });
   const detailMap = {
@@ -197,7 +195,7 @@ test('inbox A: pending fetch is visible and the reader auto-refreshes when it la
   }
 });
 
-test('inbox C: inboxGet failures surface with a retry button instead of being swallowed', { skip: !harness }, async () => {
+test('inbox C: inboxGet failures surface with a retry button instead of being swallowed', async () => {
   const i1Item = mkItem('i1', { title: '坏掉的读取' });
   let getCalls = 0;
   let fail = true;
@@ -230,7 +228,7 @@ test('inbox C: inboxGet failures surface with a retry button instead of being sw
   }
 });
 
-test('inbox D+E: done-dialog failure stays actionable; success archives and advances to the next unread', { skip: !harness }, async () => {
+test('inbox D+E: done-dialog failure stays actionable; success archives and advances to the next unread', async () => {
   const i1Item = mkItem('i1', { title: '要处理的' });
   const i2Item = mkItem('i2', { title: '下一条未读', createdAt: '2026-11-19T10:00:00.000Z' });
   const items = [i1Item, i2Item];
@@ -298,7 +296,7 @@ test('inbox D+E: done-dialog failure stays actionable; success archives and adva
   }
 });
 
-test('inbox G: the retry-all banner reports host-side stats', { skip: !harness }, async () => {
+test('inbox G: the retry-all banner reports host-side stats', async () => {
   const f1 = mkItem('f1', { title: '失败条目', status: 'fetch_failed', kind: 'url' });
   const state = {
     list: () => ({ items: [f1], counts: countsOf([f1]), pendingIds: [] }),
@@ -323,7 +321,7 @@ test('inbox G: the retry-all banner reports host-side stats', { skip: !harness }
   }
 });
 
-test('inbox H: save-as-note failure is visible and retryable; success confirms briefly', { skip: !harness }, async () => {
+test('inbox H: save-as-note failure is visible and retryable; success confirms briefly', async () => {
   const i1 = mkItem('i1', { title: '要存的' });
   let fails = true;
   const calls = [];
@@ -363,7 +361,7 @@ test('inbox H: save-as-note failure is visible and retryable; success confirms b
   }
 });
 
-test('inbox I: empty states follow the filter and list errors are visible with retry', { skip: !harness }, async () => {
+test('inbox I: empty states follow the filter and list errors are visible with retry', async () => {
   const i1 = mkItem('i1', { title: '常规条目', tags: ['ai'] });
   let listFails = true;
   const state = {

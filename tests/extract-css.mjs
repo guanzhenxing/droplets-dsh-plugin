@@ -1,10 +1,8 @@
 // Extract the panel CSS (injected <style>) from the built bundle.
 import { createRequire } from 'node:module';
 import { readFileSync, writeFileSync } from 'node:fs';
-import path from 'node:path';
 
-const DROPLETS_NM = '/Users/jesen/WorkSpace/MyProjects/droplets/apps/desktop/node_modules';
-const nmRequire = createRequire(path.join(DROPLETS_NM, 'x.js'));
+const nmRequire = createRequire(import.meta.url);
 const react = nmRequire('react');
 const { JSDOM } = nmRequire('jsdom');
 const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'http://localhost/' });

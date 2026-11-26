@@ -1,8 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { existsSync } from 'node:fs';
-import path from 'node:path';
 import { readFileSync } from 'node:fs';
 
 /**
@@ -15,9 +13,7 @@ import { readFileSync } from 'node:fs';
  * switches with their draft), which is exactly the state an interrupted
  * editing session leaves behind — no CM6 typing needed in jsdom.
  */
-const DROPLETS_NM = '/Users/jesen/WorkSpace/MyProjects/droplets/apps/desktop/node_modules';
 const bundlePath = new URL('../client.js', import.meta.url).pathname;
-const skip = !existsSync(DROPLETS_NM);
 
 // ---- shared bootstrap (one jsdom, one bundle evaluation) ----
 
@@ -28,7 +24,7 @@ function boot() {
   // to decide whether onChange rides native input events. The jsdom globals
   // must exist BEFORE the require, or React falls back to the IE polyfill
   // path and controlled inputs never fire onChange in these tests.
-  const nmRequire = createRequire(path.join(DROPLETS_NM, 'x.js'));
+  const nmRequire = createRequire(import.meta.url);
   const { JSDOM } = nmRequire('jsdom');
   const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'http://localhost/' });
   globalThis.window = dom.window;
@@ -246,7 +242,7 @@ const cmNoiseGuards = () => {
 
 // ---- A: conflict dialog 重载 actually loads the disk version ----
 
-test('conflict dialog: external change + draft → 重载 refreshes tab from disk', { skip }, async () => {
+test('conflict dialog: external change + draft → 重载 refreshes tab from disk', async () => {
   const diskContent = '# 冲突\n\n外部改写后的磁盘正文。';
   const draft = '# 冲突\n\n本地草稿，尚未保存。';
   const h = await mountVault({
@@ -274,7 +270,7 @@ test('conflict dialog: external change + draft → 重载 refreshes tab from dis
   } finally { await unmountVault(h); }
 });
 
-test('conflict dialog: 另存副本 writes the draft to a copy and reloads the original', { skip }, async () => {
+test('conflict dialog: 另存副本 writes the draft to a copy and reloads the original', async () => {
   const diskContent = '# 冲突\n\n磁盘版本正文。';
   const draft = '# 冲突\n\n本地草稿要被另存。';
   const h = await mountVault({
@@ -302,7 +298,7 @@ test('conflict dialog: 另存副本 writes the draft to a copy and reloads the o
 
 // ---- B: switching away from a dirty tab flushes it; badge counts ----
 
-test('switching tabs flushes the outgoing dirty tab and shows the unsaved badge', { skip }, async () => {
+test('switching tabs flushes the outgoing dirty tab and shows the unsaved badge', async () => {
   const a = 'A 草稿内容';
   const b = 'B 草稿内容';
   const h = await mountVault({
@@ -335,7 +331,7 @@ test('switching tabs flushes the outgoing dirty tab and shows the unsaved badge'
 
 // ---- D: create-note collision surfaces inside the modal ----
 
-test('create dialog: name collision shows an inline error and keeps the dialog open', { skip }, async () => {
+test('create dialog: name collision shows an inline error and keeps the dialog open', async () => {
   const h = await mountVault({
     files: { 'note.md': { content: '# note', sha: shaOf('# note') } },
   });
@@ -360,7 +356,7 @@ test('create dialog: name collision shows an inline error and keeps the dialog o
 
 // ---- E: quick switcher keyboard navigation ----
 
-test('quick switcher: arrows move a ring selection and Enter opens the active row', { skip }, async () => {
+test('quick switcher: arrows move a ring selection and Enter opens the active row', async () => {
   const h = await mountVault({
     files: {
       'a1.md': { content: '# a1\n\nA1 正文。', sha: shaOf('a1') },
@@ -408,7 +404,7 @@ test('quick switcher: arrows move a ring selection and Enter opens the active ro
 
 // ---- G: switching tabs preserves the editing view ----
 
-test('tab switch preserves the per-tab view (live survives a round trip)', { skip }, async () => {
+test('tab switch preserves the per-tab view (live survives a round trip)', async () => {
   const h = await mountVault({
     tabs: [
       makeTab('a.md', { content: '# a\n\nA 正文。' }),
@@ -452,7 +448,7 @@ test('tab switch preserves the per-tab view (live survives a round trip)', { ski
 
 // ---- C: failures flash in danger color ----
 
-test('failing duplicate action flashes a danger-colored notice', { skip }, async () => {
+test('failing duplicate action flashes a danger-colored notice', async () => {
   const h = await mountVault({
     files: { 'note.md': { content: '# note', sha: shaOf('# note') } },
     failOn: { vaultDuplicate: '复制失败：磁盘已满' },

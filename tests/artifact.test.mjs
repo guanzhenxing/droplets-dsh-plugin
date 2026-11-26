@@ -200,3 +200,17 @@ test('vault mode indicator is text-only — no colored edge bar', () => {
   // esbuild escapes CJK in string literals: 阅读视图 → \u9605\u8BFB\u89C6\u56FE
   assert.ok(client.includes('\\u9605\\u8BFB\\u89C6\\u56FE'), 'label carries the mode name');
 });
+
+test('no test may skip itself — a skip hides a broken dependency', async () => {
+  // The 16 jsdom render tests were skipped for weeks because they loaded
+  // react/jsdom from another repo's node_modules and switched themselves off
+  // when it was gone; `npm test` stayed green the whole time.
+  const { readdir, readFile } = await import('node:fs/promises');
+  const here = new URL('.', import.meta.url);
+  const offenders = [];
+  for (const name of (await readdir(here)).filter((file) => file.endsWith('.test.mjs')).sort()) {
+    const source = await readFile(new URL(name, here), 'utf8');
+    if (/\{\s*skip\b|\{\s*todo\b|\.skip\(|\.todo\(/.test(source)) offenders.push(name);
+  }
+  assert.deepEqual(offenders, [], 'remove the skip/todo switch and fix whatever it was hiding');
+});

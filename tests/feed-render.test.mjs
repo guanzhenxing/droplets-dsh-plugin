@@ -1,8 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { existsSync } from 'node:fs';
-import path from 'node:path';
 import { readFileSync } from 'node:fs';
 
 /**
@@ -11,11 +9,10 @@ import { readFileSync } from 'node:fs';
  * the aux rail. Mounts the real client bundle with one shared React 19 —
  * the same harness vault-render.test.mjs uses.
  */
-const DROPLETS_NM = '/Users/jesen/WorkSpace/MyProjects/droplets/apps/desktop/node_modules';
 const bundlePath = new URL('../client.js', import.meta.url).pathname;
 
-test('feed renders favicon badges and the translation toggle end-to-end', { skip: !existsSync(DROPLETS_NM) }, async () => {
-  const nmRequire = createRequire(path.join(DROPLETS_NM, 'x.js'));
+test('feed renders favicon badges and the translation toggle end-to-end', async () => {
+  const nmRequire = createRequire(import.meta.url);
   const react = nmRequire('react');
   const reactDomClient = nmRequire('react-dom/client');
   const jsxRuntime = nmRequire('react/jsx-runtime');

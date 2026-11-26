@@ -1,8 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { existsSync } from 'node:fs';
-import path from 'node:path';
 import { readFileSync } from 'node:fs';
 
 /**
@@ -16,11 +14,10 @@ import { readFileSync } from 'node:fs';
  *   groups; clearing restores the collapsed state.
  * Same harness as feed-render.test.mjs (real client bundle, shared React 19).
  */
-const DROPLETS_NM = '/Users/jesen/WorkSpace/MyProjects/droplets/apps/desktop/node_modules';
 const bundlePath = new URL('../client.js', import.meta.url).pathname;
 
-test('manage view: batch failures are visible and scoped retry refreshes the selection', { skip: !existsSync(DROPLETS_NM) }, async () => {
-  const nmRequire = createRequire(path.join(DROPLETS_NM, 'x.js'));
+test('manage view: batch failures are visible and scoped retry refreshes the selection', async () => {
+  const nmRequire = createRequire(import.meta.url);
   const react = nmRequire('react');
   const reactDomClient = nmRequire('react-dom/client');
   const jsxRuntime = nmRequire('react/jsx-runtime');

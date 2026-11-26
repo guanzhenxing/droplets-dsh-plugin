@@ -138274,6 +138274,7 @@ function VaultView({ api, onMaterial, noteRequest, onNoteRequestHandled }) {
     if (fileIndexCache) setFileIndex(fileIndexCache);
     try {
       const files = await api.vaultIndexFiles();
+      if (!Array.isArray(files)) return;
       fileIndexCache = files;
       setFileIndex(files);
     } catch {
