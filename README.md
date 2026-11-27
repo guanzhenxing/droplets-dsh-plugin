@@ -1,3 +1,9 @@
+# 已迁移
+
+Droplets 的 DSH 插件已迁至新仓库(转为私有,不提供链接)。
+
+---
+
 # Droplets · DSH 插件
 
 信息流 + 收件箱 + 知识库三空间,以 DeepSeek Harness 插件形态实现:一个侧栏入口,main 面板内三空间切换,配原生 AI 伴读与 Agent 工具。
